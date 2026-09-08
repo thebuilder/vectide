@@ -1,4 +1,5 @@
 import * as T from 'three';
+import type { World } from './visuals';
 /** Temporary world-space wire cages lead the solid reveal and are disposed at completion. */
 export class ScanIntro {
   private elapsed = 0;
@@ -14,20 +15,25 @@ export class ScanIntro {
   private reach = 1400;
   active = true;
   get progress() {
-    return Math.min(1, this.elapsed / 3.4);
+    return Math.min(1, this.elapsed / 4.6);
   }
   get cageCount() {
     return this.cages.length;
   }
-  constructor(scene: T.Scene, reduced: boolean) {
+  constructor(
+    scene: T.Scene,
+    reduced: boolean,
+    private world: World,
+  ) {
     if (reduced) {
       this.active = false;
       this.enabled.value = 0;
       return;
     }
+    world.waterMaterial.uniforms.uIntro.value = 0;
     scene.updateMatrixWorld(true);
     const meshes: T.Mesh[] = [];
-    scene.traverse((o) => {
+    scene.traverseVisible((o) => {
       if (
         o instanceof T.Mesh &&
         !(o instanceof T.InstancedMesh) &&
@@ -36,6 +42,8 @@ export class ScanIntro {
         meshes.push(o);
     });
     const bounds = new T.Box3();
+    const positions: number[] = [];
+    const edgeCache = new Map<T.BufferGeometry, T.EdgesGeometry>();
     for (const mesh of meshes) {
       mesh.geometry.computeBoundingBox();
       if (mesh.geometry.boundingBox)
@@ -64,28 +72,42 @@ export class ScanIntro {
             'varying vec3 vIntroWorld;uniform float uIntroEnabled;uniform float uIntroRadius;uniform vec3 uIntroOrigin;\n' +
             shader.fragmentShader.replace(
               '#include <clipping_planes_fragment>',
-              '#include <clipping_planes_fragment>\nfloat scanDistance=distance(vIntroWorld,uIntroOrigin)+sin(vIntroWorld.x*.007+vIntroWorld.y*.011)*36.+sin(vIntroWorld.z*.021)*17.;if(uIntroEnabled>.5&&scanDistance>uIntroRadius-100.)discard;',
+              '#include <clipping_planes_fragment>\nfloat scanDistance=distance(vIntroWorld,uIntroOrigin)+0.;float coverage=1.-smoothstep(uIntroRadius-280.,uIntroRadius-80.,scanDistance);float dither=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));if(uIntroEnabled>.5&&coverage<dither)discard;',
             );
         };
         material.customProgramCacheKey = () => 'vectide-intro';
         material.needsUpdate = true;
       }
-      const wire = new T.LineSegments(
-        new T.EdgesGeometry(mesh.geometry, 25),
-        new T.ShaderMaterial({
-          transparent: true,
-          depthWrite: false,
-          blending: T.AdditiveBlending,
-          uniforms: { uRadius: this.radius, uOpacity: this.opacity, uOrigin: this.origin },
-          vertexShader:
-            'varying vec3 world;void main(){vec4 p=modelMatrix*vec4(position,1.);world=p.xyz;gl_Position=projectionMatrix*viewMatrix*p;}',
-          fragmentShader:
-            'varying vec3 world;uniform float uRadius;uniform float uOpacity;uniform vec3 uOrigin;void main(){float d=distance(world,uOrigin)+sin(world.x*.007+world.y*.011)*36.+sin(world.z*.021)*17.;float rim=exp(-pow((d-uRadius)/85.,2.));float trail=smoothstep(uRadius-260.,uRadius,d)*(1.-smoothstep(uRadius,uRadius+30.,d));float a=(rim+trail*.35)*uOpacity;if(a<.01)discard;gl_FragColor=vec4(.48,1.,.86,a);}',
-        }),
-      );
-      mesh.add(wire);
-      this.cages.push(wire);
+      let edges = edgeCache.get(mesh.geometry);
+      if (!edges) {
+        edges = new T.EdgesGeometry(mesh.geometry, 25);
+        edgeCache.set(mesh.geometry, edges);
+      }
+      const points = edges.getAttribute('position');
+      const point = new T.Vector3();
+      for (let i = 0; i < points.count; i++) {
+        point.fromBufferAttribute(points, i).applyMatrix4(mesh.matrixWorld);
+        positions.push(point.x, point.y, point.z);
+      }
     }
+    for (const edges of edgeCache.values()) edges.dispose();
+    const geometry = new T.BufferGeometry();
+    geometry.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+    const wire = new T.LineSegments(
+      geometry,
+      new T.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: T.AdditiveBlending,
+        uniforms: { uRadius: this.radius, uOpacity: this.opacity, uOrigin: this.origin },
+        vertexShader:
+          'varying vec3 world;void main(){world=position;gl_Position=projectionMatrix*viewMatrix*vec4(position,1.);}',
+        fragmentShader:
+          'varying vec3 world;uniform float uRadius;uniform float uOpacity;uniform vec3 uOrigin;void main(){float d=distance(world,uOrigin);float reveal=1.-smoothstep(uRadius-50.,uRadius+100.,d);float trail=smoothstep(uRadius-380.,uRadius-30.,d);float a=reveal*trail*uOpacity;if(a<.005)discard;gl_FragColor=vec4(.36,.9,.76,a);}',
+      }),
+    );
+    scene.add(wire);
+    this.cages.push(wire);
     if (!bounds.isEmpty())
       this.reach =
         Math.max(
@@ -97,15 +119,18 @@ export class ScanIntro {
   }
   update(dt: number) {
     if (!this.active || document.hidden) return;
-    this.elapsed += Math.min(dt, 1 / 30);
+    this.elapsed += dt;
     const p = this.progress;
-    this.radius.value = (1 - Math.pow(1 - p, 1.35)) * this.reach;
+    this.world.waterMaterial.uniforms.uIntro.value = p;
+    const scan = T.MathUtils.smoothstep(p, 0.12, 0.88);
+    this.radius.value = scan * this.reach;
     this.opacity.value = Math.min(1, p / 0.06) * (1 - T.MathUtils.smoothstep(p, 0.72, 1));
     if (p === 1) this.finish();
   }
   finish() {
     this.active = false;
     this.enabled.value = 0;
+    this.world.waterMaterial.uniforms.uIntro.value = 1;
     for (const cage of this.cages) {
       cage.removeFromParent();
       cage.geometry.dispose();

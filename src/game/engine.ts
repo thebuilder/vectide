@@ -73,10 +73,29 @@ export class Engine {
   private introReduced = matchMedia('(prefers-reduced-motion: reduce)');
   replayIntro() {
     this.intro?.finish();
-    this.intro = new ScanIntro(this.scene, this.introReduced.matches);
+    this.world.gates.forEach((g) => {
+      g.visible = this.state !== 'menu';
+    });
+    this.jets.forEach((jet, i) => {
+      const r = this.racers[i];
+      jet.visible = this.state !== 'menu' || i === 0;
+      jet.position.set(r.x, r.y, r.z);
+      jet.rotation.set(0, r.yaw, 0);
+      jet.rotateX(-r.pitch);
+      jet.rotateZ(r.roll);
+      animateJet(jet, r, 0);
+    });
+    this.intro = new ScanIntro(this.scene, this.introReduced.matches, this.world);
+  }
+  get sprayCount() {
+    return this.spray.activeCount;
   }
   get introStatus() {
-    return { active: this.intro?.active ?? false, cages: this.intro?.cageCount ?? 0 };
+    return {
+      active: this.intro?.active ?? false,
+      cages: this.intro?.cageCount ?? 0,
+      progress: this.intro?.active ? this.intro.progress : 1,
+    };
   }
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   onUpdate: (s: Snapshot) => void = () => {};
@@ -217,6 +236,7 @@ export class Engine {
     this.onUpdate(this.snapshot());
   }
   menu() {
+    this.spray.clear();
     this.audio.setTitleScreen(true);
     this.state = 'menu';
     this.keys.clear();

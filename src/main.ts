@@ -46,10 +46,32 @@ const formatTime = (time: number) =>
     .toString()
     .padStart(2, '0')}:${(time % 60).toFixed(3).padStart(6, '0')}`;
 let mode: Mode = 'race';
+const introElements = [
+  ['.masthead', 0.08],
+  ['.hero', 0.5],
+  ['.course-heading', 0.6],
+  ['.courses', 0.62],
+  ['.course-description', 0.64],
+  ['.setup-options', 0.66],
+  ['.launch-row', 0.68],
+  ['.menu-footer', 0.7],
+].map(([selector, at]) => ({
+  element: document.querySelector<HTMLElement>(String(selector))!,
+  at: Number(at),
+}));
+function syncIntro(progress: number) {
+  for (const { element, at } of introElements) {
+    element.classList.add('intro-stage');
+    element.classList.toggle('intro-visible', progress >= at);
+    element.inert = progress < at;
+  }
+}
+syncIntro(matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0);
 let engine: Engine;
 try {
   engine = new Engine($<HTMLCanvasElement>('ocean'));
 } catch (error) {
+  syncIntro(1);
   $('menu').innerHTML =
     '<div class="hero"><h1>Ocean offline.</h1><p>Your browser could not start WebGL. Enable hardware acceleration and reload to ride.</p></div>';
   throw error;
@@ -122,7 +144,10 @@ function menu() {
   document.body.classList.remove('playing');
   $('start').focus();
 }
-$('replay-intro').onclick = () => engine.replayIntro();
+$('replay-intro').onclick = () => {
+  engine.replayIntro();
+  syncIntro(engine.introStatus.progress);
+};
 $('start').onclick = start;
 $('restart').onclick = start;
 $('again').onclick = start;
@@ -182,6 +207,7 @@ function drawMap(s: Snapshot) {
     });
 }
 engine.onUpdate = (s) => {
+  syncIntro(engine.introStatus.progress);
   const audio = engine.audio.status;
   $('sound').textContent = audio.error || (audio.enabled ? 'SOUND ON' : 'SOUND OFF');
   $('sound').setAttribute('aria-pressed', String(audio.enabled));
@@ -269,6 +295,7 @@ Object.defineProperty(window, '__vectide', {
       rider: engine.riderPose,
       audio: engine.audio.status,
       intro: engine.introStatus,
+      sprayCount: engine.sprayCount,
       renderer: engine.renderer.info.render,
     }),
 });

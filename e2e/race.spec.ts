@@ -140,3 +140,22 @@ test('Shift visibly leans the rider back while hands and feet stay attached', as
   expect(Math.max(...leaning.handErrors, ...leaning.footErrors)).toBeLessThan(0.015);
   await page.keyboard.up('Shift');
 });
+
+test('returning to the title clears race spray as the waves keep moving', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#start').click();
+  await page.keyboard.down('w');
+  await page.waitForFunction(
+    () => (window as unknown as { __vectide: { sprayCount: number } }).__vectide.sprayCount > 30,
+  );
+  await page.keyboard.up('w');
+  await page.keyboard.press('Escape');
+  await page.locator('#exit').click();
+  const particles = () =>
+    page.evaluate(
+      () => (window as unknown as { __vectide: { sprayCount: number } }).__vectide.sprayCount,
+    );
+  expect(await particles()).toBe(0);
+  await page.waitForTimeout(1500);
+  expect(await particles()).toBe(0);
+});

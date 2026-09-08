@@ -6,6 +6,7 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
   return new T.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
+      uIntro: { value: 1 },
       uMusic: { value: new T.Vector3() },
       uAmplitude: { value: track.wave },
       base: { value: new T.Color(track.water) },
@@ -25,6 +26,7 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         gl_Position = projectionMatrix * viewMatrix * world;
       }`,
     fragmentShader: `
+      uniform float uIntro;
       uniform vec3 uMusic;
       uniform vec3 base;
       uniform vec3 horizon;
@@ -68,6 +70,17 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         color+=vec3(.045,.34,.26)*crestLight*uMusic.x*nearField;
         color+=vec3(.025,.09,.12)*foam*uMusic.y*nearField;
         color+=vec3(.15,.24,.28)*uMusic.z*specular*nearField;
+        // The grid uses the same world-space cells and displaced vertices as the ocean.
+        if(uIntro<1.){
+          vec2 cell=vWorld.xz/4.;
+          vec2 edge=abs(fract(cell-.5)-.5)/max(fwidth(cell),vec2(.0001));
+          float grid=1.-smoothstep(.45,1.3,min(edge.x,edge.y));
+          float distanceFade=1.-smoothstep(120.,650.,distanceToCamera);
+          float sheet=smoothstep(0.,.18,uIntro);
+          float fill=smoothstep(.25,.7,uIntro-distanceToCamera*.0002);
+          vec3 wire=mix(vec3(.003,.009,.017),vec3(.09,.56,.44),grid*distanceFade*sheet*.65);
+          color=mix(wire,color,fill);
+        }
         gl_FragColor=vec4(color,1.);
       }`,
   });
