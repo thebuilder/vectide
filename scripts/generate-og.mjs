@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { chromium } from '@playwright/test';
 const browser = await chromium.launch({ headless: true });
 try {
@@ -65,18 +66,27 @@ try {
     renderer.dispose();
     return image;
   });
-  await page.setContent(`<!doctype html><html><body style="margin:0;background:#071b20;color:#eefbf5;font-family:Arial,sans-serif">
+  const titleFont = (
+    await readFile(
+      new URL(
+        '../node_modules/@fontsource/roboto/files/roboto-latin-900-italic.woff2',
+        import.meta.url,
+      ),
+    )
+  ).toString('base64');
+  await page.setContent(`<!doctype html><html><head><style>@font-face{font-family:Roboto;src:url(data:font/woff2;base64,${titleFont}) format('woff2');font-weight:900;font-style:italic;}</style></head><body style="margin:0;background:#071b20;color:#eefbf5;font-family:Arial,sans-serif">
     <img src="${scene}" style="position:absolute;width:1200px;height:630px">
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,12,20,.93),rgba(3,12,20,.45) 38%,transparent 62%),linear-gradient(0deg,rgba(3,12,20,.94),transparent 24%)"></div>
     <div style="position:absolute;left:54px;top:44px;display:flex;align-items:center;gap:16px;color:#86fadd">
       <svg width="58" height="58" viewBox="0 0 64 64"><path d="M8 12h12l12 29 12-29h12L32 58z" fill="currentColor"/><path d="M5 25h54M5 33h54" stroke="#07131b" stroke-width="4"/></svg>
       <span style="font:700 32px monospace;letter-spacing:7px">VECTIDE</span>
     </div>
-    <div style="position:absolute;left:56px;top:210px;font-size:68px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-3px">RIDE THE<br><span style="color:#86fadd">WAVEFORM.</span></div>
+    <div style="position:absolute;left:56px;top:210px;font-family:Roboto,Arial,sans-serif;font-synthesis:none;font-size:68px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-3px">RIDE THE<br><span style="color:#86fadd">WAVEFORM.</span></div>
     <div style="position:absolute;left:58px;bottom:153px;font:16px monospace;letter-spacing:2px;color:#bce0d5">NEON JET SKI RACING</div>
     <div style="position:absolute;left:58px;bottom:47px;font:700 26px monospace;letter-spacing:.5px;color:#eefbf5">vectide.thebuilder.dk</div>
   </body></html>`);
   await page.locator('img').evaluate((image) => image.decode());
+  await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: 'public/og.png' });
 } finally {
   await browser.close();

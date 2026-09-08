@@ -16,6 +16,33 @@ export function collideRampWalls(
       b = local(r),
       halfWidth = ramp.width / 2 + 0.55,
       halfLength = ramp.length / 2;
+    // Resolve existing overlap too: another collision or a glancing entry can
+    // place the hull inside the expanded wall without crossing it this step.
+    const topAtStart = ramp.baseHeight + (a.along / ramp.length + 0.5) * ramp.height;
+    const topAtEnd = ramp.baseHeight + (b.along / ramp.length + 0.5) * ramp.height;
+    if (
+      Math.abs(b.side) < halfWidth &&
+      Math.abs(b.along) < halfLength &&
+      r.y - 0.42 < topAtEnd - 0.03 &&
+      previous.y < topAtStart + 0.52 - 0.03
+    ) {
+      const exits = [
+        { distance: halfWidth - b.side, nx: -ramp.tz, nz: ramp.tx },
+        { distance: halfWidth + b.side, nx: ramp.tz, nz: -ramp.tx },
+        { distance: halfLength + 0.55 - b.along, nx: ramp.tx, nz: ramp.tz },
+        { distance: halfLength + b.along, nx: -ramp.tx, nz: -ramp.tz },
+      ];
+      const exit = exits.reduce((a, b) => (a.distance < b.distance ? a : b));
+      r.x += exit.nx * (exit.distance + 0.015);
+      r.z += exit.nz * (exit.distance + 0.015);
+      const speed = r.vx * exit.nx + r.vz * exit.nz;
+      if (speed < 0) {
+        r.vx -= speed * 1.18 * exit.nx;
+        r.vz -= speed * 1.18 * exit.nz;
+      }
+      hit = true;
+      continue;
+    }
     const walls = [
       { axis: 'side' as const, boundary: -halfWidth, normal: -1 },
       { axis: 'side' as const, boundary: halfWidth, normal: 1 },

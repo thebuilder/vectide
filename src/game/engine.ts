@@ -85,7 +85,7 @@ export class Engine {
       jet.rotateZ(r.roll);
       animateJet(jet, r, 0);
     });
-    this.intro = new ScanIntro(this.scene, this.introReduced.matches, this.world);
+    this.intro = new ScanIntro(this.scene, this.introReduced.matches, this.world, this.jets);
   }
   get sprayCount() {
     return this.spray.activeCount;
@@ -98,6 +98,7 @@ export class Engine {
     };
   }
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  onFrame: (now: number) => void = () => {};
   onUpdate: (s: Snapshot) => void = () => {};
   onFinish: (s: Snapshot) => void = () => {};
   onPause: () => void = () => {};
@@ -141,6 +142,7 @@ export class Engine {
     this.camera.updateProjectionMatrix();
   };
   private keyDown = (e: KeyboardEvent) => {
+    if (e.defaultPrevented) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
     if (
       ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code) &&
@@ -156,10 +158,7 @@ export class Engine {
       e.preventDefault();
       this.pause();
     }
-    if (e.code === 'KeyR' && this.state === 'racing') {
-      recoverRacer(this.racers[0], this.track, this.visualTime);
-      this.audio.tone(180);
-    }
+    if (e.code === 'KeyR') this.reset();
   };
   private keyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
   private blur = () => {
@@ -241,6 +240,11 @@ export class Engine {
     this.state = 'menu';
     this.keys.clear();
     this.onUpdate(this.snapshot());
+  }
+  reset() {
+    if (this.state !== 'racing') return;
+    recoverRacer(this.racers[0], this.track, this.visualTime);
+    this.audio.tone(180);
   }
   private input(): Input {
     const key = (...codes: string[]) => (codes.some((c) => this.keys.has(c)) ? 1 : 0);
@@ -331,6 +335,7 @@ export class Engine {
     }
   }
   private frame = (now: number) => {
+    this.onFrame(now);
     const dt = Math.min((now - (this.previous || now)) / 1000, 0.1);
     this.previous = now;
     this.fpsElapsed += dt;
@@ -371,7 +376,13 @@ export class Engine {
       : this.audio.spectrum.bands;
     this.world.update(this.visualTime, p, bands);
     this.bloom.strength = 0.48 + bands.low * 0.1;
-    this.world.gates.forEach((g) => (g.visible = this.state !== 'menu'));
+    this.world.gates.forEach((g, i) => {
+      const next = p.nextGate,
+        count = this.track.gates.length;
+      g.visible =
+        this.state !== 'menu' &&
+        (i === next || i === (next + 1) % count || (i === 0 && next >= count - 2));
+    });
     this.racers.forEach((r, i) => {
       const jet = this.jets[i];
       jet.visible = this.state !== 'menu' || i === 0;

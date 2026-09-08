@@ -152,9 +152,10 @@ button:hover {
   line-height: 1.6;
 }
 h1 {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   font-weight: 900;
   font-style: italic;
+  font-synthesis: none;
   font-size: clamp(52px, 6.8vw, 110px);
   letter-spacing: -0.065em;
   line-height: 0.92;
@@ -443,7 +444,7 @@ kbd {
   text-shadow: 0 3px 10px #05090a;
 }
 .speed strong {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   font-weight: 400;
   font-size: 90px;
   font-style: italic;
@@ -527,7 +528,7 @@ dialog::backdrop {
   backdrop-filter: blur(8px);
 }
 dialog h2 {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   font-size: 35px;
   letter-spacing: -1px;
   line-height: 1.1;
@@ -890,4 +891,9 @@ dialog dd {
     transition: none;
     transform: none;
   }
+}
+
+body[data-input='gamepad'] :is(button, summary, a):focus {
+  outline: 2px solid #86fadd;
+  outline-offset: 5px;
 }

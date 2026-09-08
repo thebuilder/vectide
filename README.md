@@ -28,16 +28,21 @@ pnpm build
 | Escape | Pause or resume |
 | Gamepad left stick | Steer; pull back to lift the nose |
 | Gamepad right / left trigger | Throttle / brake |
+| Gamepad X (west face button) | Reset to the last checkpoint |
+| Gamepad Start / Menu | Pause or resume |
+| Arrows / WASD / D-pad / left stick | Navigate menus |
+| Enter / Space / gamepad A | Select focused control |
+| Gamepad B | Back or close dialog |
 
-Pass between both buoys at each gate, in order and in the forward direction. The amber marker, HUD arrow, and minimap identify the next gate. Cutting across the course does not advance checkpoints. Recovery does not advance a checkpoint, and recovered runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
+Pass between both buoys at each gate, in order and in the forward direction. The amber marker, HUD arrow, and minimap identify the next gate. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Recovery does not advance a checkpoint, and recovered runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
 
 ## Courses
 
-- **Palm Circuit**: rolling swells, palm islands, a coastal arch, and a sunset skyline.
+- **Palm Circuit**: rolling swells, palm islands, a coastal arch, and a sweeping approach to the checkered finish.
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 12 gates and two optional ramps. Reference AI solo laps are approximately 62, 64, and 71 seconds on Normal. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Top speed is approximately 80 km/h.
+Each course has 12 gates and two optional ramps. Reference AI solo laps are approximately 46, 67, and 73 seconds on Normal. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Top speed is approximately 80 km/h.
 
 ## Water and handling
 

@@ -9,7 +9,7 @@ it('supports the keel on a solid ramp without generating water spray', () => {
   Object.assign(r, {
     x: ramp.x + ramp.tx * 10,
     z: ramp.z + ramp.tz * 10,
-    y: 2.2,
+    y: ramp.baseHeight + (10 / ramp.length + 0.5) * ramp.height + 0.52,
     yaw: Math.atan2(ramp.tx, ramp.tz),
     vx: ramp.tx * 15,
     vz: ramp.tz * 15,

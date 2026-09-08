@@ -91,7 +91,7 @@ export function createWorld(track: Track): World {
         0.3,
         0.3,
         0,
-        7,
+        11,
         0,
         track.accent,
         glowing(track.accent, 1.5),
@@ -101,14 +101,33 @@ export function createWorld(track: Track): World {
         box(
           gate,
           0.3,
-          7,
+          11,
           0.3,
           ((-g.tz * g.width) / 2) * side,
-          3.5,
+          5.5,
           ((g.tx * g.width) / 2) * side,
           track.accent,
           glowing(track.accent),
         );
+    }
+    if (i === 0) {
+      const banner = new T.Group();
+      banner.position.y = 10;
+      banner.rotation.y = Math.atan2(g.tx, g.tz);
+      for (let x = 0; x < 16; x++)
+        for (let y = 0; y < 2; y++) {
+          const tile = new T.Mesh(
+            new T.BoxGeometry(g.width / 16, 0.7, 0.18),
+            new T.MeshStandardMaterial({
+              color: (x + y) % 2 === 0 ? 0xeafff7 : 0x07171e,
+              emissive: (x + y) % 2 === 0 ? 0x86fadd : 0x000000,
+              emissiveIntensity: 0.35,
+            }),
+          );
+          tile.position.set(((x - 7.5) * g.width) / 16, y * 0.7, 0);
+          banner.add(tile);
+        }
+      gate.add(banner);
     }
     const marker = new T.Group();
     marker.name = 'next';

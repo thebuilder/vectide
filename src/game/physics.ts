@@ -165,8 +165,14 @@ export function stepRacer(
   // A rigid deck constrains the keel, while its slope supplies takeoff velocity.
   const wallHit = collideRampWalls(r, previous, track);
   const deck = rampSurface(r.x, r.z, track);
+  const previousAlong = deck
+    ? (previous.x - deck.ramp.x) * deck.ramp.tx + (previous.z - deck.ramp.z) * deck.ramp.tz
+    : 0;
+  const previousDeck = deck
+    ? deck.ramp.baseHeight + (previousAlong / deck.ramp.length + 0.5) * deck.ramp.height
+    : 0;
   r.onRamp = false;
-  if (!wallHit && deck && r.y <= deck.height + 0.52) {
+  if (!wallHit && deck && previous.y >= previousDeck + 0.52 - 0.03 && r.y <= deck.height + 0.52) {
     const alongVelocity = r.vx * deck.ramp.tx + r.vz * deck.ramp.tz;
     r.y = deck.height + 0.52;
     r.vy = (alongVelocity * deck.ramp.height) / deck.ramp.length;

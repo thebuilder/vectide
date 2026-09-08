@@ -1,8 +1,11 @@
 import * as T from 'three';
 import type { World } from './visuals';
-/** Temporary world-space wire cages lead the solid reveal and are disposed at completion. */
+/** One wire batch; moving model ranges track their live transforms during the reveal. */
 export class ScanIntro {
   private elapsed = 0;
+  private moving: { mesh: T.Mesh; local: T.BufferAttribute; offset: number }[] = [];
+  private positions?: T.Float32BufferAttribute;
+  private point = new T.Vector3();
   private cages: T.LineSegments[] = [];
   private enabled = { value: 1 };
   private radius = { value: 0 };
@@ -24,6 +27,7 @@ export class ScanIntro {
     scene: T.Scene,
     reduced: boolean,
     private world: World,
+    movingRoots: T.Object3D[] = [],
   ) {
     if (reduced) {
       this.active = false;
@@ -41,6 +45,8 @@ export class ScanIntro {
       )
         meshes.push(o);
     });
+    const movingMeshes = new Set<T.Object3D>();
+    movingRoots.forEach((root) => root.traverse((mesh) => movingMeshes.add(mesh)));
     const bounds = new T.Box3();
     const positions: number[] = [];
     const edgeCache = new Map<T.BufferGeometry, T.EdgesGeometry>();
@@ -84,6 +90,12 @@ export class ScanIntro {
         edgeCache.set(mesh.geometry, edges);
       }
       const points = edges.getAttribute('position');
+      if (movingMeshes.has(mesh))
+        this.moving.push({
+          mesh,
+          local: points.clone() as T.BufferAttribute,
+          offset: positions.length / 3,
+        });
       const point = new T.Vector3();
       for (let i = 0; i < points.count; i++) {
         point.fromBufferAttribute(points, i).applyMatrix4(mesh.matrixWorld);
@@ -92,7 +104,8 @@ export class ScanIntro {
     }
     for (const edges of edgeCache.values()) edges.dispose();
     const geometry = new T.BufferGeometry();
-    geometry.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+    this.positions = new T.Float32BufferAttribute(positions, 3).setUsage(T.DynamicDrawUsage);
+    geometry.setAttribute('position', this.positions);
     const wire = new T.LineSegments(
       geometry,
       new T.ShaderMaterial({
@@ -106,6 +119,7 @@ export class ScanIntro {
           'varying vec3 world;uniform float uRadius;uniform float uOpacity;uniform vec3 uOrigin;void main(){float d=distance(world,uOrigin);float reveal=1.-smoothstep(uRadius-50.,uRadius+100.,d);float trail=smoothstep(uRadius-380.,uRadius-30.,d);float a=reveal*trail*uOpacity;if(a<.005)discard;gl_FragColor=vec4(.36,.9,.76,a);}',
       }),
     );
+    wire.frustumCulled = false;
     scene.add(wire);
     this.cages.push(wire);
     if (!bounds.isEmpty())
@@ -119,6 +133,19 @@ export class ScanIntro {
   }
   update(dt: number) {
     if (!this.active || document.hidden) return;
+    // Physics and rider articulation have already run; include every parent transform.
+    if (this.positions && this.moving.length) {
+      this.positions.clearUpdateRanges();
+      for (const { mesh, local, offset } of this.moving) {
+        mesh.updateWorldMatrix(true, false);
+        for (let i = 0; i < local.count; i++) {
+          this.point.fromBufferAttribute(local, i).applyMatrix4(mesh.matrixWorld);
+          this.positions.setXYZ(offset + i, this.point.x, this.point.y, this.point.z);
+        }
+        this.positions.addUpdateRange(offset * 3, local.count * 3);
+      }
+      this.positions.needsUpdate = true;
+    }
     this.elapsed += dt;
     const p = this.progress;
     this.world.waterMaterial.uniforms.uIntro.value = p;
@@ -137,6 +164,8 @@ export class ScanIntro {
       (cage.material as T.Material).dispose();
     }
     this.cages = [];
+    this.moving = [];
+    this.positions = undefined;
     for (const [material, original] of this.materials) {
       material.onBeforeCompile = original.compile;
       material.customProgramCacheKey = original.cacheKey;
