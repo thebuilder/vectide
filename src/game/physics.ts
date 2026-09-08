@@ -202,25 +202,79 @@ export function stepRacer(
     }
   }
 }
+// Horizontal hull outline, matching the loft stations in jets.ts.
+const HULL = [
+  [-0.58, -1.9],
+  [-0.73, -1.55],
+  [-0.79, -0.55],
+  [-0.64, 0.65],
+  [-0.4, 1.5],
+  [-0.035, 2.13],
+  [0.035, 2.13],
+  [0.4, 1.5],
+  [0.64, 0.65],
+  [0.79, -0.55],
+  [0.73, -1.55],
+  [0.58, -1.9],
+];
+function hullPoints(r: Racer) {
+  const c = Math.cos(r.yaw),
+    s = Math.sin(r.yaw);
+  return HULL.map(([x, z]) => ({
+    x: r.x + x * 0.82 * c + z * 0.87 * s,
+    z: r.z - x * 0.82 * s + z * 0.87 * c,
+  }));
+}
 export function collideRacers(a: Racer, b: Racer): boolean {
-  const dx = b.x - a.x,
-    dz = b.z - a.z,
-    d = Math.hypot(dx, dz);
-  if (d >= 2.7 || Math.abs(a.y - b.y) > 2) return false;
-  const nx = d < 0.0001 ? 1 : dx / d,
-    nz = d < 0.0001 ? 0 : dz / d,
-    overlap = (2.7 - d) * 0.5;
-  a.x -= nx * overlap;
-  a.z -= nz * overlap;
-  b.x += nx * overlap;
-  b.z += nz * overlap;
+  if (Math.hypot(b.x - a.x, b.z - a.z) > 4.5 || Math.abs(a.y - b.y) > 0.85) return false;
+  const ah = hullPoints(a),
+    bh = hullPoints(b);
+  let depth = Infinity,
+    nx = 0,
+    nz = 0;
+  for (const hull of [ah, bh])
+    for (let i = 0; i < hull.length; i++) {
+      const p = hull[i],
+        q = hull[(i + 1) % hull.length];
+      const length = Math.hypot(q.x - p.x, q.z - p.z);
+      let x = -(q.z - p.z) / length,
+        z = (q.x - p.x) / length;
+      const ap = ah.map((p) => p.x * x + p.z * z),
+        bp = bh.map((p) => p.x * x + p.z * z);
+      const forward = Math.max(...ap) - Math.min(...bp),
+        backward = Math.max(...bp) - Math.min(...ap);
+      if (forward <= 0 || backward <= 0) return false;
+      const overlap = Math.min(forward, backward);
+      if (backward < forward) {
+        x = -x;
+        z = -z;
+      }
+      if (overlap < depth) {
+        depth = overlap;
+        nx = x;
+        nz = z;
+      }
+    }
+  a.x -= (nx * depth) / 2;
+  a.z -= (nz * depth) / 2;
+  b.x += (nx * depth) / 2;
+  b.z += (nz * depth) / 2;
   const closing = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
   if (closing < 0) {
-    const impulse = -closing * 0.58;
+    // Equal masses, restitution 0.45: a firm bump without adding linear energy.
+    const impulse = -closing * 0.725;
     a.vx -= impulse * nx;
     a.vz -= impulse * nz;
     b.vx += impulse * nx;
     b.vz += impulse * nz;
+    const kick = Math.min(-closing * 0.08, 1.2);
+    for (const [r, sign] of [
+      [a, -1],
+      [b, 1],
+    ] as const) {
+      r.rollVelocity += sign * kick * (nx * Math.cos(r.yaw) - nz * Math.sin(r.yaw));
+      r.pitchVelocity += sign * kick * (nx * Math.sin(r.yaw) + nz * Math.cos(r.yaw));
+    }
   }
   return true;
 }

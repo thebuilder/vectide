@@ -46,12 +46,13 @@ describe('fair racing', () => {
   it('resolves racer impact with equal impulses and no added kinetic energy', () => {
     const a = createRacer(TRACKS[0], 0),
       b = createRacer(TRACKS[0], 1);
-    Object.assign(a, { x: 0, z: 0, y: 0, vx: 10, vz: 0 });
-    Object.assign(b, { x: 2, z: 0, y: 0, vx: 0, vz: 0 });
+    Object.assign(a, { x: 0, z: 0, y: 0, yaw: 0, vx: 10, vz: 0 });
+    Object.assign(b, { x: 1.1, z: 0, y: 0, yaw: 0, vx: 0, vz: 0 });
     expect(collideRacers(a, b)).toBe(true);
     expect(a.vx + b.vx).toBeCloseTo(10);
     expect(a.vx * a.vx + b.vx * b.vx).toBeLessThan(100);
-    expect(b.x - a.x).toBeCloseTo(2.7);
+    expect(b.vx).toBeGreaterThan(7);
+    expect(Math.abs(a.rollVelocity)).toBeGreaterThan(0.5);
   });
   it('requires directional crossing inside the gate and rejects a skipped gate', () => {
     const g = { x: 0, z: 0, tx: 0, tz: 1, width: 20 };
@@ -107,7 +108,8 @@ it('separates racers even when their centers coincide', () => {
     b = createRacer(TRACKS[0], 1);
   Object.assign(b, { x: a.x, y: a.y, z: a.z });
   expect(collideRacers(a, b)).toBe(true);
-  expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeCloseTo(2.7);
+  expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(1.2);
+  expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeLessThan(1.4);
 });
 
 it('launches off a ramp and lands back on the moving water', () => {
@@ -134,4 +136,16 @@ it('launches off a ramp and lands back on the moving water', () => {
   expect(launched).toBe(true);
   expect(landed).toBe(true);
   expect(maxHeight).toBeGreaterThan(4);
+});
+
+it('allows close side-by-side racing but detects bow contact and overhead clearance', () => {
+  const a = createRacer(TRACKS[0], 0),
+    b = createRacer(TRACKS[0], 1);
+  Object.assign(a, { x: 0, z: 0, y: 0, yaw: 0 });
+  Object.assign(b, { x: 1.7, z: 0, y: 0, yaw: 0 });
+  expect(collideRacers(a, b)).toBe(false);
+  Object.assign(b, { x: 0, z: 3.2 });
+  expect(collideRacers(a, b)).toBe(true);
+  Object.assign(b, { x: a.x, z: a.z, y: 2 });
+  expect(collideRacers(a, b)).toBe(false);
 });
