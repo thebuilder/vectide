@@ -12,7 +12,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
 <canvas id="ocean" aria-label="Vectide 3D jet ski racing game"></canvas>
 <div class="screen-grain" aria-hidden="true"></div>
-<header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><svg viewBox="0 0 40 32" aria-hidden="true"><path d="M1 2h9l10 21L30 2h9L20 39Z"/><path d="M0 13h40M0 19h40" class="cut"/></svg>VECTIDE<span class="version">/ 01</span></a><div class="header-right"><span class="live-dot"></span><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound">SOUND OFF</button></div></header>
+<header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><svg viewBox="0 0 40 32" aria-hidden="true"><path d="M1 2h9l10 21L30 2h9L20 39Z"/><path d="M0 13h40M0 19h40" class="cut"/></svg>VECTIDE<span class="version">/ 01</span></a><div class="header-right"><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound">SOUND OFF</button></div></header>
 <main id="menu">
   <div class="hero"><p class="eyebrow">ANALOG SOUL. DIGITAL OCEAN.</p><h1>RIDE THE<br/><span>WAVEFORM.</span></h1><p class="intro">Find your line. Feel every wave.</p></div>
   <section class="launch" aria-label="Race setup">
@@ -42,11 +42,11 @@ app.innerHTML = `
 </section>
 <div id="touch-controls" aria-label="Touch driving controls">
  <div class="touch-steer"><button data-touch-key="left" aria-label="Steer left">◀</button><button data-touch-key="right" aria-label="Steer right">▶</button></div>
- <div class="touch-actions"><div><button data-touch-key="reset">RESET</button><button data-touch-key="lean">LEAN</button></div><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="throttle">GO</button></div></div>
+ <div class="touch-actions"><button data-touch-key="reset" hidden>RESET</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="throttle">GO</button></div></div>
 </div>
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2>Water can wait.</h2><button id="resume" class="primary">KEEP RIDING <span>↗</span></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
-<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="GO button" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt data-keyboard="SHIFT" data-touch="LEAN button" data-gamepad="STICK ↓">SHIFT</dt><dd>Lean back to lift the nose</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump.</p><button id="close-help" class="primary">GOT IT <span>↗</span></button></dialog>
+<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="GO button" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT" data-gamepad="STICK ↓">SHIFT</dt><dd class="touch-hide">Lean back to lift the nose</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump.</p><button id="close-help" class="primary">GOT IT <span>↗</span></button></dialog>
 <dialog id="results"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><button id="again" class="primary">RIDE AGAIN <span>↗</span></button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
 `;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -220,7 +220,7 @@ function drawMap(s: Snapshot) {
 }
 engine.onUpdate = (s) => {
   syncIntro(engine.introStatus.progress);
-  touch.sync(s.state);
+  touch.sync(s);
   const audio = engine.audio.status;
   $('sound').textContent = audio.error || (audio.enabled ? 'SOUND ON' : 'SOUND OFF');
   $('sound').setAttribute('aria-pressed', String(audio.enabled));
@@ -263,7 +263,13 @@ engine.onUpdate = (s) => {
     Math.cos(Math.atan2(gate.x - s.player.x, gate.z - s.player.z) - s.player.yaw),
   );
   $('direction').style.transform = `rotate(${-turn}rad)`;
-  $('notice').textContent = s.missed ? 'MISSED GATE · TURN BACK OR PRESS R' : '';
+  $('notice').textContent = s.missed
+    ? document.body.dataset.input === 'touch'
+      ? 'MISSED GATE · TURN BACK OR TAP RESET'
+      : document.body.dataset.input === 'gamepad'
+        ? 'MISSED GATE · TURN BACK OR PRESS X'
+        : 'MISSED GATE · TURN BACK OR PRESS R'
+    : '';
   const go = s.state === 'racing' && s.time < 0.75;
   $('countdown').hidden = s.state !== 'countdown' && !go;
   $('countdown').textContent = go ? 'GO!' : String(Math.max(1, Math.ceil(s.countdown)));

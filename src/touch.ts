@@ -1,6 +1,8 @@
-import type { Engine, State } from './game/engine';
+import type { Engine, Snapshot } from './game/engine';
 /** Each finger owns one virtual key until release, cancellation, or a state change. */
 export class TouchControls {
+  private stuck = false;
+  private stuckSince: number | null = null;
   private held = new Map<number, string>();
   constructor(
     private engine: Engine,
@@ -14,6 +16,9 @@ export class TouchControls {
       const key = target.dataset.touchKey!;
       if (key === 'reset') {
         engine.reset();
+        this.stuckSince = null;
+        this.stuck = false;
+        target.hidden = true;
         return;
       }
       this.held.set(event.pointerId, key);
@@ -33,7 +38,17 @@ export class TouchControls {
     });
     window.addEventListener('resize', () => this.clear());
   }
-  sync(state: State) {
+  sync(snapshot: Snapshot) {
+    const { state, player, track, time, speed, missed } = snapshot;
+    const stalled = state === 'racing' && this.engine.touchInput.throttle > 0 && speed < 3;
+    this.stuckSince = stalled ? (this.stuckSince ?? time) : null;
+    const offCourse =
+      state === 'racing' &&
+      Math.min(...track.points.map((p) => Math.hypot(p.x - player.x, p.z - player.z))) > 45;
+    if (state !== 'racing' || speed > 6) this.stuck = false;
+    if (this.stuckSince !== null && time - this.stuckSince >= 2) this.stuck = true;
+    const needsReset = state === 'racing' && (missed || offCourse || this.stuck);
+    this.root.querySelector<HTMLElement>('[data-touch-key="reset"]')!.hidden = !needsReset;
     const driving = state === 'racing' || state === 'countdown';
     if (!driving) this.clear();
     this.root.inert = !driving;
@@ -48,7 +63,7 @@ export class TouchControls {
       throttle: Number(pressed.has('throttle')),
       brake: Number(pressed.has('brake')),
       steer: Number(pressed.has('left')) - Number(pressed.has('right')),
-      lean: Number(pressed.has('lean')),
+      lean: 0,
     });
     this.root
       .querySelectorAll<HTMLElement>('[data-touch-key]')

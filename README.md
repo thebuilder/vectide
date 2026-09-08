@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Open the local address printed by Vite. Enable hardware acceleration in your browser. Keyboard, standard gamepad, and multitouch driving are supported. On phones, use the virtual arrow buttons to steer, GO for throttle, BRAKE to slow down, LEAN to lift the nose, and RESET to recover. Pause is at the top right. Portrait menus scroll; landscape keeps the driving view clear.
+Open the local address printed by Vite. Enable hardware acceleration in your browser. Keyboard, standard gamepad, and multitouch driving are supported. On phones, use the virtual arrow buttons to steer, GO for throttle, BRAKE to slow down. RESET appears after a missed gate, when far off course, or after holding GO while stuck for two seconds. Pause is at the top right. Portrait menus scroll; landscape keeps the driving view clear.
 
 ```sh
 pnpm check
