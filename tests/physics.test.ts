@@ -96,7 +96,8 @@ describe('fair racing', () => {
       z: r.z,
     });
     expect(r.finished).toBe(true);
-    expect(r.laps[0]).toBeGreaterThan(45);
+    // Revised Palm route and full-throttle Normal pace run just under 42 seconds.
+    expect(r.laps[0]).toBeGreaterThan(track.id === 'palms' ? 40 : 45);
     expect(r.laps[0]).toBeLessThan(80);
   });
 });

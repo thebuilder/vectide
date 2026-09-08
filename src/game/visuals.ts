@@ -76,10 +76,10 @@ export function createWorld(track: Track): World {
       const base = outlined(new T.CylinderGeometry(0.55, 1.1, 0.9, 6), color);
       base.position.y = 0.5;
       buoy.add(base);
-      const mast = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 3.5, 5), glowing(color, 1.3));
+      const mast = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 3.5, 5), glowing(color, 0.25));
       mast.position.y = 2.2;
       buoy.add(mast);
-      const top = new T.Mesh(new T.OctahedronGeometry(0.6), glowing(color, 1.8));
+      const top = new T.Mesh(new T.OctahedronGeometry(0.6), glowing(color, 0.45));
       top.position.y = 4;
       buoy.add(top);
       gate.add(buoy);
@@ -94,7 +94,7 @@ export function createWorld(track: Track): World {
         11,
         0,
         track.accent,
-        glowing(track.accent, 1.5),
+        glowing(track.accent, 0.2),
       );
       bar.rotation.y = Math.atan2(-g.tx, -g.tz);
       for (const side of [-1, 1])
@@ -107,7 +107,7 @@ export function createWorld(track: Track): World {
           5.5,
           ((g.tx * g.width) / 2) * side,
           track.accent,
-          glowing(track.accent),
+          glowing(track.accent, 0.15),
         );
     }
     if (i === 0) {
@@ -121,7 +121,7 @@ export function createWorld(track: Track): World {
             new T.MeshStandardMaterial({
               color: (x + y) % 2 === 0 ? 0xeafff7 : 0x07171e,
               emissive: (x + y) % 2 === 0 ? 0x86fadd : 0x000000,
-              emissiveIntensity: 0.35,
+              emissiveIntensity: 0.12,
             }),
           );
           tile.position.set(((x - 7.5) * g.width) / 16, y * 0.7, 0);
@@ -131,7 +131,7 @@ export function createWorld(track: Track): World {
     }
     const marker = new T.Group();
     marker.name = 'next';
-    const arrow = new T.Mesh(new T.ConeGeometry(1.2, 2, 3), glowing(0xffbc57, 1.1));
+    const arrow = new T.Mesh(new T.ConeGeometry(1.2, 2, 3), glowing(0xffbc57, 0.35));
     arrow.rotation.x = Math.PI;
     arrow.position.y = 8;
     marker.add(arrow);

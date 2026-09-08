@@ -1,6 +1,6 @@
 # Vectide
 
-A desktop water racer built with Three.js, TypeScript, and Vite. Race five AI riders over three laps, or ride a one-lap time trial. The interface uses the Afterglow palette and square terminal controls.
+A desktop and mobile water racer built with Three.js, TypeScript, and Vite. Race five AI riders over three laps, or ride a one-lap time trial. The interface uses the Afterglow palette and square terminal controls.
 
 ## Run
 
@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Open the local address printed by Vite. Enable hardware acceleration in your browser. Keyboard and standard gamepad driving are supported.
+Open the local address printed by Vite. Enable hardware acceleration in your browser. Keyboard, standard gamepad, and multitouch driving are supported. On phones, use the virtual arrow buttons to steer, GO for throttle, BRAKE to slow down, LEAN to lift the nose, and RESET to recover. Pause is at the top right. Portrait menus scroll; landscape keeps the driving view clear.
 
 ```sh
 pnpm check
@@ -42,7 +42,7 @@ Pass between both buoys at each gate, in order and in the forward direction. The
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 12 gates and two optional ramps. Reference AI solo laps are approximately 46, 67, and 73 seconds on Normal. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Top speed is approximately 80 km/h.
+Each course has 12 gates and two optional ramps. Reference AI solo laps are approximately 42, 56, and 69 seconds on Normal. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Top speed is approximately 80 km/h.
 
 ## Water and handling
 

@@ -1,3 +1,4 @@
+import { TouchControls } from './touch';
 import '@fontsource/roboto/latin-900-italic.css';
 import '@fontsource/roboto/latin-400-italic.css';
 import '@fontsource/roboto/latin-700.css';
@@ -30,18 +31,22 @@ app.innerHTML = `
     </div>
     <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary">HIT THE WATER <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button></div>
   </section>
-  <footer class="menu-footer"><a class="creator-credit" href="https://thebuilder.dk/" target="_blank" rel="noopener noreferrer">by thebuilder.dk</a><button id="replay-intro" class="quiet">REPLAY INTRO</button><span data-keyboard="WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT" data-gamepad="D-PAD / STICK · NAVIGATE · A SELECT · B BACK">WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT</span><button id="help" class="quiet">HOW TO RIDE <span>+</span></button></footer>
+  <footer class="menu-footer"><a class="creator-credit" href="https://thebuilder.dk/" target="_blank" rel="noopener noreferrer">by thebuilder.dk</a><button id="replay-intro" class="quiet">REPLAY INTRO</button><span data-keyboard="WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT" data-touch="TOUCH TO SELECT · VIRTUAL KEYS TO RIDE" data-gamepad="D-PAD / STICK · NAVIGATE · A SELECT · B BACK">WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT</span><button id="help" class="quiet">HOW TO RIDE <span>+</span></button></footer>
 </main>
 <section id="hud" hidden aria-label="Race information">
-  <div class="race-top"><div><span class="label" id="position-label">POSITION</span><strong id="position">01<span>/ 06</span></strong></div><div class="lap-info"><span class="label">LAP <b id="lap">1 / 3</b></span><strong id="timer">00:00.000</strong></div><button id="pause" class="quiet">PAUSE <kbd data-keyboard="ESC" data-gamepad="START">ESC</kbd></button></div>
+  <div class="race-top"><div><span class="label" id="position-label">POSITION</span><strong id="position">01<span>/ 06</span></strong></div><div class="lap-info"><span class="label">LAP <b id="lap">1 / 3</b></span><strong id="timer">00:00.000</strong></div><button id="pause" class="quiet">PAUSE <kbd data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</kbd></button></div>
   <div id="checkpoint" class="checkpoint"><span id="direction">↑</span><div>NEXT GATE <b id="gate">01</b><small id="distance">0 M</small></div></div>
   <div id="notice" class="notice" role="status"></div>
   <div class="race-bottom"><div class="map-wrap"><canvas id="map" width="220" height="190" aria-label="Course map"></canvas><span id="track-name">PALM CIRCUIT</span></div><div class="speed"><strong id="speed">0</strong><span>KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small id="water-state">ON THE WATER</small></div></div>
-  <div class="race-help"><kbd data-keyboard="R" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="SHIFT" data-gamepad="STICK ↓">SHIFT</kbd> LEAN BACK</div>
+  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="SHIFT" data-touch="LEAN button" data-gamepad="STICK ↓">SHIFT</kbd> LEAN BACK</div>
 </section>
+<div id="touch-controls" aria-label="Touch driving controls">
+ <div class="touch-steer"><button data-touch-key="left" aria-label="Steer left">◀</button><button data-touch-key="right" aria-label="Steer right">▶</button></div>
+ <div class="touch-actions"><div><button data-touch-key="reset">RESET</button><button data-touch-key="lean">LEAN</button></div><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="throttle">GO</button></div></div>
+</div>
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2>Water can wait.</h2><button id="resume" class="primary">KEEP RIDING <span>↗</span></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
-<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt data-keyboard="SHIFT" data-gamepad="STICK ↓">SHIFT</dt><dd>Lean back to lift the nose</dd><dt data-keyboard="R" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump.</p><button id="close-help" class="primary">GOT IT <span>↗</span></button></dialog>
+<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="GO button" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt data-keyboard="SHIFT" data-touch="LEAN button" data-gamepad="STICK ↓">SHIFT</dt><dd>Lean back to lift the nose</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump.</p><button id="close-help" class="primary">GOT IT <span>↗</span></button></dialog>
 <dialog id="results"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><button id="again" class="primary">RIDE AGAIN <span>↗</span></button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
 `;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -80,6 +85,7 @@ try {
     '<div class="hero"><h1>Ocean offline.</h1><p>Your browser could not start WebGL. Enable hardware acceleration and reload to ride.</p></div>';
   throw error;
 }
+const touch = new TouchControls(engine, $('touch-controls'));
 const controls = new Controls(engine);
 engine.onFrame = (now) => controls.poll(now);
 document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(
@@ -214,6 +220,7 @@ function drawMap(s: Snapshot) {
 }
 engine.onUpdate = (s) => {
   syncIntro(engine.introStatus.progress);
+  touch.sync(s.state);
   const audio = engine.audio.status;
   $('sound').textContent = audio.error || (audio.enabled ? 'SOUND ON' : 'SOUND OFF');
   $('sound').setAttribute('aria-pressed', String(audio.enabled));

@@ -304,15 +304,21 @@ export function aiInput(
   }
   const turn = angle(desired - r.yaw),
     steer = clamp(turn * 2.4 + avoidance, -1, 1);
-  const cruiseSpeed =
-    (track.wave > 2 ? 20 : 22.5) * { easy: 0.82, normal: 0.94, expert: 1.03 }[difficulty];
-  const targetSpeed = r.approachingGate ? 11 : cruiseSpeed - Math.min(Math.abs(turn) * 10, 16);
+  const pace = {
+    easy: { cruise: track.wave > 2 ? 16.4 : 18.45, corner: 10, maxSlowdown: 16, throttle: 0.82 },
+    normal: { cruise: track.wave > 2 ? 22.5 : 24, corner: 14, maxSlowdown: 18, throttle: 1 },
+    expert: {
+      cruise: track.wave > 2 ? 20.6 : 26,
+      corner: track.wave > 2 ? 10 : 18,
+      maxSlowdown: track.wave > 2 ? 16 : 18,
+      throttle: 1,
+    },
+  }[difficulty];
+  const targetSpeed = r.approachingGate
+    ? 11
+    : pace.cruise - Math.min(Math.abs(turn) * pace.corner, pace.maxSlowdown);
   return {
-    throttle: clamp(
-      (targetSpeed - speed) * 0.4 + 0.65,
-      0,
-      difficulty === 'expert' ? 1 : difficulty === 'easy' ? 0.82 : 0.88 + 0.015 * r.id,
-    ),
+    throttle: clamp((targetSpeed - speed) * 0.4 + 0.65, 0, pace.throttle),
     brake: clamp((speed - targetSpeed - 1) / 12, 0, 0.7),
     steer,
     lean: 0,

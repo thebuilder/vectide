@@ -112,15 +112,19 @@ export class Engine {
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.info.autoReset = false;
-    this.scene.add(new T.HemisphereLight(0xc9faff, 0x382847, 2.3));
-    const sun = new T.DirectionalLight(0xffbea6, 2.6);
-    sun.position.set(-200, 300, -500);
+    this.scene.add(new T.HemisphereLight(0xb5cce5, 0x237b78, 1.25));
+    const sun = new T.DirectionalLight(0xffad86, 2.8);
+    sun.position.set(2300, 360, 500);
     this.scene.add(sun);
+    // Cool sky fill balances the low, warm sunset and gives dark suit facets definition.
+    const fill = new T.DirectionalLight(0x82c8e6, 0.9);
+    fill.position.set(-500, 250, -350);
+    this.scene.add(fill);
     this.world = createWorld(this.track);
     this.scene.add(this.world.group, this.spray.object);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.48, 0.5, 0.8);
+    this.bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.28, 0.25, 1.1);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.resetRacers();
@@ -163,6 +167,7 @@ export class Engine {
   private keyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
   private blur = () => {
     this.keys.clear();
+    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
     if (this.state === 'racing' || this.state === 'countdown') this.pause();
   };
   private visibility = () => {
@@ -218,6 +223,7 @@ export class Engine {
     this.countdown = 3;
     this.resetRacers();
     this.keys.clear();
+    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
     this.state = 'countdown';
     this.audio.countdownCue();
     this.onUpdate(this.snapshot());
@@ -226,10 +232,12 @@ export class Engine {
     if (this.state === 'paused') {
       this.state = this.resumeState;
       this.keys.clear();
+      Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
     } else {
       this.resumeState = this.state;
       this.state = 'paused';
       this.keys.clear();
+      Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
     }
     this.onPause();
     this.onUpdate(this.snapshot());
@@ -239,6 +247,7 @@ export class Engine {
     this.audio.setTitleScreen(true);
     this.state = 'menu';
     this.keys.clear();
+    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
     this.onUpdate(this.snapshot());
   }
   reset() {
@@ -246,19 +255,31 @@ export class Engine {
     recoverRacer(this.racers[0], this.track, this.visualTime);
     this.audio.tone(180);
   }
+  readonly touchInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   private input(): Input {
     const key = (...codes: string[]) => (codes.some((c) => this.keys.has(c)) ? 1 : 0);
     const pad = navigator.getGamepads?.().find((p) => p?.connected);
     const axis = pad?.axes[0] ?? 0;
     return {
-      throttle: Math.max(key('KeyW', 'ArrowUp'), pad?.buttons[7]?.value ?? 0),
+      throttle: Math.max(
+        this.touchInput.throttle,
+        key('KeyW', 'ArrowUp'),
+        pad?.buttons[7]?.value ?? 0,
+      ),
       steer: clamp(
-        key('KeyA', 'ArrowLeft') - key('KeyD', 'ArrowRight') - (Math.abs(axis) > 0.12 ? axis : 0),
+        this.touchInput.steer +
+          key('KeyA', 'ArrowLeft') -
+          key('KeyD', 'ArrowRight') -
+          (Math.abs(axis) > 0.12 ? axis : 0),
         -1,
         1,
       ),
-      brake: Math.max(key('KeyS', 'ArrowDown', 'Space'), pad?.buttons[6]?.value ?? 0),
-      lean: key('ShiftLeft', 'ShiftRight') - (pad?.axes[1] ?? 0) * 0.5,
+      brake: Math.max(
+        this.touchInput.brake,
+        key('KeyS', 'ArrowDown', 'Space'),
+        pad?.buttons[6]?.value ?? 0,
+      ),
+      lean: this.touchInput.lean + key('ShiftLeft', 'ShiftRight') - (pad?.axes[1] ?? 0) * 0.5,
     };
   }
   get riderPose() {
@@ -375,7 +396,7 @@ export class Engine {
       ? { low: 0, mid: 0, high: 0 }
       : this.audio.spectrum.bands;
     this.world.update(this.visualTime, p, bands);
-    this.bloom.strength = 0.48 + bands.low * 0.1;
+    this.bloom.strength = 0.28 + bands.low * 0.05;
     this.world.gates.forEach((g, i) => {
       const next = p.nextGate,
         count = this.track.gates.length;

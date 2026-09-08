@@ -5,13 +5,22 @@ export class Controls {
   private buttons: boolean[] = [];
   private direction = '';
   private repeatAt = 0;
-  private device: 'keyboard' | 'gamepad' | undefined;
+  private device: 'keyboard' | 'gamepad' | 'touch' | undefined;
   constructor(private engine: Engine) {
     window.addEventListener('keydown', this.key, true);
-    window.addEventListener('gamepaddisconnected', () => this.setDevice('keyboard'));
-    this.setDevice('keyboard');
+    window.addEventListener('gamepaddisconnected', () =>
+      this.setDevice(matchMedia('(pointer:coarse)').matches ? 'touch' : 'keyboard'),
+    );
+    window.addEventListener(
+      'pointerdown',
+      (event) => {
+        if (event.pointerType === 'touch') this.setDevice('touch');
+      },
+      true,
+    );
+    this.setDevice(matchMedia('(pointer:coarse)').matches ? 'touch' : 'keyboard');
   }
-  private setDevice(device: 'keyboard' | 'gamepad') {
+  private setDevice(device: 'keyboard' | 'gamepad' | 'touch') {
     if (this.device === device) return;
     this.device = device;
     document.body.dataset.input = device;
@@ -119,7 +128,8 @@ export class Controls {
     if (!pad) {
       this.buttons = [];
       this.direction = '';
-      if (this.device === 'gamepad') this.setDevice('keyboard');
+      if (this.device === 'gamepad')
+        this.setDevice(matchMedia('(pointer:coarse)').matches ? 'touch' : 'keyboard');
       return;
     }
     const pressed = pad.buttons.map((b) => b.pressed || b.value > 0.5);
