@@ -11,6 +11,7 @@ import {
   clamp,
   collideRacers,
   createRacer,
+  crossesGate,
   raceProgress,
   recoverRacer,
   stepRacer,
@@ -251,7 +252,7 @@ export class Engine {
     this.onUpdate(this.snapshot());
   }
   reset() {
-    if (this.state !== 'racing') return;
+    if (this.state !== 'racing' && this.state !== 'finished') return;
     recoverRacer(this.racers[0], this.track, this.visualTime);
     this.audio.tone(180);
   }
@@ -292,7 +293,7 @@ export class Engine {
       state: this.state,
       track: this.track,
       mode: this.mode,
-      time: this.time,
+      time: p.finished ? p.finishTime : this.time,
       countdown: this.countdown,
       player: p,
       racers: this.racers,
@@ -318,17 +319,14 @@ export class Engine {
       if (this.countdown <= 0) this.state = 'racing';
       return;
     }
-    if (this.state !== 'racing') return;
+    if (this.state !== 'racing' && this.state !== 'finished') return;
     this.time += dt;
     this.visualTime += dt;
     const input = this.input();
     for (const r of this.racers) {
       const before = { x: r.x, z: r.z };
-      const control = r.finished
-        ? { throttle: 0, steer: 0, brake: 0.3, lean: 0 }
-        : r.id === 0
-          ? input
-          : aiInput(r, this.track, this.racers, this.difficulty);
+      const control =
+        r.id === 0 && !r.finished ? input : aiInput(r, this.track, this.racers, this.difficulty);
       stepRacer(
         r,
         control,
@@ -337,6 +335,11 @@ export class Engine {
         dt,
         r.id === 0 ? 1 : catchupPower(r, this.racers[0], this.track),
       );
+      // Continue steering through gates after finishing without changing recorded results.
+      if (r.finished && crossesGate(before, r, this.track.gates[r.nextGate])) {
+        r.nextGate = (r.nextGate + 1) % this.track.gates.length;
+        r.approachingGate = false;
+      }
       if (
         updateProgress(r, before, this.track, this.time, this.mode === 'race' ? 3 : 1) &&
         r.id === 0
@@ -350,7 +353,7 @@ export class Engine {
     for (let a = 0; a < this.racers.length; a++)
       for (let b = a + 1; b < this.racers.length; b++)
         collideRacers(this.racers[a], this.racers[b]);
-    if (this.racers[0].finished) {
+    if (this.state === 'racing' && this.racers[0].finished) {
       this.state = 'finished';
       this.onFinish(this.snapshot());
     }
@@ -383,7 +386,7 @@ export class Engine {
         }
       }
     }
-    if (this.state === 'racing' || this.state === 'countdown') {
+    if (this.state === 'racing' || this.state === 'countdown' || this.state === 'finished') {
       this.accumulator += dt;
       while (this.accumulator >= 1 / 120) {
         this.tick(1 / 120);
@@ -449,9 +452,14 @@ export class Engine {
     }
     this.cameraAnchor.set(p.x, p.y, p.z);
     this.camera.lookAt(this.camTarget);
-    if (this.state === 'racing') this.spray.update(dt, this.racers, this.track, this.visualTime);
+    if (this.state === 'racing' || this.state === 'finished')
+      this.spray.update(dt, this.racers, this.track, this.visualTime);
     const control = this.input();
-    this.audio.update(Math.hypot(p.vx, p.vz), control.throttle, this.state === 'racing');
+    this.audio.update(
+      Math.hypot(p.vx, p.vz),
+      p.finished ? 0.65 : control.throttle,
+      this.state === 'racing' || this.state === 'finished',
+    );
     this.intro?.update(dt);
     this.renderer.info.reset();
     this.composer.render();

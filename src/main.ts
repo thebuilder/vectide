@@ -44,6 +44,7 @@ app.innerHTML = `
  <div class="touch-steer"><button data-touch-key="left" aria-label="Steer left">◀</button><button data-touch-key="right" aria-label="Steer right">▶</button></div>
  <div class="touch-actions"><button data-touch-key="reset" hidden>RESET</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="throttle">GO</button></div></div>
 </div>
+<div id="lap-split" hidden role="status" aria-live="polite"></div>
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2>Water can wait.</h2><button id="resume" class="primary">KEEP RIDING <span>↗</span></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
 <dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="GO button" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT" data-gamepad="STICK ↓">SHIFT</dt><dd class="touch-hide">Lean back to lift the nose</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump.</p><button id="close-help" class="primary">GOT IT <span>↗</span></button></dialog>
@@ -138,7 +139,17 @@ document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((button) =>
     });
   }),
 );
+let finishTimer: ReturnType<typeof setTimeout> | undefined;
+let shownLaps = 0;
+let splitUntil = 0;
+function clearFinishPresentation() {
+  clearTimeout(finishTimer);
+  shownLaps = 0;
+  splitUntil = 0;
+  $('lap-split').hidden = true;
+}
 function start() {
+  clearFinishPresentation();
   void engine.audio.start();
   document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((d) => d.close());
   $('menu').hidden = true;
@@ -148,6 +159,7 @@ function start() {
   $('start').blur();
 }
 function menu() {
+  clearFinishPresentation();
   document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((d) => d.close());
   engine.menu();
   $('menu').hidden = false;
@@ -221,6 +233,19 @@ function drawMap(s: Snapshot) {
 engine.onUpdate = (s) => {
   syncIntro(engine.introStatus.progress);
   touch.sync(s);
+  if (s.player.laps.length > shownLaps) {
+    shownLaps = s.player.laps.length;
+    const latest = s.player.laps[shownLaps - 1];
+    const previous = s.player.laps[shownLaps - 2];
+    const delta =
+      previous === undefined
+        ? ''
+        : ` · ${latest < previous ? '−' : '+'}${Math.abs(latest - previous).toFixed(2)}s`;
+    $('lap-split').textContent = `LAP ${shownLaps} · ${formatTime(latest)}${delta}`;
+    splitUntil = performance.now() + 3200;
+  }
+  $('lap-split').hidden =
+    !['racing', 'finished'].includes(s.state) || performance.now() > splitUntil;
   const audio = engine.audio.status;
   $('sound').textContent = audio.error || (audio.enabled ? 'SOUND ON' : 'SOUND OFF');
   $('sound').setAttribute('aria-pressed', String(audio.enabled));
@@ -304,7 +329,9 @@ engine.onFinish = (s) => {
       : best < previous
         ? `NEW LOCAL BEST LAP · ${formatTime(best)}`
         : `LOCAL BEST LAP · ${formatTime(previous)}`;
-  $<HTMLDialogElement>('results').showModal();
+  finishTimer = setTimeout(() => {
+    if (engine.state === 'finished') $<HTMLDialogElement>('results').showModal();
+  }, 1800);
 };
 // Read-only diagnostics support reproducible browser verification without altering race state.
 Object.defineProperty(window, '__vectide', {
