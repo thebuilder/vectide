@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://vectide.thebuilder.dk/sitemap.xml
