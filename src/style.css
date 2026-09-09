@@ -107,8 +107,11 @@ button:hover {
   letter-spacing: 1px;
   color: #adbfbc;
 }
-.header-right .quiet {
+.header-right #sound {
   margin-left: 20px;
+}
+#pause kbd {
+  margin-left: 9px;
 }
 .quiet {
   background: transparent;
@@ -794,6 +797,10 @@ dialog dd {
   min-width: 190px;
 }
 .song-picker summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
   cursor: pointer;
   list-style: none;
   border: 1px solid #39424b;
@@ -808,7 +815,8 @@ dialog dd {
   content: '⌄';
   position: absolute;
   right: 12px;
-  top: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .song-options {
   position: absolute;
@@ -1058,7 +1066,7 @@ dialog {
     display: grid;
     grid-template-columns: 90px minmax(0, 1fr);
     gap: 8px;
-    font-size: 9px;
+    font-size: 11px;
   }
   .song-picker {
     min-width: 0;
@@ -1280,5 +1288,22 @@ body[data-input='touch'] .touch-hide {
   #results[open],
   #results[open]::backdrop {
     animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .playing .masthead {
+    gap: 8px;
+  }
+  .playing .header-right {
+    gap: 6px;
+  }
+  .playing .header-right #sound {
+    margin-left: 0;
+  }
+  .playing .wordmark {
+    font-size: 14px;
+    letter-spacing: 1px;
+    gap: 6px;
   }
 }

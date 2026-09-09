@@ -97,9 +97,9 @@ describe('fair racing', () => {
       z: r.z,
     });
     expect(r.finished).toBe(true);
-    // Revised Palm route and full-throttle Normal pace run just under 42 seconds.
-    expect(r.laps[0]).toBeGreaterThan(track.id === 'palms' ? 40 : 45);
-    expect(r.laps[0]).toBeLessThan(80);
+    // Authored shorelines and wave sections target roughly two-minute laps.
+    expect(r.laps[0]).toBeGreaterThan(95);
+    expect(r.laps[0]).toBeLessThan(170);
   });
 });
 
@@ -123,7 +123,7 @@ it('launches off a ramp and lands back on the moving water', () => {
     vx: ramp.tx * 24,
     vz: ramp.tz * 24,
   });
-  r.y = waterHeight(r.x, r.z, 0, track.wave) + 0.6;
+  r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
   let launched = false,
     landed = false,
     maxHeight = 0;

@@ -16,9 +16,6 @@ export function addLandmarks(parent: T.Group, track: Track): void {
       const cap = outlined(new T.ConeGeometry(6, 8, 4), color, glowing(0xff5b82, 0.3));
       cap.position.set(side * 37, 30, 0);
       landmark.add(cap);
-      const x = gate.x + Math.cos(landmark.rotation.y) * side * 37,
-        z = gate.z - Math.sin(landmark.rotation.y) * side * 37;
-      track.obstacles.push({ x, z, radius: 6 });
     }
     box(landmark, 80, 2, 5, 0, 24, 0, color);
     box(landmark, 78, 0.2, 5.2, 0, 25.2, 0, color, glowing(color, 1));
@@ -37,11 +34,6 @@ export function addLandmarks(parent: T.Group, track: Track): void {
     for (const side of [-1, 1]) box(landmark, 2, 43, 3, side * 35, 20, 0, 0xffbc57);
     box(landmark, 80, 3, 4, 0, 40, 0, 0xffbc57);
     box(landmark, 0.12, 19, 0.12, 0, 29, 0, 0xffbc57);
-    for (let z = -40; z <= 40; z += 10) {
-      const x = gate.x + Math.cos(landmark.rotation.y) * 100 + Math.sin(landmark.rotation.y) * z,
-        worldZ = gate.z - Math.sin(landmark.rotation.y) * 100 + Math.cos(landmark.rotation.y) * z;
-      track.obstacles.push({ x, z: worldZ, radius: 12 });
-    }
   } else {
     // Offshore signal platform, helipad and a glowing radar dish.
     box(landmark, 40, 3, 35, 75, 19, 0, color);
@@ -63,8 +55,5 @@ export function addLandmarks(parent: T.Group, track: Track): void {
     box(landmark, 7, 0.15, 1, 62, 21, 0, color, glowing(color));
     box(landmark, 1, 0.15, 7, 59, 21, 0, color, glowing(color));
     box(landmark, 1, 0.15, 7, 65, 21, 0, color, glowing(color));
-    const x = gate.x + Math.cos(landmark.rotation.y) * 75,
-      z = gate.z - Math.sin(landmark.rotation.y) * 75;
-    track.obstacles.push({ x, z, radius: 25 });
   }
 }

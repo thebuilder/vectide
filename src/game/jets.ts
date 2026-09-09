@@ -164,10 +164,33 @@ export function animateJet(jet: T.Group, r: Racer, dt: number): void {
   if (!rig) return;
   rig.handlebars.rotation.y = r.steer * 0.24;
   rig.handlebars.updateMatrix();
+  const root = rig.rider.root,
+    recovery = r.recovery;
+  if (recovery.phase === 'riding') {
+    root.position.set(0, 0, 0);
+    root.quaternion.identity();
+  } else {
+    jet.updateMatrixWorld(true);
+    const mount =
+      recovery.phase === 'remounting' ? T.MathUtils.smoothstep(recovery.elapsed / 1.35, 0, 1) : 0;
+    const position = new T.Vector3(recovery.x, recovery.y, recovery.z).lerp(
+      jet.getWorldPosition(new T.Vector3()),
+      mount,
+    );
+    root.position.copy(jet.worldToLocal(position));
+    const craft = jet.getWorldQuaternion(new T.Quaternion());
+    const upright = new T.Quaternion()
+      .setFromEuler(new T.Euler(0, recovery.heading, 0))
+      .slerp(craft, mount);
+    root.quaternion.copy(craft).invert().multiply(upright);
+  }
+  root.updateWorldMatrix(true, false);
+  const local = (v: T.Vector3) => root.worldToLocal(jet.localToWorld(v));
   const grips = [-1, 1].map((side) =>
-    new T.Vector3(side * 0.52, 0, 0).applyMatrix4(rig.handlebars.matrix),
+    local(new T.Vector3(side * 0.52, 0, 0).applyMatrix4(rig.handlebars.matrix)),
   );
-  rig.rider.update(r, dt, grips);
+  const feet = [-1, 1].map((side) => local(new T.Vector3(side * 0.51, 0.24, -0.7)));
+  rig.rider.update(r, dt, grips, feet);
 }
 
 /** Copy of contact errors and pose values for the existing read-only runtime diagnostics. */
@@ -181,6 +204,7 @@ export function inspectJet(jet: T.Group) {
     forward: rig.rider.pose.forward,
     lean: rig.rider.pose.lean,
     pelvis: rig.rider.body.position.toArray(),
+    feetWorld: rig.rider.legs.map((leg) => leg.contact.getWorldPosition(new T.Vector3()).toArray()),
     knees: rig.rider.legs.map((leg) => leg.joint.position.toArray()),
     footErrors: rig.rider.legs.map((leg) => tip(leg.lower, 0.53).distanceTo(leg.contact.position)),
     handErrors: rig.rider.arms.map((arm) => tip(arm.lower, 0.405).distanceTo(arm.contact.position)),

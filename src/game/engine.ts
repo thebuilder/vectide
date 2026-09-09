@@ -1,3 +1,4 @@
+import { cancelTrickSetup } from './aerial';
 import * as T from 'three';
 import { ScanIntro } from './intro';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -81,8 +82,8 @@ export class Engine {
       const r = this.racers[i];
       jet.visible = this.state !== 'menu' || i === 0;
       jet.position.set(r.x, r.y, r.z);
-      jet.rotation.set(0, r.yaw, 0);
-      jet.rotateX(-r.pitch);
+      jet.rotation.set(0, r.yaw + r.air.yaw, 0);
+      jet.rotateX(-r.pitch - r.air.pitch);
       jet.rotateZ(r.roll);
       animateJet(jet, r, 0);
     });
@@ -168,7 +169,8 @@ export class Engine {
   private keyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
   private blur = () => {
     this.keys.clear();
-    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
+    cancelTrickSetup(this.racers[0]);
+    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0, trick: 0 });
     if (this.state === 'racing' || this.state === 'countdown') this.pause();
   };
   private visibility = () => {
@@ -224,7 +226,8 @@ export class Engine {
     this.countdown = 3;
     this.resetRacers();
     this.keys.clear();
-    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
+    cancelTrickSetup(this.racers[0]);
+    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0, trick: 0 });
     this.state = 'countdown';
     this.audio.countdownCue();
     this.onUpdate(this.snapshot());
@@ -233,12 +236,14 @@ export class Engine {
     if (this.state === 'paused') {
       this.state = this.resumeState;
       this.keys.clear();
-      Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
+      cancelTrickSetup(this.racers[0]);
+      Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0, trick: 0 });
     } else {
       this.resumeState = this.state;
       this.state = 'paused';
       this.keys.clear();
-      Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
+      cancelTrickSetup(this.racers[0]);
+      Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0, trick: 0 });
     }
     this.onPause();
     this.onUpdate(this.snapshot());
@@ -248,11 +253,12 @@ export class Engine {
     this.audio.setTitleScreen(true);
     this.state = 'menu';
     this.keys.clear();
-    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0 });
+    cancelTrickSetup(this.racers[0]);
+    Object.assign(this.touchInput, { throttle: 0, brake: 0, steer: 0, lean: 0, trick: 0 });
     this.onUpdate(this.snapshot());
   }
   reset() {
-    if (this.state !== 'racing' && this.state !== 'finished') return;
+    if (this.state !== 'racing') return;
     recoverRacer(this.racers[0], this.track, this.visualTime);
     this.audio.tone(180);
   }
@@ -280,7 +286,22 @@ export class Engine {
         key('KeyS', 'ArrowDown', 'Space'),
         pad?.buttons[6]?.value ?? 0,
       ),
-      lean: this.touchInput.lean + key('ShiftLeft', 'ShiftRight') - (pad?.axes[1] ?? 0) * 0.5,
+      lean: clamp(
+        this.touchInput.lean + key('ShiftLeft', 'ShiftRight') - key('KeyC') + (pad?.axes[1] ?? 0),
+        -1,
+        1,
+      ),
+      trick:
+        this.touchInput.trick ||
+        (key('KeyE') || pad?.buttons[5]?.pressed
+          ? Math.abs(axis) > 0.3
+            ? -Math.sign(axis) * 2
+            : key('KeyA', 'ArrowLeft')
+              ? 2
+              : key('KeyD', 'ArrowRight')
+                ? -2
+                : 1
+          : 0),
     };
   }
   get riderPose() {
@@ -345,7 +366,12 @@ export class Engine {
         r.id === 0
       )
         this.audio.tone(r.nextGate === 1 ? 880 : 660, 0.08);
-      if (r.id > 0 && !r.finished && this.time - r.lastProgress > 18) {
+      if (
+        r.id > 0 &&
+        !r.finished &&
+        r.recovery.phase === 'riding' &&
+        this.time - r.lastProgress > 18
+      ) {
         recoverRacer(r, this.track, this.visualTime);
         r.lastProgress = this.time;
       }
@@ -411,8 +437,8 @@ export class Engine {
       const jet = this.jets[i];
       jet.visible = this.state !== 'menu' || i === 0;
       jet.position.set(r.x, r.y, r.z);
-      jet.rotation.set(0, r.yaw, 0);
-      jet.rotateX(-r.pitch);
+      jet.rotation.set(0, r.yaw + r.air.yaw, 0);
+      jet.rotateX(-r.pitch - r.air.pitch);
       jet.rotateZ(r.roll);
       animateJet(jet, r, this.state === 'paused' || this.state === 'finished' ? 0 : dt);
     });
@@ -435,12 +461,8 @@ export class Engine {
       this.camera.position.lerp(desired, 1 - Math.exp(-dt * 8));
       this.camera.position.y = Math.max(
         this.camera.position.y,
-        waterHeight(
-          this.camera.position.x,
-          this.camera.position.z,
-          this.visualTime,
-          this.track.wave,
-        ) + 0.8,
+        waterHeight(this.camera.position.x, this.camera.position.z, this.visualTime, this.track) +
+          0.8,
       );
       this.camTarget.lerp(
         new T.Vector3(p.x + Math.sin(p.yaw) * 4, p.y + 0.6, p.z + Math.cos(p.yaw) * 4),

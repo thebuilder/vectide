@@ -15,7 +15,7 @@ it.each(TRACKS)(
   'six riders finish three laps on $name with scenery collisions',
   (track) => {
     const world = createWorld(track);
-    expect(track.obstacles.length).toBeGreaterThan(5);
+    expect(track.obstacles.length + track.land.length).toBeGreaterThan(5);
     const racers = Array.from({ length: 6 }, (_, i) => createRacer(track, i));
     let hits = 0;
     for (let tick = 0; tick < 120 * 560 && racers.some((r) => !r.finished); tick++) {

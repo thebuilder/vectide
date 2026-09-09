@@ -3,11 +3,12 @@ import { TRACKS } from '../src/game/tracks';
 import { createRacer, stepRacer, crossesGate } from '../src/game/physics';
 import { waterHeight } from '../src/game/water';
 it.each(TRACKS)('ramps point through the next checkpoint on $name', (track) => {
-  track.ramps.forEach((ramp, i) => {
-    const gate = track.gates[i === 0 ? 3 : 9],
+  track.ramps.forEach((ramp) => {
+    expect(ramp.targetGate).toBeDefined();
+    const gate = track.gates[ramp.targetGate!],
       dx = gate.x - ramp.x,
       dz = gate.z - ramp.z;
-    expect(dx * ramp.tz - dz * ramp.tx).toBeCloseTo(0, 6);
+    expect(Math.abs(dx * ramp.tz - dz * ramp.tx)).toBeLessThan(gate.width / 2 - 2);
     expect(dx * ramp.tx + dz * ramp.tz).toBeGreaterThan(ramp.length / 2);
     expect(ramp.tx * gate.tx + ramp.tz * gate.tz).toBeGreaterThan(0);
     const r = createRacer(track, 0);
@@ -18,7 +19,7 @@ it.each(TRACKS)('ramps point through the next checkpoint on $name', (track) => {
       vx: ramp.tx * 22,
       vz: ramp.tz * 22,
     });
-    r.y = waterHeight(r.x, r.z, 0, track.wave) + 0.6;
+    r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
     let passed = false;
     for (let frame = 0; frame < 120 * 7 && !passed; frame++) {
       const previous = { x: r.x, z: r.z };
@@ -39,7 +40,7 @@ it.each(TRACKS)('enters the submerged slope without a vertical snap on $name', (
       vx: ramp.tx * 18,
       vz: ramp.tz * 18,
     });
-    r.y = waterHeight(r.x, r.z, 0, track.wave) + 0.6;
+    r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
     let contacted = false;
     for (let i = 0; i < 120 * 4; i++) {
       const before = r.y,

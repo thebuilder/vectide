@@ -125,11 +125,11 @@ export class VoxelSpray {
         this.positions[j] += this.velocities[j] * dt * 0.3;
         this.positions[j + 2] += this.velocities[j + 2] * dt * 0.3;
         this.positions[j + 1] =
-          waterHeight(this.positions[j], this.positions[j + 2], time, track.wave) + 0.06;
+          waterHeight(this.positions[j], this.positions[j + 2], time, track) + 0.06;
       } else {
         this.velocities[j + 1] -= 9.81 * dt;
         for (let k = 0; k < 3; k++) this.positions[j + k] += this.velocities[j + k] * dt;
-        const surface = waterHeight(this.positions[j], this.positions[j + 2], time, track.wave);
+        const surface = waterHeight(this.positions[j], this.positions[j + 2], time, track);
         if (this.positions[j + 1] < surface && this.velocities[j + 1] < 0) {
           this.foam[i] = 1;
           this.sizes[i] *= 1.8;

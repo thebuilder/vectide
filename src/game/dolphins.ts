@@ -70,7 +70,7 @@ export function createDolphins(track: Track) {
         const z = location.z + location.tz * (age * 9 - 25) + location.tx * (19 + i * 3);
         const phase = Math.min(age / 2.5, 1),
           jump = age < 2.5 ? Math.sin(phase * Math.PI) * 4 : -Math.min((age - 2.5) * 1.5, 6);
-        animal.position.set(x, waterHeight(x, z, t, track.wave) + jump - 0.5, z);
+        animal.position.set(x, waterHeight(x, z, t, track) + jump - 0.5, z);
         animal.rotation.set(
           -Math.atan2(age < 2.5 ? Math.cos(phase * Math.PI) * 5 : -1.5, 9),
           Math.atan2(location.tx, location.tz),

@@ -27,13 +27,20 @@ export function batchStatic(root: T.Group, excluded: T.Object3D[]): void {
       m.opacity,
       m.transparent,
       m.side,
+      m.vertexColors,
+      m.toneMapped,
+      m.name,
+      m.polygonOffset,
+      m.polygonOffsetFactor,
+      m.polygonOffsetUnits,
       m instanceof T.MeshStandardMaterial
         ? `${m.emissive.getHex()},${m.emissiveIntensity},${m.roughness},${m.metalness}`
         : '',
     ].join('/');
     let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
     Object.keys(g.attributes).forEach((a) => {
-      if (a !== 'position' && a !== 'normal') g.deleteAttribute(a);
+      if (a !== 'position' && a !== 'normal' && !(a === 'color' && m.vertexColors))
+        g.deleteAttribute(a);
     });
     g.applyMatrix4(o.matrixWorld);
     const batch = batches.get(key) ?? { geometries: [], material: m, lines };
