@@ -82,3 +82,7 @@ pnpm test:browser
 Browser captures are in `artifacts/`. Hardware gamepad feel and browsers beyond Chromium still need hands-on verification. Before the First Credit loops on the title screen when sound is enabled. Starting a race switches to the selected race song; returning to the title screen restores its theme. The racing soundtrack includes Apex Run, Crimson Slipstream, and Neon Slipway. Choose the starting song in the menu; songs advance in a looping playlist. Hit the Water enables audio when starting a race, and SOUND toggles music plus engine effects. Pause freezes playback. A dedicated music analyser extracts bass, mid, and treble energy with adaptive peaks and smooth decay: nearby course lights, sun scale, bloom, wave-crest highlights and reflections respond without changing collision geometry or wave physics. Reduced-motion preferences disable the additional visual modulation. Music files load on demand.
 
 Visual references: [Afterglow](https://afterglow.thebuilder.dk/), [Vector Wars](https://github.com/thebuilder/vector-wars), [thebuilder.dk](https://github.com/thebuilder/thebuilder-dk). Gameplay reference: [MoeGamer's Wave Race 64 review](https://moegamer.net/2018/02/09/n64-essentials-wave-race-64/).
+
+## Web Analytics
+
+Vercel Web Analytics initializes once from the app entry point. Enable Web Analytics for the Vercel project, then deploy this change to collect page views. Local Vite development uses the SDK's development mode.
