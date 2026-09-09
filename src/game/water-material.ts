@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { Track } from './tracks';
-import { waveGLSL } from './water';
+import { waterGLSL } from './water';
 
 export function createWaterMaterial(track: Track): T.ShaderMaterial {
   return new T.ShaderMaterial({
@@ -17,7 +17,7 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
       uniform float uAmplitude;
       varying vec3 vWorld;
       varying float vHeight;
-      ${waveGLSL}
+      ${waterGLSL(track)}
       void main() {
         vec4 world = modelMatrix * vec4(position, 1.);
         world.y = heightAt(world.xz) * uAmplitude;

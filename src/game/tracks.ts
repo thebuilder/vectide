@@ -1,3 +1,5 @@
+import { COURSE_LAYOUTS, fitGateToShore, landmarkObstacles, type Landform } from './course-layout';
+import { waveZoneWeight, type WaveZone } from './water';
 import { CatmullRomCurve3, Vector3 } from 'three';
 
 export interface Point {
@@ -13,6 +15,7 @@ export interface Ramp extends Gate {
   baseHeight: number;
   length: number;
   height: number;
+  targetGate?: number;
 }
 export interface Obstacle extends Point {
   radius: number;
@@ -28,12 +31,14 @@ export interface Track {
   horizon: string;
   water: string;
   wave: number;
+  waveZones?: WaveZone[];
   points: Point[];
   gates: Gate[];
   landmark: Gate;
   dolphin: Gate;
   ramps: Ramp[];
   obstacles: Obstacle[];
+  land: Landform[];
   length: number;
 }
 const definitions = [
@@ -41,133 +46,112 @@ const definitions = [
     id: 'palms',
     name: 'PALM CIRCUIT',
     subtitle: 'The golden hour',
-    description: 'Wide water. Palm islands. A sweeping approach to the sunset finish.',
+    description:
+      'Carve around palm islands, ride the reef swell, and link two jumps above a sheltered lagoon.',
     sea: 'ROLLING',
     accent: '#86fadd',
     sky: '#080a20',
     horizon: '#ad385e',
     water: '#073438',
     wave: 1.35,
-    route: [
-      [0, 0],
-      [130, -280],
-      [460, -370],
-      [680, -160],
-      [670, 190],
-      [420, 350],
-      [140, 360],
-      [-100, 370],
-      [-230, 240],
-      [-110, 140],
-    ],
   },
   {
     id: 'harbor',
     name: 'PORT AFTERDARK',
     subtitle: 'Between the iron giants',
-    description: 'Thread the docks beneath cranes and violet city lights.',
+    description:
+      'Thread the docks, cross the harbor swell, and line up the double jump beneath violet city lights.',
     sea: 'CHOPPY',
     accent: '#b890ff',
     sky: '#07081d',
     horizon: '#402465',
     water: '#151f3e',
     wave: 1.65,
-    route: [
-      [0, 0],
-      [0, -300],
-      [250, -430],
-      [500, -290],
-      [470, -40],
-      [700, 100],
-      [550, 360],
-      [280, 290],
-      [100, 430],
-      [-170, 240],
-      [-200, 30],
-    ],
   },
   {
     id: 'storm',
     name: 'STORM SIGNAL',
     subtitle: 'Out past the breakwater',
-    description: 'Heavy swell. Offshore turbines. Ride the face of the storm.',
+    description:
+      'Heavy swell between rocky islands. Find the sheltered line, or launch off the exposed wave trains.',
     sea: 'ROUGH',
     accent: '#ffbc57',
     sky: '#080f20',
     horizon: '#344c67',
     water: '#0a2839',
     wave: 2.3,
-    route: [
-      [0, 0],
-      [100, -320],
-      [430, -420],
-      [700, -170],
-      [560, 130],
-      [700, 400],
-      [320, 480],
-      [100, 240],
-      [-200, 350],
-      [-380, 60],
-      [-260, -200],
-    ],
   },
 ];
 export const TRACKS: Track[] = definitions.map((d) => {
+  const layout = COURSE_LAYOUTS[d.id as keyof typeof COURSE_LAYOUTS];
   const curve = new CatmullRomCurve3(
-    d.route.map(
-      ([x, z]) =>
-        new Vector3(
-          x * (d.id === 'storm' ? 0.24 : d.id === 'harbor' ? 0.32 : 0.33),
-          0,
-          z * (d.id === 'storm' ? 0.24 : d.id === 'harbor' ? 0.32 : 0.33),
-        ),
-    ),
+    layout.route.map(([x, z]) => new Vector3(x, 0, z)),
     true,
     'catmullrom',
     0.3,
   );
   const points = curve
-    .getSpacedPoints(640)
+    .getSpacedPoints(960)
     .slice(0, -1)
     .map((p) => ({ x: p.x, z: p.z }));
   const at = (fraction: number): Gate => {
     const p = curve.getPointAt(fraction),
       t = curve.getTangentAt(fraction);
-    return { x: p.x, z: p.z, tx: t.x, tz: t.z, width: d.id === 'harbor' ? 25 : 32 };
+    // The jump straight leaves room to pass each optional ramp on either side.
+    const exposed = layout.zones.some(
+      (zone) => zone.swell > 0 && waveZoneWeight(p.x, p.z, zone) > 0.15,
+    );
+    const width = exposed
+      ? 56
+      : fraction > 0.55 && fraction < 0.8
+        ? 46
+        : d.id === 'harbor'
+          ? 24
+          : 32;
+    return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
-  const gates = Array.from({ length: 12 }, (_, i) => at(i / 12));
-  // Aim the start grid down the opening leg now that checkpoints are farther apart.
-  const openingX = gates[1].x - gates[0].x,
-    openingZ = gates[1].z - gates[0].z;
-  const openingLength = Math.hypot(openingX, openingZ);
-  gates[0].tx = openingX / openingLength;
-  gates[0].tz = openingZ / openingLength;
-  const ramps = [7 / 32, 22 / 32].map((fraction) => {
-    const anchor = at(fraction);
-    const x = anchor.x - anchor.tz * 11,
-      z = anchor.z + anchor.tx * 11;
-    const target = gates[Math.ceil(fraction * gates.length) % gates.length];
-    const distance = Math.hypot(target.x - x, target.z - z);
-    return {
-      ...anchor,
-      x: x - ((target.x - x) / distance) * 11,
-      z: z - ((target.z - z) / distance) * 11,
-      tx: (target.x - x) / distance,
-      tz: (target.z - z) / distance,
-      width: 9,
-      length: 42,
-      baseHeight: -4.08,
-      height: 7.98,
+  const gates = Array.from({ length: 24 }, (_, i) => fitGateToShore(at(i / 24), layout.land));
+  const ramps: Ramp[] = layout.rampCenters.map(([x, z, tx = -1, tz = 0]) => {
+    const early = d.id === 'palms' && tz === -1;
+    const ramp = {
+      x,
+      z,
+      tx,
+      tz,
+      width: early ? 9 : 12,
+      length: early ? 26 : 40,
+      baseHeight: -4.2,
+      height: early ? 7 : 9.5,
     };
+    const target = gates
+      .map((gate, index) => ({
+        index,
+        along: (gate.x - x) * ramp.tx + (gate.z - z) * ramp.tz,
+        side: Math.abs(-(gate.x - x) * ramp.tz + (gate.z - z) * ramp.tx),
+        gate,
+      }))
+      .filter(
+        (v) =>
+          v.along > ramp.length / 2 &&
+          v.along < 210 &&
+          v.side < v.gate.width / 2 - 2 &&
+          v.gate.tx * ramp.tx + v.gate.tz * ramp.tz > 0.5,
+      )
+      .sort((a, b) => a.along - b.along)[0];
+    return { ...ramp, targetGate: target?.index };
   });
+  const landmark = at(d.id === 'palms' ? 0.42 : d.id === 'harbor' ? 0.46 : 0.36);
   return {
     ...d,
+    wave: d.id === 'palms' ? 0.8 : d.id === 'harbor' ? 0.95 : 1.25,
+    waveZones: layout.zones,
     points,
     gates,
     ramps,
-    landmark: at(d.id === 'harbor' ? 2 / 32 : 13 / 32),
-    dolphin: at(10 / 32),
-    obstacles: [],
+    land: layout.land,
+    landmark,
+    dolphin: at(0.22),
+    obstacles: landmarkObstacles(d.id, landmark),
     length: curve.getLength(),
   };
 });

@@ -1,3 +1,4 @@
+import { stepRiderLoad } from '../src/game/rider-load';
 import { describe, it, expect } from 'vitest';
 import { Vector3, Euler } from 'three';
 import {
@@ -20,6 +21,8 @@ describe('rider reactions', () => {
     a.steer = 1;
     b.steer = -1;
     for (let i = 0; i < 60; i++) {
+      stepRiderLoad(a, { throttle: 1, steer: 1, brake: 0, lean: 0 }, 1 / 60);
+      stepRiderLoad(b, { throttle: 1, steer: -1, brake: 0, lean: 0 }, 1 / 60);
       stepRiderPose(left, a, 1 / 60);
       stepRiderPose(right, b, 1 / 60);
     }
@@ -139,9 +142,15 @@ it('leans the torso back on command and returns to neutral on release', () => {
   const r = createRacer(TRACKS[0], 0),
     pose = createRiderPose();
   r.lean = 1;
-  for (let i = 0; i < 60; i++) stepRiderPose(pose, r, 1 / 60);
+  for (let i = 0; i < 60; i++) {
+    stepRiderLoad(r, { throttle: 0, steer: 0, brake: 0, lean: r.lean }, 1 / 60);
+    stepRiderPose(pose, r, 1 / 60);
+  }
   expect(pose.forward).toBeLessThan(-0.2);
   r.lean = 0;
-  for (let i = 0; i < 60; i++) stepRiderPose(pose, r, 1 / 60);
+  for (let i = 0; i < 60; i++) {
+    stepRiderLoad(r, { throttle: 0, steer: 0, brake: 0, lean: r.lean }, 1 / 60);
+    stepRiderPose(pose, r, 1 / 60);
+  }
   expect(pose.forward).toBeCloseTo(0.12, 2);
 });

@@ -1,6 +1,5 @@
 import * as T from 'three';
 import type { Spectrum } from './spectrum';
-import { createMusicVisuals } from './music-visuals';
 import { batchStatic } from './batch';
 import { CELL, waterHeight } from './water';
 import { createWaterMaterial } from './water-material';
@@ -8,8 +7,9 @@ import { type Track } from './tracks';
 import { type Racer } from './physics';
 
 import { box, dark, glowing, outlined } from './geometry';
-import { createPalm } from './palm';
+import { addTerrain } from './terrain-visuals';
 import { createDolphins } from './dolphins';
+import { createMusicVisuals } from './music-visuals';
 import { addLandmarks } from './landmarks';
 export interface World {
   group: T.Group;
@@ -188,90 +188,23 @@ export function createWorld(track: Track): World {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  track.obstacles.length = 0;
-  // Landmarks sit outside the racing corridor and have matching collision volumes.
-  for (let i = 0; i < track.points.length; i += 48) {
-    const p = track.points[i],
-      next = track.points[(i + 1) % track.points.length],
-      dx = next.x - p.x,
-      dz = next.z - p.z,
-      len = Math.hypot(dx, dz),
-      tx = dx / len,
-      tz = dz / len;
-    for (const side of [i % 96 === 0 ? -1 : 1]) {
-      const offset = track.id === 'harbor' ? 42 + random() * 10 : 65 + random() * 35;
-      const x = p.x - tz * offset * side,
-        z = p.z + tx * offset * side;
-      const clearanceRadius = track.id === 'palms' ? 18 : track.id === 'harbor' ? 17 : 8;
-      if (
-        track.points.some(
-          (v) => Math.hypot(v.x - x, v.z - z) < clearanceRadius + track.gates[0].width / 2 + 3,
-        )
-      )
-        continue;
-      if (track.id === 'palms') {
-        const island = outlined(new T.CylinderGeometry(14, 19, 3, 7), track.accent);
-        island.position.set(x, 0.5, z);
-        group.add(island);
-        track.obstacles.push({ x, z, radius: 18 });
-        island.scale.set(0.7 + random() * 0.5, 0.7 + random() * 0.7, 0.7 + random() * 0.5);
-        island.rotation.y = random() * 6.28;
-        for (let j = 0; j < 1 + Math.floor(random() * 4); j++) {
-          const palm = createPalm(7 + random() * 7, 1 + random() * 2, random() * 6.28);
-          palm.position.set(x + (random() - 0.5) * 12, 2, z + (random() - 0.5) * 12);
-          group.add(palm);
-        }
-        if (i % 144 === 0) {
-          const rock = outlined(new T.IcosahedronGeometry(6, 0), 0x766784);
-          rock.position.set(x + 8, 4, z);
-          rock.scale.set(1, 1.4, 0.7);
-          group.add(rock);
-        }
-      } else if (track.id === 'harbor') {
-        box(group, 25, 3, 25, x, 0, z, track.accent);
-        track.obstacles.push({ x, z, radius: 17 });
-        const height = 10 + random() * 30;
-        box(group, 12, height, 14, x, height / 2 + 1, z, track.accent);
-        if (i % 144 === 0) {
-          const crane = new T.Group();
-          crane.position.set(x, 0, z);
-          group.add(crane);
-          box(crane, 1.2, 52, 1.2, 0, 26, 0, 0xffbc57);
-          box(crane, 45, 1.2, 1.2, 8, 51, 0, 0xffbc57);
-          box(crane, 0.13, 20, 0.13, 28, 41, 0, 0xffbc57);
-        }
-      } else {
-        const platform = outlined(new T.CylinderGeometry(6, 8, 4, 8), track.accent);
-        platform.position.set(x, 1, z);
-        group.add(platform);
-        track.obstacles.push({ x, z, radius: 8 });
-        const pole = new T.Mesh(new T.CylinderGeometry(0.6, 1.4, 65, 7), dark);
-        pole.position.set(x, 33, z);
-        group.add(pole);
-        const rotor = new T.Group();
-        rotor.position.set(x, 65, z);
-        group.add(rotor);
-        turbines.push(rotor);
-        for (let k = 0; k < 3; k++) {
-          const arm = new T.Group();
-          arm.rotation.z = (k * Math.PI * 2) / 3;
-          box(arm, 1.4, 25, 0.6, 0, 12, 0, track.accent);
-          rotor.add(arm);
-        }
-      }
-    }
-  }
+  turbines.push(...addTerrain(group, track));
   // Skyline and angular mountains frame the course, well beyond the racing water.
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * Math.PI * 2,
+  const skylineBounds: T.Box3[] = [];
+  const skylineCount = track.id === 'harbor' ? 22 : track.id === 'palms' ? 5 : 8;
+  for (let i = 0; i < skylineCount; i++) {
+    const a = (i / skylineCount) * Math.PI * 2,
       radius = 650 + random() * 350,
       x = 220 + Math.cos(a) * radius,
       z = Math.sin(a) * radius;
-    if (track.id === 'storm') {
-      const geo = new T.ConeGeometry(110 + random() * 150, 100 + random() * 170, 4);
-      const mountain = outlined(geo, 0x43677b);
-      mountain.position.set(x, 40, z);
+    if (track.id !== 'harbor') {
+      const geo = new T.ConeGeometry(100 + random() * 100, 35 + random() * 65, 7);
+      const mountain = outlined(geo, track.accent);
+      mountain.position.set(x, 8, z);
+      mountain.scale.set(1.4, 1, 0.65);
+      mountain.rotation.y = random() * Math.PI;
       group.add(mountain);
+      skylineBounds.push(new T.Box3().setFromObject(mountain).expandByScalar(25));
     } else {
       const h = 35 + random() * 150,
         w = 18 + random() * 30;
@@ -293,6 +226,7 @@ export function createWorld(track: Track): World {
       } else box(tower, w, h, w * 0.65, 0, h / 2, 0, track.accent);
       for (let y = 12; i % 3 === 2 && y < h; y += 18)
         box(group, w + 0.2, 0.2, w + 0.2, x, y, z, track.accent, glowing(track.accent, 0.6));
+      skylineBounds.push(new T.Box3().setFromObject(tower).expandByScalar(25));
     }
   }
   // Sparse stars, seeded so course switching is stable.
@@ -314,7 +248,7 @@ export function createWorld(track: Track): World {
     ),
   );
   addLandmarks(group, track);
-  const musicVisuals = createMusicVisuals(track);
+  const musicVisuals = createMusicVisuals(track, skylineBounds);
   group.add(musicVisuals.group);
   const dolphins = createDolphins(track);
   group.add(dolphins.group);
@@ -342,16 +276,17 @@ export function createWorld(track: Track): World {
     gates,
     turbines,
     update(t, player, bands = { low: 0, mid: 0, high: 0 }) {
-      musicVisuals.update(bands);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {
-        material.color.copy(base.color).multiplyScalar(1 + outlinePulse * 2.5);
-        material.opacity = base.opacity + (1 - base.opacity) * outlinePulse;
+        const sand = material.name === 'sand-wire';
+        material.color.copy(base.color).multiplyScalar(1 + outlinePulse * (sand ? 0.25 : 2.5));
+        material.opacity = base.opacity + ((sand ? 0.42 : 1) - base.opacity) * outlinePulse;
       });
       pulseMaterials.forEach(
         (base, material) =>
           (material.emissiveIntensity = base * (1 + bands.low * 0.5 + bands.high * 0.15)),
       );
+      musicVisuals.update(bands);
       sun.scale.setScalar(1 + bands.low * 0.035);
       waterMaterial.uniforms.uMusic.value.set(bands.low, bands.mid, bands.high);
       dolphins.update(t, player);
@@ -360,7 +295,7 @@ export function createWorld(track: Track): World {
       water.position.z = Math.floor(player.z / CELL) * CELL;
       gates.forEach((g, i) => {
         const p = track.gates[i];
-        g.position.y = i === 0 ? 0 : waterHeight(p.x, p.z, t, track.wave);
+        g.position.y = i === 0 ? 0 : waterHeight(p.x, p.z, t, track);
         g.getObjectByName('next')!.visible = i === player.nextGate;
       });
       turbines.forEach((r, i) => (r.rotation.z = t * 0.3 + i));

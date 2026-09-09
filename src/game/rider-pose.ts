@@ -34,13 +34,14 @@ export function stepRiderPose(p: RiderPose, r: Racer, dt: number): void {
         ? 0.18
         : 0.06
       : clamp(0.1 + vertical * 0.008 + speed * 0.0008 + p.impact * 0.022, 0.04, 0.36);
-  const lean = r.steer * clamp(speed / 16, 0, 1) * 0.19;
+  const lean = r.body.side * 0.78;
   const forward = clamp(
-    0.12 + acceleration * 0.002 + r.pitch * 0.85 - r.lean * 0.38 + (r.wet === 0 ? 0.04 : 0),
+    0.12 + acceleration * 0.002 + r.pitch * 0.85 - r.body.fore * 0.42 + (r.wet === 0 ? 0.04 : 0),
     -0.4,
     0.65,
   );
-  p.compression += (compression - p.compression) * (1 - Math.exp(-dt * 16));
+  p.compression +=
+    (Math.max(compression, r.body.compression) - p.compression) * (1 - Math.exp(-dt * 16));
   p.lean += (lean - p.lean) * (1 - Math.exp(-dt * 11));
   p.forward += (forward - p.forward) * (1 - Math.exp(-dt * 9));
   p.previousVy = r.vy;

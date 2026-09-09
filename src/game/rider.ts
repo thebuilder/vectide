@@ -23,7 +23,7 @@ export interface RiderRig {
   legs: Limb[];
   arms: Limb[];
   pose: RiderPose;
-  update: (r: Racer, dt: number, grips: T.Vector3[]) => void;
+  update: (r: Racer, dt: number, grips: T.Vector3[], deckFeet?: T.Vector3[]) => void;
 }
 function material(color: T.ColorRepresentation, roughness = 0.6, metalness = 0.05) {
   return new T.MeshStandardMaterial({ color, roughness, metalness, flatShading: true });
@@ -224,25 +224,68 @@ export function createRider(color: string, number: number): RiderRig {
     legs,
     arms,
     pose,
-    update(r, dt, grips) {
+    update(r, dt, grips, deckFeet) {
       stepRiderPose(pose, r, dt);
       body.position.set(
         pose.lean,
         1.12 - pose.compression,
         -0.27 - Math.max(0, pose.forward - 0.12) * 0.12 - r.lean * 0.12,
       );
-      body.rotation.set(pose.forward, r.steer * 0.07, -pose.lean * 1.25 - r.roll * 0.2);
+      body.rotation.set(pose.forward, r.steer * 0.12, -pose.lean * 0.9 - r.roll * 0.2);
+      const recovery = r.recovery;
+      const detached = recovery.phase !== 'riding';
+      const mount =
+        recovery.phase === 'remounting' ? T.MathUtils.smoothstep(recovery.elapsed / 1.35, 0, 1) : 0;
+      if (detached) {
+        const falling = recovery.phase === 'falling';
+        const settle = falling ? T.MathUtils.smoothstep(recovery.elapsed, 0, 0.7) : 1;
+        body.position.set(
+          0,
+          T.MathUtils.lerp(1.02, 0.16, settle) * (1 - mount) + (1.12 - pose.compression) * mount,
+          -0.15 * mount,
+        );
+        body.rotation.set(
+          1.1 * settle * (1 - mount) + pose.forward * mount,
+          0,
+          falling ? Math.sin(recovery.elapsed * 7) * 0.25 : 0,
+        );
+      }
+      const footTarget = (side: number) => {
+        const extension = Math.max(0, r.body.foot * side);
+        const riding = new T.Vector3(
+          side * (0.51 + extension * 0.32),
+          0.24 - extension * 0.56,
+          -0.7 + extension * 0.12,
+        );
+        if (!detached) return riding;
+        const swim = new T.Vector3(
+          side * 0.28,
+          -0.15 + Math.sin(recovery.elapsed * 8 + side) * 0.12,
+          -0.85,
+        );
+        return swim.lerp(deckFeet?.[side < 0 ? 0 : 1] ?? riding, mount);
+      };
+      const handTarget = (i: number) => {
+        if (!detached) return grips[i];
+        const side = i === 0 ? -1 : 1;
+        const swim = new T.Vector3(
+          side * (0.48 + Math.sin(recovery.elapsed * 5 + side) * 0.08),
+          0.14,
+          0.65,
+        );
+        return swim.lerp(grips[i], recovery.phase === 'remounting' ? Math.min(1, mount * 2.5) : 0);
+      };
       fitRootToContacts(
         body.position,
         [-1, 1].flatMap((side, i) => [
           {
             offset: new T.Vector3(side * 0.17, 0, 0).applyEuler(body.rotation),
-            target: new T.Vector3(side * 0.51, 0.24, -0.7),
+            target: footTarget(side),
             reach: 1.08 - 0.003,
           },
           {
             offset: new T.Vector3(side * 0.29, 0.535, 0).applyEuler(body.rotation),
-            target: grips[i],
+            target: handTarget(i),
             reach: 0.81 - 0.003,
           },
         ]),
@@ -254,14 +297,14 @@ export function createRider(color: string, number: number): RiderRig {
           leg = legs[i],
           arm = arms[i];
         const hip = new T.Vector3(side * 0.17, 0, 0).applyMatrix4(body.matrix),
-          foot = new T.Vector3(side * 0.51, 0.24, -0.7);
+          foot = footTarget(side);
         const knee = solveJoint(hip, foot, 0.55, 0.53, new T.Vector3(side * 0.65, 0.55, 0.12));
         placeBone(leg.upper, hip, knee);
         placeBone(leg.lower, knee, foot);
         leg.joint.position.copy(knee);
         leg.contact.position.copy(foot);
         const shoulder = new T.Vector3(side * 0.29, 0.535, 0).applyMatrix4(body.matrix),
-          hand = grips[i];
+          hand = handTarget(i);
         const elbow = solveJoint(
           shoulder,
           hand,

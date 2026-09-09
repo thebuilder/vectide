@@ -1,3 +1,8 @@
+import { createAerialState, stepAerial, landAerial, type AerialState } from './aerial';
+import { createRecoveryState, stepRecovery, type RecoveryState } from './recovery';
+import { hullPoints, polygonContact } from './hull-contact';
+import { collideTerrain } from './terrain-collision';
+import { createRiderLoad, stepRiderLoad, type RiderLoad } from './rider-load';
 import { collideRampWalls } from './ramp-collision';
 import { waterHeight } from './water';
 import { nearestPoint, routePoint, type Track, type Gate } from './tracks';
@@ -6,6 +11,7 @@ export interface Input {
   steer: number;
   brake: number;
   lean: number;
+  trick?: number;
 }
 export interface Racer {
   id: number;
@@ -35,6 +41,9 @@ export interface Racer {
   finishTime: number;
   lastProgress: number;
   recovered: boolean;
+  body: RiderLoad;
+  air: AerialState;
+  recovery: RecoveryState;
   approachingGate: boolean;
 }
 export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
@@ -50,7 +59,7 @@ export function createRacer(track: Track, id: number): Racer {
     name: ['YOU', 'NOVA', 'ECHO', 'FLUX', 'ONYX', 'SOL'][id],
     color: ['#86fadd', '#ff5b82', '#ffbc57', '#b890ff', '#8dbdf5', '#ffffff'][id],
     x,
-    y: waterHeight(x, z, 0, track.wave) + 0.6,
+    y: waterHeight(x, z, 0, track) + 0.6,
     z,
     vx: 0,
     vy: 0,
@@ -73,6 +82,9 @@ export function createRacer(track: Track, id: number): Racer {
     finishTime: 0,
     lastProgress: 0,
     recovered: false,
+    body: createRiderLoad(),
+    air: createAerialState(),
+    recovery: createRecoveryState(),
     approachingGate: false,
   };
 }
@@ -93,6 +105,11 @@ export function stepRacer(
   dt: number,
   power = 1,
 ): void {
+  if (r.recovery.phase !== 'riding') input = { throttle: 0, steer: 0, brake: 0.7, lean: 0 };
+  stepAerial(r, input, r.y - waterHeight(r.x, r.z, t, track), dt);
+  stepRiderLoad(r, input, dt);
+  const wasAirborne = r.body.airtime > 0.12;
+  const entryVelocity = r.vy;
   r.lean += (input.lean - r.lean) * (1 - Math.exp(-dt * 10));
   const previous = { x: r.x, y: r.y, z: r.z };
   const speed = Math.hypot(r.vx, r.vz),
@@ -111,11 +128,18 @@ export function stepRacer(
       const x = r.x + fx * along + rx * side,
         z = r.z + fz * along + rz * side;
       const localY = r.y + Math.sin(r.pitch) * along + Math.sin(r.roll) * side;
-      const h = waterHeight(x, z, t, track.wave),
-        waterV = (waterHeight(x, z, t + 0.025, track.wave) - h) / 0.025;
+      const h = waterHeight(x, z, t, track),
+        waterV = (waterHeight(x, z, t + 0.025, track) - h) / 0.025;
       const immersion = h + 0.48 + Math.min(speed / 120, 0.2) - localY;
       const pointV = r.vy + r.pitchVelocity * along + r.rollVelocity * side;
-      const spring = immersion > -0.12 ? clamp(immersion * 48 - (pointV - waterV) * 7.5, 0, 85) : 0;
+      const spring =
+        immersion > -0.12
+          ? clamp(
+              immersion * (30 + Math.max(0, immersion - 0.6) * 22) - (pointV - waterV) * 4.2,
+              0,
+              110,
+            )
+          : 0;
       if (immersion > -0.12) contacts++;
       force += spring / 4;
       if (along > 0) front += spring;
@@ -124,17 +148,35 @@ export function stepRacer(
       else left += spring;
     }
   r.wet = contacts / 4;
+  if (r.wet === 0 && !r.onRamp) r.body.airtime += dt;
+  else {
+    if (wasAirborne) landAerial(r, entryVelocity);
+    if (wasAirborne && entryVelocity < -2) {
+      r.body.impact = Math.min(16, -entryVelocity);
+      // A deep entry spends forward energy on displacing water. Nose-down entries bite harder.
+      const scrub = clamp(-entryVelocity * (0.015 + Math.max(0, -r.pitch) * 0.025), 0, 0.34);
+      r.vx *= 1 - scrub;
+      r.vz *= 1 - scrub;
+    }
+    r.body.airtime = 0;
+  }
   r.vy += (force - 9.81) * dt;
   r.y += r.vy * dt;
-  const targetBank = -input.steer * clamp(speed / 24, 0, 1) * 0.35;
+  const targetBank = -r.body.side * 0.82;
   r.pitchVelocity +=
-    ((front - back) * 0.19 - r.pitchVelocity * 3 - r.pitch * 2 + input.lean * 2.8) * dt;
-  r.rollVelocity += ((right - left) * 0.25 + (targetBank - r.roll) * 13 - r.rollVelocity * 5) * dt;
-  r.pitch = clamp(r.pitch + r.pitchVelocity * dt, -0.8, 0.8);
+    ((front - back) * 0.19 - r.pitchVelocity * 2.8 - r.pitch * 2.5 + r.body.fore * 4.8) * dt;
+  r.rollVelocity += ((right - left) * 0.25 + (targetBank - r.roll) * 15 - r.rollVelocity * 5) * dt;
+  r.pitch = clamp(r.pitch + r.pitchVelocity * dt, -1.15, 1.15);
   r.roll = clamp(r.roll + r.rollVelocity * dt, -0.9, 0.9);
   r.steer += (input.steer - r.steer) * Math.min(1, dt * 7);
   const grip = r.onRamp ? 0.55 : r.wet;
-  r.yaw += r.steer * 1.05 * clamp(speed / 9, 0, 1) * (1 - input.brake * 0.2) * grip * dt;
+  r.yaw +=
+    r.steer *
+    (1.02 + Math.abs(r.body.side) * 0.1) *
+    clamp(speed / 9, 0, 1) *
+    (1 - input.brake * 0.2) *
+    grip *
+    dt;
   const forward = r.vx * fx + r.vz * fz,
     lateral = r.vx * rx + r.vz * rz;
   const thrust = input.throttle * 19 * power * grip;
@@ -143,14 +185,14 @@ export function stepRacer(
       input.brake * forward * 1.8 +
       (1 - input.throttle) * forward * 0.9) *
     grip;
-  const sideDrag = lateral * (2.3 + input.brake) * grip;
+  const sideDrag = lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * grip;
   r.vx += (fx * (thrust - drag) - rx * sideDrag) * dt;
   r.vz += (fz * (thrust - drag) - rz * sideDrag) * dt;
   if (!r.onRamp && r.wet > 0) {
     const slopeX =
-      (waterHeight(r.x + 1.5, r.z, t, track.wave) - waterHeight(r.x - 1.5, r.z, t, track.wave)) / 3;
+      (waterHeight(r.x + 1.5, r.z, t, track) - waterHeight(r.x - 1.5, r.z, t, track)) / 3;
     const slopeZ =
-      (waterHeight(r.x, r.z + 1.5, t, track.wave) - waterHeight(r.x, r.z - 1.5, t, track.wave)) / 3;
+      (waterHeight(r.x, r.z + 1.5, t, track) - waterHeight(r.x, r.z - 1.5, t, track)) / 3;
     const waveDrive = clamp(speed / 6, 0, 1);
     r.vx -= slopeX * 4.5 * r.wet * waveDrive * dt;
     r.vz -= slopeZ * 4.5 * r.wet * waveDrive * dt;
@@ -181,9 +223,12 @@ export function stepRacer(
     r.pitch += (rampPitch - r.pitch) * (1 - Math.exp(-dt * 14));
     r.pitchVelocity = 0;
     r.roll *= Math.exp(-dt * 12);
+    if (wasAirborne) landAerial(r, entryVelocity);
+    r.body.airtime = 0;
     r.onRamp = true;
     r.wet = 0;
   }
+  collideTerrain(r, track);
   for (const o of track.obstacles) {
     const dx = r.x - o.x,
       dz = r.z - o.z,
@@ -201,60 +246,14 @@ export function stepRacer(
       }
     }
   }
+  stepRecovery(r, track, t, dt);
 }
-// Horizontal hull outline, matching the loft stations in jets.ts.
-const HULL = [
-  [-0.58, -1.9],
-  [-0.73, -1.55],
-  [-0.79, -0.55],
-  [-0.64, 0.65],
-  [-0.4, 1.5],
-  [-0.035, 2.13],
-  [0.035, 2.13],
-  [0.4, 1.5],
-  [0.64, 0.65],
-  [0.79, -0.55],
-  [0.73, -1.55],
-  [0.58, -1.9],
-];
-function hullPoints(r: Racer) {
-  const c = Math.cos(r.yaw),
-    s = Math.sin(r.yaw);
-  return HULL.map(([x, z]) => ({
-    x: r.x + x * 0.82 * c + z * 0.87 * s,
-    z: r.z - x * 0.82 * s + z * 0.87 * c,
-  }));
-}
+
 export function collideRacers(a: Racer, b: Racer): boolean {
   if (Math.hypot(b.x - a.x, b.z - a.z) > 4.5 || Math.abs(a.y - b.y) > 0.85) return false;
-  const ah = hullPoints(a),
-    bh = hullPoints(b);
-  let depth = Infinity,
-    nx = 0,
-    nz = 0;
-  for (const hull of [ah, bh])
-    for (let i = 0; i < hull.length; i++) {
-      const p = hull[i],
-        q = hull[(i + 1) % hull.length];
-      const length = Math.hypot(q.x - p.x, q.z - p.z);
-      let x = -(q.z - p.z) / length,
-        z = (q.x - p.x) / length;
-      const ap = ah.map((p) => p.x * x + p.z * z),
-        bp = bh.map((p) => p.x * x + p.z * z);
-      const forward = Math.max(...ap) - Math.min(...bp),
-        backward = Math.max(...bp) - Math.min(...ap);
-      if (forward <= 0 || backward <= 0) return false;
-      const overlap = Math.min(forward, backward);
-      if (backward < forward) {
-        x = -x;
-        z = -z;
-      }
-      if (overlap < depth) {
-        depth = overlap;
-        nx = x;
-        nz = z;
-      }
-    }
+  const contact = polygonContact(hullPoints(a), hullPoints(b));
+  if (!contact) return false;
+  const { x: nx, z: nz, depth } = contact;
   a.x -= (nx * depth) / 2;
   a.z -= (nz * depth) / 2;
   b.x += (nx * depth) / 2;
@@ -298,7 +297,12 @@ export function updateProgress(
   time: number,
   totalLaps: number,
 ): boolean {
-  if (r.finished || !crossesGate(previous, r, track.gates[r.nextGate])) return false;
+  if (
+    r.finished ||
+    r.recovery.phase !== 'riding' ||
+    !crossesGate(previous, r, track.gates[r.nextGate])
+  )
+    return false;
   const wasStart = r.nextGate === 0;
   r.passed++;
   r.approachingGate = false;
@@ -359,14 +363,9 @@ export function aiInput(
   const turn = angle(desired - r.yaw),
     steer = clamp(turn * 2.4 + avoidance, -1, 1);
   const pace = {
-    easy: { cruise: track.wave > 2 ? 16.4 : 18.45, corner: 10, maxSlowdown: 16, throttle: 0.82 },
-    normal: { cruise: track.wave > 2 ? 22.5 : 24, corner: 14, maxSlowdown: 18, throttle: 1 },
-    expert: {
-      cruise: track.wave > 2 ? 20.6 : 26,
-      corner: track.wave > 2 ? 10 : 18,
-      maxSlowdown: track.wave > 2 ? 16 : 18,
-      throttle: 1,
-    },
+    easy: { cruise: 18.45, corner: 14, maxSlowdown: 18, throttle: 0.82 },
+    normal: { cruise: 23, corner: 14, maxSlowdown: 18, throttle: 1 },
+    expert: { cruise: 26, corner: 10, maxSlowdown: 18, throttle: 1 },
   }[difficulty];
   const targetSpeed = r.approachingGate
     ? 11
@@ -384,7 +383,7 @@ export function recoverRacer(r: Racer, track: Track, time: number): void {
   const start = r.passed === 0 ? createRacer(track, r.id) : null;
   r.x = start ? start.x : g.x;
   r.z = start ? start.z : g.z;
-  r.y = waterHeight(r.x, r.z, time, track.wave) + 0.6;
+  r.y = waterHeight(r.x, r.z, time, track) + 0.6;
   r.yaw = start
     ? start.yaw
     : Math.atan2(track.gates[r.nextGate].x - g.x, track.gates[r.nextGate].z - g.z);
@@ -399,4 +398,7 @@ export function recoverRacer(r: Racer, track: Track, time: number): void {
   r.pitchVelocity = 0;
   r.rollVelocity = 0;
   r.recovered = true;
+  r.body = createRiderLoad();
+  r.air = createAerialState();
+  r.recovery = createRecoveryState();
 }
