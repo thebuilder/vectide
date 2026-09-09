@@ -1,3 +1,4 @@
+import { inject } from '@vercel/analytics';
 import { TouchControls } from './touch';
 import '@fontsource/roboto/latin-900-italic.css';
 import '@fontsource/roboto/latin-400-italic.css';
@@ -7,6 +8,8 @@ import './style.css';
 import { Engine, type Mode, type Snapshot } from './game/engine';
 import { SONGS } from './game/audio';
 import { TRACKS } from './game/tracks';
+
+inject();
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
