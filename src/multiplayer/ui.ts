@@ -116,7 +116,7 @@ export function setupMultiplayer(
         ...room.members.map((member) => {
           const li = document.createElement('li');
           li.style.setProperty('--craft-color', COLORS[member.color]);
-          li.textContent = `${member.name}${member.slot === 0 ? ' · HOST' : ''}${member.slot === room.slot ? ' · YOU' : ''}${room.riding.includes(member.slot) ? ' · RIDING' : ''}`;
+          li.textContent = `${member.name}${member.slot === 0 ? ' · HOST' : ''}${room.riding.includes(member.slot) ? ' · RIDING' : ''}`;
           return li;
         }),
       );
