@@ -1,3 +1,4 @@
+import { formatTime, setupResults } from './results';
 import { PickupHud } from './pickup-hud';
 import './pickups.css';
 import { courseCards } from './course-cards';
@@ -34,7 +35,7 @@ app.innerHTML = `
   <div class="launch"><div class="setup-heading"><button id="setup-back" class="quiet">BACK</button><h2>Set your course.</h2></div>
     <div class="course-heading"><span>SELECT COURSE</span><span id="course-number">01 / 03</span></div>
     <div class="courses">${courseCards('data-track')}</div>
-    <div class="course-description"><span id="description">${TRACKS[0].description}</span><span id="lap-estimate">~2 MIN / LAP</span></div>
+    <div class="course-description"><span id="description">${TRACKS[0].description}</span><span id="lap-estimate">~1 MIN / LAP</span></div>
     <div class="setup-options">
       <div class="setup-option"><span id="soundtrack-heading">SOUNDTRACK</span><details class="song-picker"><summary id="soundtrack-label" aria-labelledby="soundtrack-heading soundtrack-label">${SONGS[0].name}</summary><div class="song-options" role="group" aria-label="Race soundtrack">${SONGS.map((s, i) => `<button type="button" data-song="${i}" aria-pressed="${i === 0}">${s.name}</button>`).join('')}</div></details></div>
       <div class="setup-option"><span id="difficulty-heading">DIFFICULTY</span><div class="difficulty-toggle" role="group" aria-labelledby="difficulty-heading">${['easy', 'normal', 'expert'].map((d) => `<button type="button" data-difficulty="${d}" aria-pressed="${d === 'normal'}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div></div>
@@ -62,13 +63,10 @@ app.innerHTML = `
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><button id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
 <dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="AUTOMATIC" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT / C" data-gamepad="STICK ↑ / ↓">SHIFT / C</dt><dd class="touch-hide">Shift weight back / forward</dd><dt data-keyboard="E / STEER + E" data-touch="HOLD JUMP" data-gamepad="RB / STICK + RB">E / STEER + E</dt><dd>Hold to load a flip<span class="touch-hide">; steer to load a spin</span>. Release at takeoff.</dd><dt data-keyboard="Q" data-touch="USE button" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose, or forward to press it down.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump. Hold E (gamepad RB) as you approach a jump, then release at takeoff. On touch, throttle is automatic. Hold BRAKE to slow down. Hold JUMP to prepare a flip, then release as a wave or ramp launches you. An unfinished trick can throw you off; you will swim back and remount.</p><button id="close-help" class="primary">GOT IT</button></dialog>
-<dialog id="results"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><ol id="online-results" hidden></ol><button id="again" class="primary">RIDE AGAIN</button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
+<dialog id="results" aria-labelledby="result-title"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><ol id="race-results" aria-label="Race positions" hidden></ol><p id="result-ride-note">AUTOPILOT · ENJOY THE RIDE</p><button id="again" class="primary">RIDE AGAIN</button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
 `;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
-const formatTime = (time: number) =>
-  `${Math.floor(time / 60)
-    .toString()
-    .padStart(2, '0')}:${(time % 60).toFixed(3).padStart(6, '0')}`;
+const results = setupResults($<HTMLOListElement>('race-results'), $('result-title'));
 let mode: Mode = 'race';
 const introElements = [
   ['.masthead', 0.08],
@@ -149,7 +147,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-track]').forEach((button) =>
       b.setAttribute('aria-pressed', String(active));
     });
     $('description').textContent = TRACKS[selectedTrack].description;
-    $('lap-estimate').textContent = selectedTrack === 0 ? '~2 MIN / LAP' : '~1 MIN / LAP';
+    $('lap-estimate').textContent = '~1 MIN / LAP';
     $('course-number').textContent = `0${selectedTrack + 1} / 03`;
   }),
 );
@@ -176,6 +174,7 @@ let shownLaps = 0;
 let splitUntil = 0;
 function clearFinishPresentation() {
   clearTimeout(finishTimer);
+  results.clear();
   shownLaps = 0;
   splitUntil = 0;
   $('lap-split').hidden = true;
@@ -273,6 +272,7 @@ function drawMap(s: Snapshot) {
 }
 engine.onUpdate = (s) => {
   multiplayer.update();
+  results.update(s, engine.network?.disconnected);
   syncIntro(engine.introStatus.progress);
   touch.sync(s);
   if (s.player.laps.length > shownLaps) {
@@ -353,7 +353,7 @@ engine.onUpdate = (s) => {
 };
 engine.onFinish = (s) => {
   const best = Math.min(...s.player.laps),
-    courseVersion = s.track.id === 'palms' ? 'v5' : 'v6',
+    courseVersion = 'v7',
     key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;
@@ -367,6 +367,7 @@ engine.onFinish = (s) => {
   }
   $('result-label').textContent =
     s.mode === 'race' ? `POSITION ${s.position} / ${s.racers.length}` : 'TIME TRIAL COMPLETE';
+  $('result-title').removeAttribute('aria-label');
   $('result-title').textContent =
     s.mode === 'race' && s.position === 1 ? 'You own the water.' : 'Made some waves.';
   $('result-time').textContent = formatTime(s.time);
@@ -381,7 +382,10 @@ engine.onFinish = (s) => {
         ? `NEW LOCAL BEST LAP · ${formatTime(best)}`
         : `LOCAL BEST LAP · ${formatTime(previous)}`;
   finishTimer = setTimeout(() => {
-    if (engine.state === 'finished') $<HTMLDialogElement>('results').showModal();
+    if (engine.state === 'finished') {
+      $<HTMLDialogElement>('results').showModal();
+      results.reveal();
+    }
   }, 1800);
 };
 const multiplayer = setupMultiplayer(

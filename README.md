@@ -59,8 +59,9 @@ players, never your own craft.
 Keep the host's tab visible. Opening the race menu releases driving controls while
 the race continues. A departing guest is marked disconnected. If the host leaves,
 hides the tab, or stops sending updates, guests return to the menu with an
-explanation. To race again, create a new room. There is no host migration or mid-race
-rejoining. A signaling interruption retries the PeerServer connection while existing
+explanation. The host can use **Return to lobby** from results or the race menu
+to bring everyone back together, preserving the room code, profiles, and settings.
+The host can then start another race. There is no host migration or mid-race rejoining. A signaling interruption retries the PeerServer connection while existing
 WebRTC racers keep playing; losing the host data connection still ends the room.
 
 The host runs physics and validates checkpoints, collisions and finish times at
@@ -142,13 +143,15 @@ send only input and receive bounded item snapshots alongside the race state.
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 24 gates and a pair of linked optional ramps. Palm also has a smaller opening ramp. Normal AI solo laps are approximately 115, 120, and 146 seconds. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Top speed is approximately 80 km/h.
+Each course has 16 gates and a pair of linked optional ramps. Palm also has a smaller opening ramp and turns directly toward the finish after the jump straight. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
+
+After finishing, AI keeps the craft riding while results appear with a brief headline scramble and panel sweep. Reduced motion uses a fade. The board lists every racer by position and adds their recorded time as they finish; disconnected racers appear last. Finishers cannot collide with racers still competing.
 
 ## Water and handling
 
 `src/game/water.ts` owns three directional wave components and a four-meter world-space grid. Localized sheltered bays and directional swell zones modify the shared water field. The water vertex shader uses those same components and zones. The CPU interpolates the same mesh triangles rather than sampling a different smooth surface.
 
-`src/game/physics.ts` advances at 120 fixed steps per second. Four hull contact points apply buoyancy and damping relative to the moving surface. Their force differences drive pitch and roll. Thrust, quadratic drag, lateral resistance, and steering depend on water contact. Speed adds planing lift. The rendered wave slopes also apply a gentle downhill horizontal force and yaw influence while the hull is in the water; cross-swells require small steering corrections. Closed wedge ramps extend their slope four meters below the surface and use rigid deck contact, hold the keel above their surface, and supply slope-based takeoff velocity. Ramp contact does not emit water spray. Swept side and rear wall collisions bounce riders away below deck height, while airborne riders can clear those faces. Airborne craft follow gravity without engine thrust.
+`src/game/physics.ts` advances at 120 fixed steps per second. Four hull contact points apply buoyancy and damping relative to the moving surface. Their force differences drive pitch and roll. Thrust, quadratic drag, lateral resistance, and steering depend on water contact. Speed adds planing lift. Launch acceleration stays quick, with roughly four seconds to build to 95 percent of cruising speed. Brief throttle releases preserve momentum; braking still slows the craft firmly, and prolonged coasting settles to a stop. Water-entry losses use impact speed relative to the moving wave face and hull alignment. Following a descending face adds bounded drive while in contact; airborne throttle adds no speed. Engine pitch and volume respond to loss of water contact. The rendered wave slopes also apply a gentle downhill horizontal force and yaw influence while the hull is in the water; cross-swells require small steering corrections. Closed wedge ramps extend their slope four meters below the surface and use rigid deck contact, hold the keel above their surface, and supply slope-based takeoff velocity. Ramp contact does not emit water spray. Swept side and rear wall collisions bounce riders away below deck height, while airborne riders can clear those faces. Airborne craft follow gravity without engine thrust.
 
 This is an arcade model inspired by Wave Race's feel, not a reconstruction of Nintendo's source or a full fluid solver. The tuning keeps turns responsive while making rough water, landings, and loss of contact affect control.
 

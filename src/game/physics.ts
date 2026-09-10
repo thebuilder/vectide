@@ -164,14 +164,25 @@ export function stepRacer(
       if (side > 0) right += spring;
       else left += spring;
     }
+  const height = waterHeight(r.x, r.z, t, surface),
+    surfaceV = (waterHeight(r.x, r.z, t + 0.025, surface) - height) / 0.025,
+    slopeX =
+      (waterHeight(r.x + 1.5, r.z, t, surface) - waterHeight(r.x - 1.5, r.z, t, surface)) / 3,
+    slopeZ =
+      (waterHeight(r.x, r.z + 1.5, t, surface) - waterHeight(r.x, r.z - 1.5, t, surface)) / 3;
   r.wet = contacts / 4;
   if (r.wet === 0 && !r.onRamp) r.body.airtime += dt;
   else {
     if (wasAirborne) landAerial(r, entryVelocity);
-    if (wasAirborne && entryVelocity < -2) {
-      r.body.impact = Math.min(16, -entryVelocity);
-      // A deep entry spends forward energy on displacing water. Nose-down entries bite harder.
-      const scrub = clamp(-entryVelocity * (0.015 + Math.max(0, -r.pitch) * 0.025), 0, 0.34);
+    if (wasAirborne && !r.onRamp) {
+      // Judge entry against the moving face, including the water crossed by forward motion.
+      const impact = Math.max(
+        0,
+        (surfaceV + r.vx * slopeX + r.vz * slopeZ - entryVelocity) / Math.hypot(1, slopeX, slopeZ),
+      );
+      r.body.impact = Math.min(16, impact);
+      const mismatch = Math.abs(r.pitch - Math.atan(slopeX * fx + slopeZ * fz));
+      const scrub = clamp((impact - 2) * (0.009 + Math.min(mismatch, 1) * 0.018), 0, 0.28);
       r.vx *= 1 - scrub;
       r.vz *= 1 - scrub;
     }
@@ -196,23 +207,28 @@ export function stepRacer(
     dt;
   const forward = r.vx * fx + r.vz * fz,
     lateral = r.vx * rx + r.vz * rz;
-  const thrust = input.throttle * 19 * power * grip;
+  // Fast launch, then a longer pull through the upper range without changing cruise speed.
+  const response = 1 - 0.65 * clamp((Math.abs(forward) - 8) / 12, 0, 1);
+  const thrust = input.throttle * 19 * power * response * grip;
   const drag =
-    (0.037 * forward * Math.abs(forward) +
+    (0.037 * forward * Math.abs(forward) * response * (0.35 + 0.65 * input.throttle) +
       input.brake * forward * 1.8 +
-      (1 - input.throttle) * forward * 0.9) *
+      (1 - input.throttle) * forward * (0.08 + 0.8 * clamp((8 - speed) / 6, 0, 1))) *
     grip;
   const sideDrag = lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * grip;
   r.vx += (fx * (thrust - drag) - rx * sideDrag) * dt;
   r.vz += (fz * (thrust - drag) - rz * sideDrag) * dt;
   if (!r.onRamp && r.wet > 0) {
-    const slopeX =
-      (waterHeight(r.x + 1.5, r.z, t, surface) - waterHeight(r.x - 1.5, r.z, t, surface)) / 3;
-    const slopeZ =
-      (waterHeight(r.x, r.z + 1.5, t, surface) - waterHeight(r.x, r.z - 1.5, t, surface)) / 3;
     const waveDrive = clamp(speed / 6, 0, 1);
     r.vx -= slopeX * 4.5 * r.wet * waveDrive * dt;
     r.vz -= slopeZ * 4.5 * r.wet * waveDrive * dt;
+    // A descending face travelling with the craft rewards contact, with a finite speed reserve.
+    const downhill = Math.max(0, -(slopeX * fx + slopeZ * fz));
+    const following = surfaceV > 0 ? 1 : 0;
+    const surf =
+      Math.min(downhill, 0.6) * following * 7 * clamp((26 - speed) / 4, 0, 1) * waveDrive * r.wet;
+    r.vx += fx * surf * dt;
+    r.vz += fz * surf * dt;
     r.yaw -= (slopeX * rx + slopeZ * rz) * 0.18 * clamp(speed / 12, 0, 1) * r.wet * dt;
   }
   if (input.throttle === 0 && r.wet > 0 && !r.onRamp && Math.hypot(r.vx, r.vz) < 0.12) {

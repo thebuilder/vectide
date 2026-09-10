@@ -98,8 +98,8 @@ describe('fair racing', () => {
     });
     expect(r.finished).toBe(true);
     // The compact harbor and offshore routes target one-minute laps.
-    expect(r.laps[0]).toBeGreaterThan(track.id === 'palms' ? 95 : 55);
-    expect(r.laps[0]).toBeLessThan(track.id === 'palms' ? 170 : 70);
+    expect(r.laps[0]).toBeGreaterThan(55);
+    expect(r.laps[0]).toBeLessThan(70);
   });
 });
 

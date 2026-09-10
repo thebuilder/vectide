@@ -86,7 +86,9 @@ describe('authoritative multiplayer simulation', () => {
       host.step(aiInput(host.player, host.track, host.racers, 'normal'));
     }
     expect(host.racers.every((r) => r.finished)).toBe(true);
-    expect(host.racers.every((r) => r.laps.length === 3 && r.finishTime > 300)).toBe(true);
+    expect(
+      host.racers.every((r) => r.laps.length === 3 && r.finishTime > 150 && r.finishTime < 300),
+    ).toBe(true);
     expect(validSnapshot(host.snapshot())).toBe(true);
     const decoded = parseMessage(
       encodeMessage({ type: 'snapshot', race: 1, state: host.snapshot() }),

@@ -42,11 +42,14 @@ export interface PickupState {
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
   // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
-  return [2, 6, track.id === 'palms' ? 14 : 11, 16, 21].flatMap((index, row) => {
+  const used = new Set<number>();
+  return [1, 4, track.id === 'palms' ? 10 : 9, 12, 14].flatMap((index, row) => {
     // Gates already fit the navigable water. Avoid placing a row on a ramp deck.
-    for (let offset = 0; offset < 4; offset++) {
-      const gate = track.gates[(index + offset) % track.gates.length];
-      const spacing = Math.min(7, (gate.width - 8) / 4);
+    for (let offset = 0; offset < track.gates.length; offset++) {
+      const gateIndex = (index + offset) % track.gates.length;
+      if (used.has(gateIndex)) continue;
+      const gate = track.gates[gateIndex];
+      const spacing = Math.min(5, (gate.width - 8) / 4);
       const points = Array.from({ length: 5 }, (_, lane) => ({
         x: gate.x - gate.tz * (lane - 2) * spacing,
         z: gate.z + gate.tx * (lane - 2) * spacing,
@@ -68,8 +71,10 @@ export function pickupRows(track: Track): Pickup[] {
             }) &&
             track.obstacles.every((o) => Math.hypot(p.x - o.x, p.z - o.z) > o.radius + 3),
         )
-      )
+      ) {
+        used.add(gateIndex);
         return points;
+      }
     }
     throw new Error(`No clear pickup row on ${track.id} near gate ${index}`);
   });

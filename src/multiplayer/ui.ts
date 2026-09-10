@@ -1,6 +1,5 @@
 import { courseCards } from '../course-cards';
 import type { Engine } from '../game/engine';
-import { raceProgress } from '../game/physics';
 import { TRACKS } from '../game/tracks';
 import type { NetworkRace } from './race';
 import { Room } from './room';
@@ -230,7 +229,6 @@ export function setupMultiplayer(
     update() {
       const online = !!engine.network && !engine.track.practiceRadius;
       document.getElementById('online-race-status')!.hidden = !online;
-      document.getElementById('online-results')!.hidden = !online;
       document.getElementById('restart')!.hidden = online;
       document.getElementById('again')!.hidden = online;
       for (const id of ['exit', 'result-exit'])
@@ -253,23 +251,6 @@ export function setupMultiplayer(
         room.phase === 'loading'
           ? 'WAITING FOR RACERS TO LOAD…'
           : `${room.host ? 'HOST' : `${room.ping} MS`} · ${room.members.length - disconnected} CONNECTED${disconnected ? ` · ${disconnected} DISCONNECTED` : ''}`;
-      if (engine.state !== 'finished') return;
-      const racers = [...engine.racers].sort((a, b) => {
-        const ad = engine.network!.disconnected.has(a.id) && !a.finished,
-          bd = engine.network!.disconnected.has(b.id) && !b.finished;
-        if (ad !== bd) return ad ? 1 : -1;
-        if (a.finished !== b.finished) return a.finished ? -1 : 1;
-        return a.finished
-          ? a.finishTime - b.finishTime
-          : raceProgress(b, engine.track) - raceProgress(a, engine.track);
-      });
-      document.getElementById('online-results')!.replaceChildren(
-        ...racers.map((r) => {
-          const li = document.createElement('li');
-          li.textContent = `${r.name} · ${r.finished ? `${r.finishTime.toFixed(3)}s` : engine.network!.disconnected.has(r.id) ? 'DISCONNECTED' : 'RACING'}`;
-          return li;
-        }),
-      );
     },
   };
 }

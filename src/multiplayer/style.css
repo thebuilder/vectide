@@ -48,14 +48,7 @@
   text-align: center;
   color: var(--phosphor);
 }
-#online-results {
-  font-size: 12px;
-  line-height: 1.8;
-  text-align: left;
-  max-height: 180px;
-  overflow: auto;
-  overflow-wrap: anywhere;
-}
+
 @media (max-width: 700px) {
   #online-race-status {
     bottom: 180px;

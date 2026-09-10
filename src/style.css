@@ -1279,12 +1279,12 @@ body[data-input='touch'] .touch-hide {
   pointer-events: none;
 }
 #results[open] {
-  animation: results-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: results-enter 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 #results[open]::backdrop {
   background: #030b0d88;
   backdrop-filter: blur(3px);
-  animation: results-backdrop 480ms ease-out both;
+  animation: results-backdrop 200ms ease both;
 }
 @keyframes results-enter {
   from {
@@ -1307,7 +1307,7 @@ body[data-input='touch'] .touch-hide {
 @media (prefers-reduced-motion: reduce) {
   #results[open],
   #results[open]::backdrop {
-    animation: none;
+    animation: results-backdrop 200ms ease both;
   }
 }
 
@@ -1332,4 +1332,83 @@ body[data-input='touch'] .touch-hide {
   .masthead .header-right {
     margin-left: auto;
   }
+}
+
+#results {
+  width: min(500px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+#results[open]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--phosphor);
+  transform-origin: left;
+  animation: result-sweep 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes result-sweep {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+#race-results {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+#race-results li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+#race-results [aria-current='true'] {
+  color: var(--phosphor);
+}
+.result-position,
+.result-pending {
+  color: #92a69d;
+}
+.result-pending {
+  font-size: 10px;
+  font-weight: normal;
+}
+.result-name {
+  overflow-wrap: anywhere;
+}
+#result-ride-note {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  #results[open]::before {
+    display: none;
+    animation: none;
+  }
+}
+
+#results #lap-results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+#results #lap-results > div {
+  flex-direction: column;
+  gap: 8px;
+}
+#results .result-time {
+  margin-bottom: 12px;
 }

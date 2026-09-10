@@ -32,7 +32,9 @@ it('permits a hard water entry, loses speed, then floats back up', () => {
   expect(submerged).toBeLessThan(-0.35);
   expect(submerged).toBeGreaterThan(-2.5);
   expect(impact).toBeGreaterThan(6);
-  expect(slowest).toBeLessThan(16);
+  // Aligned entries keep more momentum while still shedding speed.
+  expect(slowest).toBeLessThan(17);
+  expect(slowest).toBeGreaterThan(12);
   expect(r.y).toBeGreaterThan(0);
 });
 it('launches from a localized wave without touching a ramp', () => {

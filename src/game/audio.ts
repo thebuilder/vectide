@@ -141,11 +141,15 @@ export class RaceAudio {
     this.suspended = false;
     await this.play();
   }
-  update(speed: number, throttle: number, active: boolean) {
+  update(speed: number, throttle: number, active: boolean, contact = 1) {
     if (!this.context || !this.oscillator || !this.gain) return;
     const t = this.context.currentTime;
-    this.oscillator.frequency.setTargetAtTime(42 + speed * 4 + throttle * 20, t, 0.08);
-    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.045 : 0, t, 0.1);
+    this.oscillator.frequency.setTargetAtTime(
+      42 + speed * 4 + throttle * (20 + (1 - contact) * 35),
+      t,
+      0.08,
+    );
+    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.035 + contact * 0.01 : 0, t, 0.1);
   }
   explosion(distance = 0) {
     if (!this.enabled || !this.context || distance >= 140 || this.effects.size >= 8) return;

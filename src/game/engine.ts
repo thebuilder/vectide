@@ -739,6 +739,7 @@ export class Engine {
       Math.hypot(p.vx, p.vz),
       p.finished ? 0.65 : control.throttle,
       this.state === 'racing' || this.state === 'finished' || this.state === 'freeride',
+      p.onRamp ? 1 : p.wet,
     );
     this.intro?.update(dt);
     this.renderer.info.reset();
