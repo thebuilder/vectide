@@ -66,14 +66,17 @@ export function createDolphins(track: Track) {
         const age = t - started - i * 0.45;
         animal.visible = age >= 0 && age < 8;
         if (!animal.visible) return;
-        const x = location.x + location.tx * (age * 9 - 25) - location.tz * (19 + i * 3);
-        const z = location.z + location.tz * (age * 9 - 25) + location.tx * (19 + i * 3);
+        // Breach ahead of the rider, then angle inward so the pod stays in the chase view.
+        const forward = age * 14,
+          side = 6 + i * 1.5 - age * 2;
+        const x = location.x + location.tx * forward - location.tz * side;
+        const z = location.z + location.tz * forward + location.tx * side;
         const phase = Math.min(age / 2.5, 1),
           jump = age < 2.5 ? Math.sin(phase * Math.PI) * 4 : -Math.min((age - 2.5) * 1.5, 6);
         animal.position.set(x, waterHeight(x, z, t, track) + jump - 0.5, z);
         animal.rotation.set(
-          -Math.atan2(age < 2.5 ? Math.cos(phase * Math.PI) * 5 : -1.5, 9),
-          Math.atan2(location.tx, location.tz),
+          -Math.atan2(age < 2.5 ? Math.cos(phase * Math.PI) * 5 : -1.5, Math.hypot(14, 2)),
+          Math.atan2(location.tx * 14 + location.tz * 2, location.tz * 14 - location.tx * 2),
           0,
         );
       });
