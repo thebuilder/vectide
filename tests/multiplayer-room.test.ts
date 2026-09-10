@@ -104,6 +104,61 @@ afterEach(() => {
 });
 
 describe('room ownership and lifecycle', () => {
+  it('returns everyone to the same lobby and starts another race with fresh state', async () => {
+    const { host, guest } = await pair();
+    guest.setProfile('WAVE RIDER', 4);
+    host.setTrack(1);
+    host.setPickups(false);
+    await settle();
+    const code = host.code,
+      members = structuredClone(host.members);
+    host.start();
+    await settle();
+    const first = host.race!;
+    for (let i = 0; i < 400; i++) first.step(NEUTRAL);
+    await settle();
+    guest.returnToLobby();
+    expect(host.phase).toBe('racing');
+    expect(guest.phase).toBe('racing');
+    host.returnToLobby();
+    await settle();
+    expect(first.running).toBe(false);
+    for (const room of [host, guest]) {
+      expect(room.phase).toBe('lobby');
+      expect(room.code).toBe(code);
+      expect(room.members).toEqual(members);
+      expect(room.race).toBeUndefined();
+      expect(room.practice).toBeDefined();
+      expect(room.riding).toEqual([]);
+      expect(room.pickups).toBe(false);
+    }
+    host.setTrack(2);
+    await settle();
+    host.start();
+    await settle();
+    expect(host.race).not.toBe(first);
+    expect(host.phase).toBe('racing');
+    expect(guest.race!.track.id).toBe('storm');
+    expect(guest.race!.countdown).toBe(3);
+    expect(guest.race!.player.laps).toEqual([]);
+    expect(guest.race!.player.finished).toBe(false);
+    expect(mock.peers.size).toBe(2);
+  });
+  it('drops departed racers from the returned lobby and lets a replacement join', async () => {
+    const { host, guest } = await pair();
+    host.start();
+    await settle();
+    guest.close();
+    await settle();
+    expect(host.members[1].connected).toBe(false);
+    host.returnToLobby();
+    await settle();
+    const replacement = room();
+    await replacement.open(false, 'NEXT RACER', host.code);
+    await settle();
+    expect(replacement.slot).toBe(1);
+    expect(host.members.map((m) => m.name)).toEqual(['HOST', 'NEXT RACER']);
+  });
   it('shares practice, locks riding profiles and starts a fresh race from the lobby', async () => {
     const { host, guest } = await pair();
     expect(host.practice).toBeDefined();

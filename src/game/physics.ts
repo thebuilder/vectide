@@ -338,6 +338,13 @@ export function updateProgress(
   }
   return true;
 }
+/** Autopilot follows the course after finishing without changing race records. */
+export function advanceFinishLap(r: Racer, previous: { x: number; z: number }, track: Track) {
+  if (r.finished && crossesGate(previous, r, track.gates[r.nextGate])) {
+    r.nextGate = (r.nextGate + 1) % track.gates.length;
+    r.approachingGate = false;
+  }
+}
 export function raceProgress(r: Racer, track: Track): number {
   const g = track.gates[r.nextGate];
   return r.passed - Math.min(Math.hypot(g.x - r.x, g.z - r.z) / 120, 0.99);

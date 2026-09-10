@@ -23,6 +23,44 @@ const drive = { throttle: 1, steer: 0, brake: 0, lean: 0, trick: 0 };
 const command = (seq: number): Command => ({ seq, input: drive, reset: false });
 
 describe('authoritative multiplayer simulation', () => {
+  it('autopilots a finished guest through gates while preserving their result', () => {
+    const host = new NetworkRace(TRACKS[1], members.slice(0, 2), 0, true);
+    const guest = new NetworkRace(TRACKS[1], members.slice(0, 2), 1, false);
+    host.running = true;
+    host.tick = 360 + 180 * 120;
+    const racer = host.racers[1],
+      gate = host.track.gates[0];
+    Object.assign(racer, {
+      x: gate.x,
+      z: gate.z,
+      vx: gate.tx * 18,
+      vz: gate.tz * 18,
+      yaw: Math.atan2(gate.tx, gate.tz),
+      nextGate: 1,
+      finished: true,
+      finishTime: 180,
+      laps: [60, 60, 60],
+      lap: 4,
+      passed: 49,
+    });
+    host.onSnapshot = (snapshot) => guest.receiveSnapshot(snapshot);
+    guest.onInput = (commands) => host.receiveInput(1, commands);
+    guest.receiveSnapshot(host.snapshot());
+    const start = { x: racer.x, z: racer.z };
+    for (let tick = 0; tick < 120 * 10; tick++) {
+      guest.step({ ...NEUTRAL, steer: 1 });
+      host.step(NEUTRAL);
+    }
+    expect(Math.hypot(racer.x - start.x, racer.z - start.z)).toBeGreaterThan(50);
+    expect(racer.nextGate).toBeGreaterThan(1);
+    expect(racer.finishTime).toBe(180);
+    expect(racer.laps).toEqual([60, 60, 60]);
+    expect(racer.passed).toBe(49);
+    expect(guest.player.finishTime).toBe(180);
+    expect(guest.player.laps).toEqual(racer.laps);
+    expect(Math.hypot(guest.player.x - racer.x, guest.player.z - racer.z)).toBeLessThan(1);
+    expect(host.player.finished).toBe(false);
+  });
   it('finishes a full ten-racer race with bounded wire snapshots', () => {
     const host = new NetworkRace(TRACKS[0], members, 0, true);
     host.running = true;

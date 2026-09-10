@@ -275,13 +275,15 @@ export class Room {
       }
       if (
         message.type === 'lobby' &&
-        (this.phase === 'connecting' || this.phase === 'lobby') &&
+        this.phase !== 'idle' &&
         message.members.some((m) => m.slot === message.slot)
       ) {
         this.members = message.members;
         this.slot = message.slot;
         this.track = message.track;
         this.pickups = message.pickups;
+        if (this.race) this.race.running = false;
+        this.race = undefined;
         this.phase = 'lobby';
         if (message.riding.includes(this.slot) && !this.riding.includes(this.slot))
           this.lastSnapshot = performance.now();
@@ -416,6 +418,17 @@ export class Room {
     if (this.phase !== 'loading') return;
     this.prepare();
     this.beginWhenReady();
+  }
+  returnToLobby() {
+    if (!this.host || (this.phase !== 'racing' && this.phase !== 'loading')) return;
+    if (this.race) this.race.running = false;
+    this.race = undefined;
+    this.practice = undefined;
+    this.riding = [];
+    this.members = this.members.filter((member) => member.connected);
+    this.phase = 'lobby';
+    for (const connection of this.connections.values()) connection.ready = false;
+    this.publishLobby();
   }
   private prepare() {
     this.phase = 'loading';

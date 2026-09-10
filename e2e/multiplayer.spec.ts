@@ -102,11 +102,11 @@ test('two rendered racers join, sync course and countdown, drive, open menu and 
     await expect(guest.locator('#menu')).toBeVisible();
     await expect(host.locator('#online-race-status')).toContainText('1 DISCONNECTED');
     await host.keyboard.press('Escape');
-    await host.getByRole('button', { name: 'CLOSE ROOM', exact: true }).click();
-    // A departed guest can immediately join a fresh room without stale callbacks.
-    await host.getByRole('button', { name: 'HOST', exact: true }).click();
+    await host.getByRole('button', { name: 'RETURN TO LOBBY', exact: true }).click();
+    // The room survives the race, and a departed guest can rejoin the same code.
     await expect(host.locator('#online-lobby')).toBeVisible();
     const next = await host.locator('#room-code').inputValue();
+    expect(next).toBe(code);
     await guest.getByRole('button', { name: 'JOIN', exact: true }).click();
     await guest.getByLabel('Room code', { exact: true }).fill(next);
     await guest.getByRole('button', { name: 'JOIN ROOM' }).click();

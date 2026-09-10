@@ -210,8 +210,12 @@ function menu(screen: 'home' | 'setup' = 'setup') {
 $('start').onclick = start;
 $('restart').onclick = start;
 $('again').onclick = start;
-$('exit').onclick = () => menu(engine.network ? 'home' : 'setup');
-$('result-exit').onclick = () => menu(engine.network ? 'home' : 'setup');
+const exitRace = () => {
+  if (engine.network && multiplayer.room.host) multiplayer.room.returnToLobby();
+  else menu(engine.network ? 'home' : 'setup');
+};
+$('exit').onclick = exitRace;
+$('result-exit').onclick = exitRace;
 $('pause').onclick = () => engine.pause();
 $('resume').onclick = () => engine.pause();
 $('help').onclick = () => $<HTMLDialogElement>('help-dialog').showModal();
@@ -387,6 +391,14 @@ const multiplayer = setupMultiplayer(
     engine.startNetwork(race);
   },
   () => menu('home'),
+  () => {
+    clearFinishPresentation();
+    document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((d) => d.close());
+    $('hud').hidden = true;
+    $('pause').hidden = true;
+    $('countdown').hidden = true;
+    document.body.classList.remove('playing');
+  },
 );
 // Read-only diagnostics support reproducible browser verification without altering race state.
 Object.defineProperty(window, '__vectide', {

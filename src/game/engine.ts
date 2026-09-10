@@ -13,11 +13,11 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { TRACKS, type Track } from './tracks';
 import {
   aiInput,
+  advanceFinishLap,
   catchupPower,
   clamp,
   collideRacers,
   createRacer,
-  crossesGate,
   racePosition,
   recoverRacer,
   stepRacer,
@@ -280,6 +280,7 @@ export class Engine {
     this.network = practice;
     this.lobby = { members: structuredClone(members), slot: practice.localSlot };
     this.state = state;
+    this.onlineMenuOpen = false;
     if (this.track !== practice.track) this.loadTrack(practice.track);
     else if (rebuild) this.resetRacers();
     if (changed) {
@@ -580,11 +581,7 @@ export class Engine {
         r.id === 0 ? 1 : catchupPower(r, this.player, this.track),
         this.items.surface,
       );
-      // Continue steering through gates after finishing without changing recorded results.
-      if (r.finished && crossesGate(before, r, this.track.gates[r.nextGate])) {
-        r.nextGate = (r.nextGate + 1) % this.track.gates.length;
-        r.approachingGate = false;
-      }
+      advanceFinishLap(r, before, this.track);
       if (
         updateProgress(r, before, this.track, this.time, this.mode === 'race' ? 3 : 1) &&
         r.id === 0
@@ -602,7 +599,8 @@ export class Engine {
     }
     for (let a = 0; a < this.racers.length; a++)
       for (let b = a + 1; b < this.racers.length; b++)
-        collideRacers(this.racers[a], this.racers[b]);
+        if (!this.racers[a].finished && !this.racers[b].finished)
+          collideRacers(this.racers[a], this.racers[b]);
     this.items.step(dt, this.visualTime, this.racers);
     if (this.state === 'racing' && this.player.finished) {
       this.state = 'finished';
@@ -685,7 +683,7 @@ export class Engine {
       jet.rotation.set(0, r.yaw + r.air.yaw, 0);
       jet.rotateX(-r.pitch - r.air.pitch);
       jet.rotateZ(r.roll);
-      animateJet(jet, r, this.state === 'paused' || this.state === 'finished' ? 0 : dt);
+      animateJet(jet, r, this.state === 'paused' ? 0 : dt);
     });
     if (this.state === 'menu') {
       // Look across the islands toward the sunset instead of the empty outer sea.

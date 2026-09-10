@@ -10,6 +10,7 @@ export function setupMultiplayer(
   engine: Engine,
   begin: (race: NetworkRace) => void,
   exit: () => void,
+  backToLobby: () => void,
 ) {
   const room = new Room();
   const dialog = document.createElement('dialog');
@@ -76,6 +77,7 @@ export function setupMultiplayer(
     button('leave-practice').hidden = !practicing;
     el('online-entry').hidden = room.phase !== 'idle';
     if (inLobby) {
+      if (engine.state !== 'lobby' && engine.state !== 'freeride') backToLobby();
       dialog.close();
       el('menu').hidden = true;
       const wasPracticing = engine.state === 'freeride';
@@ -234,7 +236,7 @@ export function setupMultiplayer(
       for (const id of ['exit', 'result-exit'])
         document.getElementById(id)!.textContent = online
           ? room.host
-            ? 'CLOSE ROOM'
+            ? 'RETURN TO LOBBY'
             : 'LEAVE RACE'
           : 'BACK TO COURSES';
       document.getElementById('pause-title')!.textContent = online
@@ -242,7 +244,7 @@ export function setupMultiplayer(
         : 'Water can wait.';
       document.getElementById('pause-note')!.textContent = online
         ? room.host
-          ? 'The race keeps running. Closing the room ends the race for everyone.'
+          ? 'The race keeps running. Returning to the lobby brings everyone back together.'
           : 'The race keeps running while this menu is open.'
         : '';
       if (!online) return;
