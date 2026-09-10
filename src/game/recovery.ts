@@ -1,6 +1,5 @@
 import type { Racer } from './physics';
-import type { Track } from './tracks';
-import { waterHeight } from './water';
+import { waterHeight, type WaterProfile } from './water';
 
 export interface RecoveryState {
   phase: 'riding' | 'falling' | 'swimming' | 'remounting';
@@ -57,7 +56,7 @@ export function beginRecovery(r: Racer): void {
   r.air.messageTime = 0;
 }
 /** Recovery stays beside the physical craft. It never edits checkpoint or lap state. */
-export function stepRecovery(r: Racer, track: Track, time: number, dt: number): void {
+export function stepRecovery(r: Racer, track: WaterProfile, time: number, dt: number): void {
   const state = r.recovery;
   if (state.phase === 'riding') return;
   state.elapsed += dt;

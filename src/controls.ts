@@ -32,6 +32,7 @@ export class Controls {
     return (
       !!document.querySelector('dialog[open]') ||
       this.engine.state === 'menu' ||
+      this.engine.state === 'lobby' ||
       this.engine.state === 'finished'
     );
   }
@@ -50,7 +51,7 @@ export class Controls {
     const targets = this.targets();
     const current = document.activeElement as HTMLElement;
     if (!targets.includes(current)) {
-      (targets.find((e) => e.matches('.course.selected')) ?? targets[0])?.focus();
+      (targets.find((e) => e.matches('#open-setup,.course.selected')) ?? targets[0])?.focus();
       return;
     }
     const from = current.getBoundingClientRect();
@@ -87,7 +88,12 @@ export class Controls {
     const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
     if (dialog?.id === 'pause-dialog') this.engine.pause();
     else if (dialog?.id === 'results') document.getElementById('result-exit')?.click();
-    else if (dialog) {
+    else if (this.engine.state === 'lobby') document.getElementById('leave-room')?.click();
+    else if (dialog?.id === 'online-dialog') document.getElementById('cancel-online')?.click();
+    else if (!dialog && this.engine.state === 'menu') {
+      const back = document.getElementById('setup-back');
+      if (back && !back.closest('[inert]')) back.click();
+    } else if (dialog) {
       dialog.close();
       document.getElementById('help')?.focus();
     }
@@ -103,6 +109,11 @@ export class Controls {
         event.target.matches('input,textarea,select,[contenteditable]'))
     )
       return;
+    if (event.code === 'Escape' && !document.querySelector('dialog[open]')) {
+      event.preventDefault();
+      this.back();
+      return;
+    }
     const directions: Record<string, [number, number]> = {
       ArrowUp: [0, -1],
       KeyW: [0, -1],
@@ -136,8 +147,9 @@ export class Controls {
     const edge = (i: number) => pressed[i] && !this.buttons[i];
     if (pressed.some((p, i) => p && !this.buttons[i]) || pad.axes.some((a) => Math.abs(a) > 0.25))
       this.setDevice('gamepad');
-    if (edge(9) && ['racing', 'countdown', 'paused'].includes(this.engine.state))
+    if (edge(9) && ['racing', 'freeride', 'countdown', 'paused'].includes(this.engine.state))
       this.engine.pause();
+    else if (edge(1) && this.engine.state === 'freeride') this.engine.pause();
     else if (this.navigating) {
       if (edge(0)) this.activate();
       if (edge(1)) this.back();

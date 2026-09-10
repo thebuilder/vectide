@@ -53,3 +53,18 @@ it('does not create a landing burst for a gentle surface contact', () => {
   spray.update(1 / 60, [r], TRACKS[0], 1 / 60);
   expect(spray.activeCount).toBe(0);
 });
+
+it('explosions spray outward and upward, settle into foam and expire within the shared pool', () => {
+  const spray = new VoxelSpray(),
+    track = TRACKS[0];
+  spray.burst(-100, 2, -150);
+  spray.update(0.1, [], track, 0);
+  expect(spray.activeCount).toBe(140);
+  for (let i = 0; i < 180; i++) spray.update(1 / 60, [], track, i / 60);
+  expect(spray.activeCount).toBe(0);
+  for (let i = 0; i < 50; i++) spray.burst(-100, 2, -150);
+  spray.update(1 / 60, [], track, 0);
+  expect(spray.activeCount).toBeLessThanOrEqual(4200);
+  spray.clear();
+  expect(spray.activeCount).toBe(0);
+});

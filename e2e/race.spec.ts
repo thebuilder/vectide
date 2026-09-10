@@ -4,13 +4,14 @@ test('select courses, ride, pause, recover and restart', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /PORT AFTERDARK/ }).click();
   await expect(page.locator('#description')).toContainText('docks');
   await page.getByRole('button', { name: /STORM SIGNAL/ }).click();
   await expect(page.locator('#description')).toContainText('Heavy swell');
   await page.getByRole('button', { name: /PALM CIRCUIT/ }).click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
-  await page.getByRole('button', { name: 'HIT THE WATER' }).click();
+  await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeHidden({ timeout: 10000 });
   await page.keyboard.down('w');
   await expect
@@ -42,9 +43,10 @@ test('select courses, ride, pause, recover and restart', async ({ page }) => {
 
 test('rider joints stay connected while absorbing rough water and turning', async ({ page }) => {
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /STORM SIGNAL/ }).click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
-  await page.getByRole('button', { name: 'HIT THE WATER' }).click();
+  await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeHidden({ timeout: 10000 });
   await page.keyboard.down('w');
   let minimum = 1,
@@ -74,6 +76,7 @@ test('player stays centered and points through the start line during countdown',
   page,
 }) => {
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeVisible();
   for (let i = 0; i < 3; i++) {
@@ -104,6 +107,7 @@ test('player stays centered and points through the start line during countdown',
 test('coasting settles to zero speed and stays stopped', async ({ page }) => {
   test.setTimeout(60000);
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeHidden({ timeout: 15000 });
@@ -119,6 +123,7 @@ test('coasting settles to zero speed and stays stopped', async ({ page }) => {
 
 test('Shift visibly leans the rider back while hands and feet stay attached', async ({ page }) => {
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeHidden({ timeout: 15000 });
@@ -143,6 +148,7 @@ test('Shift visibly leans the rider back while hands and feet stay attached', as
 
 test('returning to the title clears race spray as the waves keep moving', async ({ page }) => {
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.locator('#start').click();
   await page.keyboard.down('w');
   await page.waitForFunction(

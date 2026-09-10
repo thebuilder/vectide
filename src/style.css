@@ -18,6 +18,23 @@
 body {
   margin: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+body,
+dialog {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+body.playing {
+  touch-action: none;
 }
 button,
 a {
@@ -965,7 +982,7 @@ body[data-input='gamepad'] :is(button, summary, a):focus {
   display: flex;
   gap: 8px;
 }
-#touch-controls [data-touch-key='throttle'] {
+#touch-controls [data-touch-key='flip'] {
   height: 70px;
   width: 72px;
   background: #86faddd9;
@@ -1301,9 +1318,15 @@ body[data-input='touch'] .touch-hide {
   .playing .header-right #sound {
     margin-left: 0;
   }
-  .playing .wordmark {
-    font-size: 14px;
-    letter-spacing: 1px;
-    gap: 6px;
+}
+
+@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
+  .in-lobby .wordmark,
+  .playing .wordmark,
+  body:has(#race-setup.is-active) .wordmark {
+    display: none;
+  }
+  .masthead .header-right {
+    margin-left: auto;
   }
 }

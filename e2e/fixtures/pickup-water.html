@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <title>Weapon water rendering test</title>
+  <link rel="icon" href="data:," />
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+  <canvas id="ocean"></canvas>
+  <button id="detonate" style="position: fixed; top: 10px; left: 10px">Detonate</button>
+  <script type="module">
+    import * as T from 'three';
+    import { Engine } from '/src/game/engine.ts';
+    import { Pickups } from '/src/game/pickups.ts';
+    import { waterHeight, vertexHeight, waterGLSL } from '/src/game/water.ts';
+    import { createWaterMaterial, updateWaterPulses } from '/src/game/water-material.ts';
+    import { pulseGLSL } from '/src/game/water-pulses.ts';
+    window.demo = new Engine(document.querySelector('canvas'));
+    demo.start('trial');
+    demo.items = new Pickups(demo.track, true);
+    demo.items.waterTime = 3;
+    demo.visualTime = 3;
+    demo.state = 'paused';
+    Object.assign(demo.player, {
+      x: -100,
+      z: -150,
+      y: waterHeight(-100, -150, 3, demo.track) + 0.5,
+      yaw: 0,
+    });
+    demo.camera.position.set(-108, 5, -163);
+    demo.camTarget.set(-100, 0, -120);
+    window.showPulse = (kind = 5) => {
+      demo.items.state.effects = [
+        {
+          id: 1,
+          kind,
+          owner: 0,
+          x: -100,
+          z: kind === 4 ? -125 : -115,
+          yaw: Math.PI,
+          age: 0.55,
+          hit: 0,
+        },
+      ];
+    };
+    showPulse();
+
+    let weaponId = 10;
+    window.showWeapon = (kind, time = 3, bass = 0, age = 1) => {
+      demo.items.state.effects = [
+        { id: ++weaponId, kind, owner: 0, x: -100, z: -125, yaw: 0, age, hit: 0 },
+      ];
+      demo.items.waterTime = time;
+      demo.visualTime = time;
+      demo.pickupVisuals.update(demo.items, time, true, bass);
+      const mesh = demo.pickupVisuals.group.children.find((c) => c.userData.kind === kind);
+      return {
+        y: mesh.position.y,
+        surface: waterHeight(-100, -125, time, demo.items.surface),
+        tilt: mesh.quaternion.angleTo(new T.Quaternion()),
+      };
+    };
+    window.releaseSplashes = 0;
+    const originalSplash = demo.pickupVisuals.onSplash;
+    demo.pickupVisuals.onSplash = (...args) => {
+      window.releaseSplashes++;
+      originalSplash(...args);
+    };
+    window.startDeployment = (item, speed = 24) => {
+      demo.items = new Pickups(demo.track, true);
+      demo.items.waterTime = 3;
+      demo.visualTime = 3;
+      Object.assign(demo.player, {
+        x: -100,
+        z: -150,
+        y: waterHeight(-100, -150, 3, demo.track) + 0.5,
+        yaw: 0,
+        vx: 0,
+        vz: speed,
+        item,
+        itemReadyIn: 0,
+        itemPressed: false,
+      });
+      demo.items.use(demo.player, true);
+      window.deploymentAge = 0;
+      return window.advanceDeployment(0);
+    };
+    window.advanceDeployment = (age) => {
+      const elapsed = age - window.deploymentAge;
+      demo.items.step(elapsed, 3 + age, []);
+      window.deploymentAge = age;
+      const p = demo.player;
+      p.z = -150 + p.vz * age;
+      p.y = waterHeight(p.x, p.z, 3 + age, demo.track) + 0.5;
+      demo.visualTime = 3 + age;
+      demo.cameraAnchor.set(p.x, p.y, p.z);
+      demo.camera.position.set(p.x, p.y + 2.9, p.z - 7.2);
+      demo.camTarget.set(p.x, p.y + 0.6, p.z + 4);
+      demo.camera.lookAt(demo.camTarget);
+      demo.camera.updateMatrixWorld();
+      demo.pickupVisuals.update(demo.items, 3 + age, true);
+      demo.spray.update(elapsed, [], demo.track, 3 + age, demo.items.surface);
+      const e = demo.items.state.effects[0];
+      const mesh = demo.pickupVisuals.group.children.find((c) => c.userData.kind === e.kind);
+      const point = mesh.position.clone().project(demo.camera);
+      return {
+        x: point.x,
+        y: point.y,
+        scale: mesh.scale.x,
+        height: mesh.position.y,
+        sea: waterHeight(e.x, e.z, 3 + age, demo.items.surface),
+        kind: e.kind,
+      };
+    };
+    window.noiseStarts = 0;
+    const originalStart = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      window.noiseStarts++;
+      return originalStart.apply(this, args);
+    };
+    document.querySelector('#detonate').onclick = async () => {
+      await demo.audio.start();
+      demo.state = 'racing';
+      showWeapon(4, 3, 0, 0.08);
+      demo.state = 'paused';
+      demo.spray.update(0.16, [], demo.track, 3, demo.items.surface);
+    };
+    window.glowPixels = (kind, bass = 0) => {
+      const material = createWaterMaterial(demo.track);
+      material.uniforms.uTime.value = 3;
+      material.uniforms.uMusic.value.set(bass, 0, 0);
+      const profile = {
+        ...demo.track,
+        pulseTime: 3,
+        pulses: kind ? [{ kind, x: 0, z: 0, yaw: 0, age: kind === 4 ? 0.1 : 1 }] : [],
+      };
+      updateWaterPulses(material, profile, 3);
+      const geometry = new T.PlaneGeometry(40, 40, 10, 10).rotateX(-Math.PI / 2);
+      const scene = new T.Scene();
+      scene.add(new T.Mesh(geometry, material));
+      const camera = new T.OrthographicCamera(-14, 14, 14, -14, 0.1, 100);
+      camera.position.set(0, 35, 1);
+      camera.lookAt(0, 0, 0);
+      const target = new T.WebGLRenderTarget(96, 96);
+      const pixels = new Uint8Array(96 * 96 * 4);
+      demo.renderer.setRenderTarget(target);
+      demo.renderer.render(scene, camera);
+      demo.renderer.readRenderTargetPixels(target, 0, 0, 96, 96, pixels);
+      demo.renderer.setRenderTarget(null);
+      let red = 0,
+        redPixels = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        red += Math.max(0, pixels[i] - Math.max(pixels[i + 1], pixels[i + 2]));
+        if (pixels[i] > pixels[i + 1] * 1.4 && pixels[i] > pixels[i + 2] * 1.4) redPixels++;
+      }
+      material.dispose();
+      geometry.dispose();
+      target.dispose();
+      return { red, redPixels };
+    };
+    // Execute the production GPU height formula in a one-pixel target and compare with CPU sampling.
+    window.compareHeights = () => {
+      const source = createWaterMaterial(demo.track);
+      updateWaterPulses(source, demo.items.surface, 3);
+      source.uniforms.uTime.value = 3;
+      const shader = new T.ShaderMaterial({
+        uniforms: { ...source.uniforms, uSample: { value: new T.Vector2() } },
+        vertexShader: 'void main(){gl_Position=vec4(position.xy,0.,1.);}',
+        fragmentShader: `uniform vec2 uSample; uniform float uTime; uniform float uAmplitude;
+      ${waterGLSL(demo.track)} ${pulseGLSL}
+      void main(){float h=heightAt(uSample)*uAmplitude+pulseHeightAt(uSample);
+        vec3 encoded=fract((h+16.)/32.*vec3(1.,255.,65025.));
+        encoded-=encoded.yzz*vec3(1./255.,1./255.,0.);
+        gl_FragColor=vec4(encoded,1.);}`,
+      });
+      const target = new T.WebGLRenderTarget(1, 1, { depthBuffer: false });
+      const scene = new T.Scene(),
+        geometry = new T.PlaneGeometry(2, 2);
+      scene.add(new T.Mesh(geometry, shader));
+      const camera = new T.Camera(),
+        bytes = new Uint8Array(4),
+        samples = [];
+      for (const x of [-116, -108, -100, -92, -84])
+        for (const z of [-140, -132, -124, -116, -108]) {
+          shader.uniforms.uSample.value.set(x, z);
+          demo.renderer.setRenderTarget(target);
+          demo.renderer.render(scene, camera);
+          demo.renderer.readRenderTargetPixels(target, 0, 0, 1, 1, bytes);
+          const gpu = (bytes[0] / 255 + bytes[1] / 65025 + bytes[2] / 16581375) * 32 - 16;
+          samples.push({ x, z, gpu, cpu: vertexHeight(x, z, 3, demo.items.surface) });
+        }
+      demo.renderer.setRenderTarget(null);
+      target.dispose();
+      shader.dispose();
+      source.dispose();
+      geometry.dispose();
+      return samples;
+    };
+  </script>
+</html>

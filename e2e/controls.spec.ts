@@ -13,21 +13,25 @@ test('gamepad navigates menus, starts and pauses once per press, and resets', as
   await page.goto('/');
   const button = async (index: number, down: boolean) =>
     page.evaluate(
-      ({ index, down }) => {
+      async ({ index, down }) => {
         const pad = (
           window as unknown as { testPad: { buttons: { pressed: boolean; value: number }[] } }
         ).testPad;
         pad.buttons[index] = { pressed: down, value: down ? 1 : 0 };
+        // Input is polled per frame; do not let a slow GPU skip a synthetic press.
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
       },
       { index, down },
     );
   const tap = async (index: number) => {
     await button(index, true);
-    await page.waitForTimeout(80);
     await button(index, false);
-    await page.waitForTimeout(80);
   };
   await tap(15);
+  await expect(page.locator('#open-setup')).toBeFocused();
+  await tap(0);
   await expect(page.locator('[data-track="0"]')).toBeFocused();
   await tap(15);
   await expect(page.locator('[data-track="1"]')).toBeFocused();
@@ -74,6 +78,8 @@ test('WASD and arrows navigate and activate course controls', async ({ page }) =
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#open-setup')).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(page.locator('[data-track="0"]')).toBeFocused();
   await page.keyboard.press('KeyD');
   await expect(page.locator('[data-track="1"]')).toBeFocused();

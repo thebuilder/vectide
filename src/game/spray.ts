@@ -1,7 +1,7 @@
 import * as T from 'three';
 import type { Racer } from './physics';
 import type { Track } from './tracks';
-import { waterHeight } from './water';
+import { waterHeight, type WaterProfile } from './water';
 
 const CAPACITY = 4200;
 /** Solid water fragments and floating foam, emitted from hull contacts and landing impacts. */
@@ -52,6 +52,24 @@ export class VoxelSpray {
     for (let i = 0; i < CAPACITY; i++) this.object.setMatrixAt(i, this.dummy.matrix);
     this.object.instanceMatrix.needsUpdate = true;
   }
+  burst(x: number, y: number, z: number, strength = 1) {
+    for (let n = 0; n < Math.ceil(140 * strength); n++) {
+      const i = this.cursor++ % CAPACITY,
+        j = i * 3;
+      const theta = Math.random() * Math.PI * 2;
+      const speed = (5 + Math.random() * 14) * Math.sqrt(strength);
+      this.foam[i] = 0;
+      this.duration[i] = this.life[i] = 0.9 + Math.random() * 0.8;
+      this.sizes[i] = (0.12 + Math.random() * 0.35) * (0.5 + strength * 0.5);
+      this.positions[j] = x + Math.sin(theta) * 0.7;
+      this.positions[j + 1] = y + 0.4;
+      this.positions[j + 2] = z + Math.cos(theta) * 0.7;
+      this.velocities[j] = Math.sin(theta) * speed;
+      this.velocities[j + 1] = (4 + Math.random() * 12) * Math.sqrt(strength);
+      this.velocities[j + 2] = Math.cos(theta) * speed;
+      this.object.setColorAt(i, n % 4 ? this.white : this.blue);
+    }
+  }
   private emit(r: Racer, side: number, impact: number, isFoam: boolean) {
     const i = this.cursor++ % CAPACITY,
       j = i * 3,
@@ -81,7 +99,7 @@ export class VoxelSpray {
     this.velocities[j + 2] = r.vz * 0.13 - fx * lateral - fz * 2 * pace;
     this.object.setColorAt(i, Math.random() > 0.23 ? this.white : this.blue);
   }
-  update(dt: number, racers: Racer[], track: Track, time: number) {
+  update(dt: number, racers: Racer[], track: Track, time: number, water: WaterProfile = track) {
     for (const r of racers) {
       const speed = Math.hypot(r.vx, r.vz),
         cooldown = Math.max(0, (this.cooldown.get(r.id) ?? 0) - dt);
@@ -125,11 +143,11 @@ export class VoxelSpray {
         this.positions[j] += this.velocities[j] * dt * 0.3;
         this.positions[j + 2] += this.velocities[j + 2] * dt * 0.3;
         this.positions[j + 1] =
-          waterHeight(this.positions[j], this.positions[j + 2], time, track) + 0.06;
+          waterHeight(this.positions[j], this.positions[j + 2], time, water) + 0.06;
       } else {
         this.velocities[j + 1] -= 9.81 * dt;
         for (let k = 0; k < 3; k++) this.positions[j + k] += this.velocities[j + k] * dt;
-        const surface = waterHeight(this.positions[j], this.positions[j + 2], time, track);
+        const surface = waterHeight(this.positions[j], this.positions[j + 2], time, water);
         if (this.positions[j + 1] < surface && this.velocities[j + 1] < 0) {
           this.foam[i] = 1;
           this.sizes[i] *= 1.8;

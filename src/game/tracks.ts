@@ -22,6 +22,7 @@ export interface Obstacle extends Point {
 }
 export interface Track {
   id: string;
+  practiceRadius?: number;
   name: string;
   subtitle: string;
   description: string;

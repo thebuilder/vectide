@@ -1,3 +1,4 @@
+import { pulseHeight, type WaterPulse } from './water-pulses';
 // Fixed world-space grid. Physics interpolates the same two triangles as the GPU mesh.
 export const CELL = 4;
 export const WAVES = [
@@ -23,6 +24,8 @@ export interface WaveZone {
 export interface WaterProfile {
   wave: number;
   waveZones?: readonly WaveZone[];
+  pulses?: readonly WaterPulse[];
+  pulseTime?: number;
 }
 type Surface = number | WaterProfile;
 export function waveZoneWeight(x: number, z: number, zone: WaveZone): number {
@@ -50,7 +53,11 @@ export function vertexHeight(x: number, z: number, t: number, surface: Surface):
       // A second harmonic gives a firm launch face and a longer back to each crest.
       swell += (Math.sin(phase) + 0.25 * Math.sin(2 * phase)) * zone.swell * weight;
     }
-  return (h * shelter + swell) * amplitude;
+  let disturbance = 0;
+  if (typeof surface !== 'number')
+    for (const pulse of surface.pulses ?? [])
+      disturbance += pulseHeight(x, z, pulse.age + t - (surface.pulseTime ?? t), pulse);
+  return (h * shelter + swell) * amplitude + Math.max(-2, Math.min(5, disturbance));
 }
 export function waterHeight(x: number, z: number, t: number, surface: Surface): number {
   const gx = Math.floor(x / CELL) * CELL,

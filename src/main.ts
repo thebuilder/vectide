@@ -1,3 +1,7 @@
+import { PickupHud } from './pickup-hud';
+import './pickups.css';
+import { courseCards } from './course-cards';
+import { setupMultiplayer } from './multiplayer/ui';
 import { inject } from '@vercel/analytics';
 import { TouchControls } from './touch';
 import '@fontsource/roboto/latin-900-italic.css';
@@ -5,6 +9,9 @@ import '@fontsource/roboto/latin-400-italic.css';
 import '@fontsource/roboto/latin-700.css';
 import { Controls } from './controls';
 import './style.css';
+import './multiplayer/style.css';
+import './menu.css';
+import { setupMenuScreens } from './menu';
 import { Engine, type Mode, type Snapshot } from './game/engine';
 import { SONGS } from './game/audio';
 import { TRACKS } from './game/tracks';
@@ -17,41 +24,45 @@ app.innerHTML = `
 <div class="screen-grain" aria-hidden="true"></div>
 <header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><svg viewBox="0 0 40 32" aria-hidden="true"><path d="M1 2h9l10 21L30 2h9L20 39Z"/><path d="M0 13h40M0 19h40" class="cut"/></svg>VECTIDE<span class="version">/ 01</span></a><div class="header-right"><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound">SOUND OFF</button><button id="pause" class="quiet" hidden>PAUSE <kbd data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</kbd></button></div></header>
 <main id="menu">
+  <div id="menu-panels">
+  <section id="menu-home" class="menu-screen is-active" aria-label="Main menu">
   <div class="hero"><p class="eyebrow">ANALOG SOUL. DIGITAL OCEAN.</p><h1>RIDE THE<br/><span>WAVEFORM.</span></h1><p class="intro">Find your line. Feel every wave.</p></div>
-  <section class="launch" aria-label="Race setup">
+  <div class="home-actions"><button id="open-setup" class="primary">HIT THE WATER <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button>
+    <div class="multiplayer-launch"><span class="eyebrow">MULTIPLAYER</span><div><button id="host-online">HOST</button><button id="join-online">JOIN</button></div></div>
+  </div></section>
+  <section id="race-setup" class="menu-screen" aria-label="Race setup" inert>
+  <div class="launch"><div class="setup-heading"><button id="setup-back" class="quiet">BACK</button><h2>Set your course.</h2></div>
     <div class="course-heading"><span>SELECT COURSE</span><span id="course-number">01 / 03</span></div>
-    <div class="courses">${TRACKS.map(
-      (t, i) =>
-        `<button class="course ${i === 0 ? 'selected' : ''}" data-track="${i}" aria-pressed="${i === 0}"><span class="course-index">0${i + 1}</span><span class="course-name">${t.name}<small>${t.sea} WATER</small></span><svg class="course-line" viewBox="${Math.min(...t.points.map((p) => p.x)) - 20} ${Math.min(...t.points.map((p) => p.z)) - 20} ${Math.max(...t.points.map((p) => p.x)) - Math.min(...t.points.map((p) => p.x)) + 40} ${Math.max(...t.points.map((p) => p.z)) - Math.min(...t.points.map((p) => p.z)) + 40}" aria-hidden="true"><path d="M${t.points
-          .filter((_, i) => i % 8 === 0)
-          .map((p) => `${p.x},${p.z}`)
-          .join('L')}Z"/></svg></button>`,
-    ).join('')}</div>
+    <div class="courses">${courseCards('data-track')}</div>
     <div class="course-description"><span id="description">${TRACKS[0].description}</span><span>~2 MIN / LAP</span></div>
     <div class="setup-options">
       <div class="setup-option"><span id="soundtrack-heading">SOUNDTRACK</span><details class="song-picker"><summary id="soundtrack-label" aria-labelledby="soundtrack-heading soundtrack-label">${SONGS[0].name}</summary><div class="song-options" role="group" aria-label="Race soundtrack">${SONGS.map((s, i) => `<button type="button" data-song="${i}" aria-pressed="${i === 0}">${s.name}</button>`).join('')}</div></details></div>
       <div class="setup-option"><span id="difficulty-heading">DIFFICULTY</span><div class="difficulty-toggle" role="group" aria-labelledby="difficulty-heading">${['easy', 'normal', 'expert'].map((d) => `<button type="button" data-difficulty="${d}" aria-pressed="${d === 'normal'}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div></div>
+      <div class="setup-option"><span id="pickups-heading">PICKUPS</span><button id="pickups-toggle" class="pickup-toggle" aria-labelledby="pickups-heading pickups-toggle" aria-pressed="true">ON</button></div>
     </div>
-    <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary">HIT THE WATER <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button></div>
-  </section>
-  <footer class="menu-footer"><a class="creator-credit" href="https://thebuilder.dk/" target="_blank" rel="noopener noreferrer">by thebuilder.dk</a><button id="replay-intro" class="quiet">REPLAY INTRO</button><span data-keyboard="WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT" data-touch="TOUCH TO SELECT · VIRTUAL KEYS TO RIDE" data-gamepad="D-PAD / STICK · NAVIGATE · A SELECT · B BACK">WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT</span><button id="help" class="quiet">HOW TO RIDE <span>+</span></button></footer>
+    <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary">START RACE</button></div>
+  </div></section>
+  </div>
+  <footer class="menu-footer"><a class="creator-credit" href="https://thebuilder.dk/" target="_blank" rel="noopener noreferrer">by thebuilder.dk</a><span data-keyboard="WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT" data-touch="TOUCH TO SELECT · VIRTUAL KEYS TO RIDE" data-gamepad="D-PAD / STICK · NAVIGATE · A SELECT · B BACK">WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT</span><button id="help" class="quiet">HOW TO RIDE <span>+</span></button></footer>
 </main>
 <section id="hud" hidden aria-label="Race information">
   <div class="race-top"><div><span class="label" id="position-label">POSITION</span><strong id="position">01<span>/ 06</span></strong></div><div class="lap-info"><span class="label">LAP <b id="lap">1 / 3</b></span><strong id="timer">00:00.000</strong></div></div>
   <div id="checkpoint" class="checkpoint"><span id="direction">↑</span><div>NEXT GATE <b id="gate">01</b><small id="distance">0 M</small></div></div>
+  <div id="item-hud" hidden><span id="item-icon" aria-hidden="true">◇</span><div><strong id="item-name" aria-hidden="true"></strong><span id="item-announcement" class="sr-only" role="status"></span><small id="item-description">Ride through a pickup</small><span id="item-use"><span class="item-use-label"><kbd data-keyboard="Q" data-gamepad="LB" data-touch="USE button">Q</kbd> USE ITEM</span></span></div></div>
   <div id="notice" class="notice" role="status"></div>
   <div class="race-bottom"><div class="map-wrap"><canvas id="map" width="220" height="190" aria-label="Course map"></canvas><span id="track-name">PALM CIRCUIT</span></div><div class="speed"><strong id="speed">0</strong><span>KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small id="water-state">ON THE WATER</small></div></div>
-  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="SWIPE + HOLD GO" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE STUNT · RELEASE AT TAKEOFF</div>
+  <div id="online-race-status" hidden></div>
+  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE STUNT · RELEASE AT TAKEOFF</div>
 </section>
 <div id="touch-controls" aria-label="Touch driving controls">
  <div class="touch-steer"><button data-touch-key="left" aria-label="Steer left">◀</button><button data-touch-key="right" aria-label="Steer right">▶</button></div>
- <div class="touch-actions"><button data-touch-key="reset" hidden>RESET</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="throttle">GO</button></div></div>
+ <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><button data-touch-key="reset" hidden>RESET</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
 </div>
 <div id="lap-split" hidden role="status" aria-live="polite"></div>
 <div id="countdown" hidden aria-live="polite"></div>
-<dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2>Water can wait.</h2><button id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
-<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="GO button" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT / C" data-gamepad="STICK ↑ / ↓">SHIFT / C</dt><dd class="touch-hide">Shift weight back / forward</dd><dt data-keyboard="E / STEER + E" data-touch="SWIPE + HOLD GO" data-gamepad="RB / STICK + RB">E / STEER + E</dt><dd>Hold to load a flip; steer to load a spin. Release at takeoff.</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose, or forward to press it down.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump. Hold E (gamepad RB) as you approach a jump, then release at takeoff. On touch, swipe up from GO and hold to load a flip, or sideways for a spin; lift your finger at takeoff. An unfinished trick can throw you off; you will swim back and remount.</p><button id="close-help" class="primary">GOT IT <span>↗</span></button></dialog>
-<dialog id="results"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><button id="again" class="primary">RIDE AGAIN <span>↗</span></button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
+<dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><button id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
+<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="AUTOMATIC" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT / C" data-gamepad="STICK ↑ / ↓">SHIFT / C</dt><dd class="touch-hide">Shift weight back / forward</dd><dt data-keyboard="E / STEER + E" data-touch="HOLD JUMP" data-gamepad="RB / STICK + RB">E / STEER + E</dt><dd>Hold to load a flip<span class="touch-hide">; steer to load a spin</span>. Release at takeoff.</dd><dt data-keyboard="Q" data-touch="USE button" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose, or forward to press it down.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump. Hold E (gamepad RB) as you approach a jump, then release at takeoff. On touch, throttle is automatic. Hold BRAKE to slow down. Hold JUMP to prepare a flip, then release as a wave or ramp launches you. An unfinished trick can throw you off; you will swim back and remount.</p><button id="close-help" class="primary">GOT IT</button></dialog>
+<dialog id="results"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><ol id="online-results" hidden></ol><button id="again" class="primary">RIDE AGAIN</button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
 `;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const formatTime = (time: number) =>
@@ -62,11 +73,7 @@ let mode: Mode = 'race';
 const introElements = [
   ['.masthead', 0.08],
   ['.hero', 0.5],
-  ['.course-heading', 0.6],
-  ['.courses', 0.62],
-  ['.course-description', 0.64],
-  ['.setup-options', 0.66],
-  ['.launch-row', 0.68],
+  ['.home-actions', 0.6],
   ['.menu-footer', 0.7],
 ].map(([selector, at]) => ({
   element: document.querySelector<HTMLElement>(String(selector))!,
@@ -91,7 +98,19 @@ try {
 }
 const touch = new TouchControls(engine, $('touch-controls'));
 const controls = new Controls(engine);
-engine.onFrame = (now) => controls.poll(now);
+$('pickups-toggle').onclick = () => {
+  engine.pickupsEnabled = !engine.pickupsEnabled;
+  $('pickups-toggle').setAttribute('aria-pressed', String(engine.pickupsEnabled));
+  $('pickups-toggle').textContent = engine.pickupsEnabled ? 'ON' : 'OFF';
+};
+const pickupHud = new PickupHud($('item-hud'));
+engine.onFrame = (now) => {
+  controls.poll(now);
+  pickupHud.update(
+    engine.player,
+    (engine.network?.items ?? engine.items).enabled && ['racing', 'paused'].includes(engine.state),
+  );
+};
 document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(
   (button) =>
     (button.onclick = () => {
@@ -118,6 +137,7 @@ document.querySelector('.song-picker')!.addEventListener('keydown', (event) => {
     $('soundtrack-label').focus();
   }
 });
+const menuScreens = setupMenuScreens();
 let selectedTrack = 0;
 document.querySelectorAll<HTMLButtonElement>('[data-track]').forEach((button) =>
   button.addEventListener('click', () => {
@@ -135,6 +155,14 @@ document.querySelectorAll<HTMLButtonElement>('[data-track]').forEach((button) =>
 document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((button) =>
   button.addEventListener('click', () => {
     mode = button.dataset.mode as Mode;
+    $<HTMLButtonElement>('pickups-toggle').disabled = mode === 'trial';
+    $('pickups-toggle').textContent =
+      mode === 'trial' ? 'OFF · TIME TRIAL' : engine.pickupsEnabled ? 'ON' : 'OFF';
+    $('pickups-toggle').setAttribute(
+      'aria-pressed',
+      String(mode === 'race' && engine.pickupsEnabled),
+    );
+    $('start').textContent = mode === 'trial' ? 'START TIME TRIAL' : 'START RACE';
     document.querySelectorAll('[data-mode]').forEach((b) => {
       const active = b === button;
       b.classList.toggle('active', active);
@@ -151,7 +179,7 @@ function clearFinishPresentation() {
   splitUntil = 0;
   $('lap-split').hidden = true;
 }
-function start() {
+function showRace() {
   clearFinishPresentation();
   void engine.audio.start();
   document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((d) => d.close());
@@ -159,29 +187,30 @@ function start() {
   $('hud').hidden = false;
   $('pause').hidden = false;
   document.body.classList.add('playing');
-  engine.start(mode);
   $('start').blur();
 }
-function menu() {
+function start() {
+  showRace();
+  engine.start(mode);
+}
+function menu(screen: 'home' | 'setup' = 'setup') {
+  multiplayer.room.close();
   clearFinishPresentation();
   document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((d) => d.close());
   engine.menu();
+  if (engine.track !== TRACKS[selectedTrack]) engine.selectTrack(selectedTrack);
   $('menu').hidden = false;
   $('hud').hidden = true;
   $('pause').hidden = true;
   $('countdown').hidden = true;
   document.body.classList.remove('playing');
-  $('start').focus();
+  menuScreens.show(screen, false);
 }
-$('replay-intro').onclick = () => {
-  engine.replayIntro();
-  syncIntro(engine.introStatus.progress);
-};
 $('start').onclick = start;
 $('restart').onclick = start;
 $('again').onclick = start;
-$('exit').onclick = menu;
-$('result-exit').onclick = menu;
+$('exit').onclick = () => menu(engine.network ? 'home' : 'setup');
+$('result-exit').onclick = () => menu(engine.network ? 'home' : 'setup');
 $('pause').onclick = () => engine.pause();
 $('resume').onclick = () => engine.pause();
 $('help').onclick = () => $<HTMLDialogElement>('help-dialog').showModal();
@@ -192,12 +221,13 @@ $('sound').onclick = async () => {
 };
 $<HTMLDialogElement>('pause-dialog').addEventListener('cancel', (e) => {
   e.preventDefault();
-  if (engine.state === 'paused') engine.pause();
+  if (engine.state === 'paused' || engine.onlineMenuOpen) engine.pause();
 });
 engine.onPause = () => {
   const dialog = $<HTMLDialogElement>('pause-dialog');
-  if (engine.state === 'paused') dialog.showModal();
-  else dialog.close();
+  if (engine.state === 'paused' || engine.onlineMenuOpen) {
+    if (!dialog.open) dialog.showModal();
+  } else dialog.close();
 };
 const map = $<HTMLCanvasElement>('map').getContext('2d')!;
 function drawMap(s: Snapshot) {
@@ -228,14 +258,16 @@ function drawMap(s: Snapshot) {
   s.racers
     .slice()
     .reverse()
+    .filter((r) => !engine.network?.disconnected.has(r.id))
     .forEach((r) => {
       map.fillStyle = r.color;
       map.beginPath();
-      map.arc(x(r.x), z(r.z), r.id === 0 ? 4 : 2.5, 0, Math.PI * 2);
+      map.arc(x(r.x), z(r.z), r.id === s.player.id ? 4 : 2.5, 0, Math.PI * 2);
       map.fill();
     });
 }
 engine.onUpdate = (s) => {
+  multiplayer.update();
   syncIntro(engine.introStatus.progress);
   touch.sync(s);
   if (s.player.laps.length > shownLaps) {
@@ -272,7 +304,9 @@ engine.onUpdate = (s) => {
   $('header-label').textContent = s.track.name;
   $('position-label').textContent = s.mode === 'trial' ? 'TIME TRIAL' : 'POSITION';
   $('position').innerHTML =
-    s.mode === 'trial' ? 'SOLO' : `${s.position.toString().padStart(2, '0')}<span>/ 06</span>`;
+    s.mode === 'trial'
+      ? 'SOLO'
+      : `${s.position.toString().padStart(2, '0')}<span>/ ${String(s.racers.length).padStart(2, '0')}</span>`;
   $('lap').textContent =
     `${Math.min(Math.max(s.player.lap, 1), s.mode === 'race' ? 3 : 1)} / ${s.mode === 'race' ? 3 : 1}`;
   $('timer').textContent = formatTime(s.time);
@@ -305,11 +339,7 @@ engine.onUpdate = (s) => {
           : document.body.dataset.input === 'gamepad'
             ? 'MISSED GATE · TURN BACK OR PRESS X'
             : 'MISSED GATE · TURN BACK OR PRESS R'
-        : s.player.air.trick !== 'none'
-          ? s.player.air.trick.toUpperCase()
-          : s.player.air.messageTime > 0
-            ? s.player.air.message
-            : '';
+        : '';
   const go = s.state === 'racing' && s.time < 0.75;
   $('countdown').hidden = s.state !== 'countdown' && !go;
   $('countdown').textContent = go ? 'GO!' : String(Math.max(1, Math.ceil(s.countdown)));
@@ -318,7 +348,7 @@ engine.onUpdate = (s) => {
 };
 engine.onFinish = (s) => {
   const best = Math.min(...s.player.laps),
-    key = `vectide:best:v5:${s.track.id}:${s.mode}`;
+    key = `vectide:best:v5:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;
   try {
@@ -330,7 +360,7 @@ engine.onFinish = (s) => {
     saved = false;
   }
   $('result-label').textContent =
-    s.mode === 'race' ? `POSITION ${s.position} / 6` : 'TIME TRIAL COMPLETE';
+    s.mode === 'race' ? `POSITION ${s.position} / ${s.racers.length}` : 'TIME TRIAL COMPLETE';
   $('result-title').textContent =
     s.mode === 'race' && s.position === 1 ? 'You own the water.' : 'Made some waves.';
   $('result-time').textContent = formatTime(s.time);
@@ -348,11 +378,31 @@ engine.onFinish = (s) => {
     if (engine.state === 'finished') $<HTMLDialogElement>('results').showModal();
   }, 1800);
 };
+const multiplayer = setupMultiplayer(
+  engine,
+  (race) => {
+    showRace();
+    engine.startNetwork(race);
+  },
+  () => menu('home'),
+);
 // Read-only diagnostics support reproducible browser verification without altering race state.
 Object.defineProperty(window, '__vectide', {
   get: () =>
     structuredClone({
       ...engine.snapshot(),
+      pickups: {
+        enabled: (engine.network?.items ?? engine.items).enabled,
+        boxes: (engine.network?.items ?? engine.items).boxes,
+        ...(engine.network?.items ?? engine.items).state,
+      },
+      multiplayer: {
+        phase: multiplayer.room.phase,
+        host: multiplayer.room.host,
+        slot: multiplayer.room.slot,
+        members: multiplayer.room.members,
+        pendingInputs: engine.network?.pendingCount ?? 0,
+      },
       rider: engine.riderPose,
       audio: engine.audio.status,
       intro: engine.introStatus,
