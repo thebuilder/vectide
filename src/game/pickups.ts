@@ -41,7 +41,8 @@ export interface PickupState {
 
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
-  return [2, 6, 11, 16, 21].flatMap((index, row) => {
+  // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
+  return [2, 6, track.id === 'palms' ? 14 : 11, 16, 21].flatMap((index, row) => {
     // Gates already fit the navigable water. Avoid placing a row on a ramp deck.
     for (let offset = 0; offset < 4; offset++) {
       const gate = track.gates[(index + offset) % track.gates.length];

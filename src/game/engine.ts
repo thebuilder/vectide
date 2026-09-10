@@ -249,6 +249,7 @@ export class Engine {
       // Stage the title offshore so the coast stays on the horizon, clear of the rider.
       p.x = -320;
       p.z = -250;
+      p.yaw = Math.PI / 4;
       p.y = waterHeight(p.x, p.z, this.visualTime, this.track) + 0.6;
       this.camera.position.set(p.x - Math.sin(1.72) * 12, p.y + 4, p.z - Math.cos(1.72) * 12);
     } else
@@ -688,12 +689,24 @@ export class Engine {
     });
     if (this.state === 'menu') {
       // Look across the islands toward the sunset instead of the empty outer sea.
+      const portrait = this.camera.aspect < 1;
       const a =
-        (this.camera.aspect < 1 ? 1.4 : 1.72) +
+        (portrait ? 1.4 : 1.72) +
         (this.reducedMotion.matches ? 0 : Math.sin(this.visualTime * 0.1) * 0.06);
-      const desired = new T.Vector3(p.x - Math.sin(a) * 12, p.y + 4, p.z - Math.cos(a) * 12);
-      this.camera.position.lerp(desired, 1 - Math.exp(-dt * 2));
-      this.camTarget.set(p.x, p.y + 1, p.z);
+      // Leave the menu's left column clear. Portrait looks farther ahead from above,
+      // placing the rider in the open water below the buttons while retaining the sunset.
+      const offset = portrait ? 2.6 : this.camera.aspect * 3.2;
+      const x = p.x + Math.cos(a) * offset,
+        z = p.z - Math.sin(a) * offset,
+        distance = portrait ? 22 : 12,
+        lead = portrait ? 36 : 0;
+      const desired = new T.Vector3(
+        x - Math.sin(a) * distance,
+        p.y + (portrait ? 16 : 4),
+        z - Math.cos(a) * distance,
+      );
+      this.camera.position.lerp(desired, this.reducedMotion.matches ? 1 : 1 - Math.exp(-dt * 2));
+      this.camTarget.set(x + Math.sin(a) * lead, p.y + 1, z + Math.cos(a) * lead);
     } else if (this.state !== 'lobby') {
       const speed = Math.hypot(p.vx, p.vz),
         desired = new T.Vector3(

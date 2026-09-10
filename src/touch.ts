@@ -49,8 +49,11 @@ export class TouchControls {
     this.root.querySelector<HTMLButtonElement>('[data-touch-key="item"]')!.disabled =
       player.itemReadyIn > 0;
     const mounted = player.recovery.phase === 'riding';
+    const riding = state === 'racing' || state === 'freeride';
     const stalled =
-      state === 'racing' &&
+      riding &&
+      mounted &&
+      !this.engine.onlineMenuOpen &&
       document.body.dataset.input === 'touch' &&
       !this.engine.touchInput.brake &&
       speed < 3;
@@ -58,11 +61,13 @@ export class TouchControls {
     const offCourse =
       state === 'racing' &&
       Math.min(...track.points.map((p) => Math.hypot(p.x - player.x, p.z - player.z))) > 45;
-    if (state !== 'racing' || speed > 6) this.stuck = false;
+    if (!riding || !mounted || this.engine.onlineMenuOpen || speed > 6) this.stuck = false;
     if (this.stuckSince !== null && time - this.stuckSince >= 2) this.stuck = true;
     const needsReset =
       mounted &&
-      (state === 'freeride' || (state === 'racing' && (missed || offCourse || this.stuck)));
+      !this.engine.onlineMenuOpen &&
+      riding &&
+      (this.stuck || (state === 'racing' && (missed || offCourse)));
     this.root.querySelector<HTMLElement>('[data-touch-key="reset"]')!.hidden = !needsReset;
     const driving =
       document.body.dataset.input === 'touch' &&

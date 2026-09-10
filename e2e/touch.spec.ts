@@ -92,6 +92,8 @@ test('touch reset is contextual and ordinary stops do not reveal it', async ({ p
     };
     const control = new TouchControls(engine, root);
     s.state = 'racing';
+    s.player.x = s.track.gates[0].x;
+    s.player.z = s.track.gates[0].z;
     s.missed = false;
     s.speed = 0;
     s.time = 10;
@@ -116,7 +118,35 @@ test('touch reset is contextual and ordinary stops do not reveal it', async ({ p
     s.state = 'paused';
     control.sync(s);
     const paused = visible();
-    return { idle, missed, offCourse, stuck, moving, paused };
+    s.state = 'freeride';
+    s.time = 20;
+    s.speed = 0;
+    engine.touchInput.brake = 1;
+    control.sync(s);
+    s.time = 23;
+    control.sync(s);
+    const practiceBraking = visible();
+    engine.touchInput.brake = 0;
+    control.sync(s);
+    const practiceIdle = visible();
+    s.time = 25.1;
+    control.sync(s);
+    const practiceStuck = visible();
+    s.speed = 20;
+    control.sync(s);
+    const practiceMoving = visible();
+    return {
+      idle,
+      missed,
+      offCourse,
+      stuck,
+      moving,
+      paused,
+      practiceBraking,
+      practiceIdle,
+      practiceStuck,
+      practiceMoving,
+    };
   });
   expect(result).toEqual({
     idle: false,
@@ -125,5 +155,9 @@ test('touch reset is contextual and ordinary stops do not reveal it', async ({ p
     stuck: true,
     moving: false,
     paused: false,
+    practiceBraking: false,
+    practiceIdle: false,
+    practiceStuck: true,
+    practiceMoving: false,
   });
 });

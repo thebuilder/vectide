@@ -10,7 +10,7 @@ import {
 } from '../src/game/pickups';
 import { createRacer, racePosition, stepRacer } from '../src/game/physics';
 import { TRACKS } from '../src/game/tracks';
-import { waterHeight } from '../src/game/water';
+import { waterHeight, waveZoneWeight } from '../src/game/water';
 const track = TRACKS[0];
 const drive = { throttle: 1, steer: 0, brake: 0, lean: 0 };
 const setup = () => {
@@ -22,6 +22,16 @@ const setup = () => {
   return { items, racers };
 };
 describe('race pickups', () => {
+  it('places the Palm reef row after the waves and before the jump straight', () => {
+    const reef = track.waveZones!.find((zone) => zone.name === 'Reef wave channel')!;
+    const straight = track.waveZones!.find((zone) => zone.name === 'Jump straight')!;
+    for (const box of pickupRows(track).filter((box) => box.row === 2)) {
+      expect(waveZoneWeight(box.x, box.z, reef)).toBeLessThan(0.1);
+      expect(box.z).toBeGreaterThan(reef.z);
+      expect(box.z).toBeLessThan(straight.z);
+      expect(box.x).toBeGreaterThan(track.ramps[0].x);
+    }
+  });
   it('places five clear rows of five on every course', () => {
     for (const t of TRACKS) {
       const boxes = pickupRows(t);

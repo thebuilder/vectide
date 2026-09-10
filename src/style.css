@@ -964,6 +964,9 @@ body[data-input='gamepad'] :is(button, summary, a):focus {
   background: #86fadd;
   color: #07171e;
 }
+.touch-navigation {
+  position: relative;
+}
 .touch-steer {
   display: flex;
   gap: 8px;
@@ -994,7 +997,7 @@ body[data-input='gamepad'] :is(button, summary, a):focus {
 }
 #touch-controls [data-touch-key='reset'] {
   position: absolute;
-  right: 0;
+  left: 0;
   bottom: calc(100% + 10px);
   min-height: 44px;
   width: 68px;
