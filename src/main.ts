@@ -34,7 +34,7 @@ app.innerHTML = `
   <div class="launch"><div class="setup-heading"><button id="setup-back" class="quiet">BACK</button><h2>Set your course.</h2></div>
     <div class="course-heading"><span>SELECT COURSE</span><span id="course-number">01 / 03</span></div>
     <div class="courses">${courseCards('data-track')}</div>
-    <div class="course-description"><span id="description">${TRACKS[0].description}</span><span>~2 MIN / LAP</span></div>
+    <div class="course-description"><span id="description">${TRACKS[0].description}</span><span id="lap-estimate">~2 MIN / LAP</span></div>
     <div class="setup-options">
       <div class="setup-option"><span id="soundtrack-heading">SOUNDTRACK</span><details class="song-picker"><summary id="soundtrack-label" aria-labelledby="soundtrack-heading soundtrack-label">${SONGS[0].name}</summary><div class="song-options" role="group" aria-label="Race soundtrack">${SONGS.map((s, i) => `<button type="button" data-song="${i}" aria-pressed="${i === 0}">${s.name}</button>`).join('')}</div></details></div>
       <div class="setup-option"><span id="difficulty-heading">DIFFICULTY</span><div class="difficulty-toggle" role="group" aria-labelledby="difficulty-heading">${['easy', 'normal', 'expert'].map((d) => `<button type="button" data-difficulty="${d}" aria-pressed="${d === 'normal'}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div></div>
@@ -149,6 +149,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-track]').forEach((button) =>
       b.setAttribute('aria-pressed', String(active));
     });
     $('description').textContent = TRACKS[selectedTrack].description;
+    $('lap-estimate').textContent = selectedTrack === 0 ? '~2 MIN / LAP' : '~1 MIN / LAP';
     $('course-number').textContent = `0${selectedTrack + 1} / 03`;
   }),
 );
@@ -348,7 +349,8 @@ engine.onUpdate = (s) => {
 };
 engine.onFinish = (s) => {
   const best = Math.min(...s.player.laps),
-    key = `vectide:best:v5:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
+    courseVersion = s.track.id === 'palms' ? 'v5' : 'v6',
+    key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;
   try {

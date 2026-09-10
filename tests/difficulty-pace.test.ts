@@ -20,9 +20,8 @@ it.each(TRACKS)('Normal is competitive and difficulties stay ordered on $name', 
     expect(r.recovered).toBe(false);
     laps[difficulty] = r.laps[0];
   }
-  // New courses have meaningful two-minute routes; old short-course times are not comparable.
-  expect(laps.normal).toBeGreaterThan(95);
-  expect(laps.normal).toBeLessThan(170);
+  expect(laps.normal).toBeGreaterThan(track.id === 'palms' ? 95 : 55);
+  expect(laps.normal).toBeLessThan(track.id === 'palms' ? 170 : 70);
   expect(laps.normal).toBeLessThan(laps.easy);
   expect(laps.expert).toBeLessThan(laps.normal);
 });

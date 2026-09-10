@@ -111,18 +111,23 @@ export const TRACKS: Track[] = definitions.map((d) => {
           : 32;
     return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
-  const gates = Array.from({ length: 24 }, (_, i) => fitGateToShore(at(i / 24), layout.land));
+  // Keep checkpoint spacing readable on the compact one-minute courses.
+  const gateCount = d.id === 'palms' ? 24 : 16;
+  const gates = Array.from({ length: gateCount }, (_, i) =>
+    fitGateToShore(at(i / gateCount), layout.land),
+  );
   const ramps: Ramp[] = layout.rampCenters.map(([x, z, tx = -1, tz = 0]) => {
-    const early = d.id === 'palms' && tz === -1;
+    const early = d.id === 'palms' && tz === -1,
+      compact = d.id !== 'palms';
     const ramp = {
       x,
       z,
       tx,
       tz,
       width: early ? 9 : 12,
-      length: early ? 26 : 40,
+      length: early ? 26 : compact ? 20 : 40,
       baseHeight: -4.2,
-      height: early ? 7 : 9.5,
+      height: early || compact ? 7 : 9.5,
     };
     const target = gates
       .map((gate, index) => ({
