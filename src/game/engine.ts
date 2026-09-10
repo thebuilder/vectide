@@ -249,7 +249,7 @@ export class Engine {
       // Stage the title offshore so the coast stays on the horizon, clear of the rider.
       p.x = -320;
       p.z = -250;
-      p.yaw = 0;
+      p.yaw = Math.PI / 4;
       p.y = waterHeight(p.x, p.z, this.visualTime, this.track) + 0.6;
       this.camera.position.set(p.x - Math.sin(1.72) * 12, p.y + 4, p.z - Math.cos(1.72) * 12);
     } else
