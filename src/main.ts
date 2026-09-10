@@ -55,8 +55,8 @@ app.innerHTML = `
   <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE STUNT · RELEASE AT TAKEOFF</div>
 </section>
 <div id="touch-controls" aria-label="Touch driving controls">
- <div class="touch-steer"><button data-touch-key="left" aria-label="Steer left">◀</button><button data-touch-key="right" aria-label="Steer right">▶</button></div>
- <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><button data-touch-key="reset" hidden>RESET</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
+ <div class="touch-navigation"><button data-touch-key="reset" hidden>RESET</button><div class="touch-steer"><button data-touch-key="left" aria-label="Steer left">◀</button><button data-touch-key="right" aria-label="Steer right">▶</button></div></div>
+ <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
 </div>
 <div id="lap-split" hidden role="status" aria-live="polite"></div>
 <div id="countdown" hidden aria-live="polite"></div>

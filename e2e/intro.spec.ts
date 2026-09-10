@@ -15,12 +15,16 @@ test('intro stages the interface and releases the race', async ({ page }) => {
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeVisible();
   // Leaving the offshore title scene must restore the actual race grid.
-  expect(
-    await page.evaluate(() => {
-      const { player, track } = (window as unknown as { __vectide: Snapshot }).__vectide;
-      return Math.hypot(player.x - track.gates[0].x, player.z - track.gates[0].z);
-    }),
-  ).toBeLessThan(30);
+  const grid = await page.evaluate(() => {
+    const { player, track } = (window as unknown as { __vectide: Snapshot }).__vectide;
+    const gate = track.gates[0];
+    return {
+      distance: Math.hypot(player.x - gate.x, player.z - gate.z),
+      alignment: Math.sin(player.yaw) * gate.tx + Math.cos(player.yaw) * gate.tz,
+    };
+  });
+  expect(grid.distance).toBeLessThan(30);
+  expect(grid.alignment).toBeGreaterThan(0.99);
   expect(
     await page.evaluate(
       () =>
