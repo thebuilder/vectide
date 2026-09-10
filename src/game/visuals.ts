@@ -9,6 +9,7 @@ import { type Racer } from './physics';
 import { box, dark, glowing, outlined } from './geometry';
 import { addTerrain } from './terrain-visuals';
 import { createDolphins } from './dolphins';
+import { createCargoBoat } from './cargo-boat';
 import { createMusicVisuals } from './music-visuals';
 import { addLandmarks } from './landmarks';
 export interface World {
@@ -284,10 +285,10 @@ export function createWorld(track: Track): World {
   } else addLandmarks(group, track);
   const musicVisuals = createMusicVisuals(track, skylineBounds);
   group.add(musicVisuals.group);
-  const dolphins = createDolphins(track);
-  group.add(dolphins.group);
+  const passing = track.id === 'storm' ? createCargoBoat(track) : createDolphins(track);
+  group.add(passing.group);
   batchStatic(ramps, []);
-  batchStatic(group, [water, ramps, ...gates, ...turbines, dolphins.group, musicVisuals.group]);
+  batchStatic(group, [water, ramps, ...gates, ...turbines, passing.group, musicVisuals.group]);
   const pulseMaterials = new Map<T.MeshStandardMaterial, number>();
   const outlines = new Map<T.LineBasicMaterial, { color: T.Color; opacity: number }>();
   group.traverse((object) => {
@@ -326,7 +327,7 @@ export function createWorld(track: Track): World {
       musicVisuals.update(bands);
       sun.scale.setScalar(1 + bands.low * 0.035);
       waterMaterial.uniforms.uMusic.value.set(bands.low, bands.mid, bands.high);
-      dolphins.update(t, player);
+      passing.update(t, player);
       waterMaterial.uniforms.uTime.value = t;
       water.position.x = Math.floor(player.x / CELL) * CELL;
       water.position.z = Math.floor(player.z / CELL) * CELL;

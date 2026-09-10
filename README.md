@@ -119,7 +119,7 @@ input simulation and snapshot interpolation; no reference source was copied.
 ## Pickups
 
 Race setup and the host lobby have a Pickups toggle, enabled by default. Each course
-has five rows of five mystery crates, clear of ramp approaches and landings. Collect
+has five pickup rows. Palm uses five crates per row; Port and Storm use three, spaced between checkpoints with time to use each item. Rows stay clear of ramp approaches and landings. Collect
 one item at a time; a collected crate returns after seven seconds. Time trials and
 lobby free ride have no items. Best laps with pickups use a separate local record.
 
@@ -143,7 +143,7 @@ send only input and receive bounded item snapshots alongside the race state.
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 16 gates and a pair of linked optional ramps. Palm also has a smaller opening ramp and turns directly toward the finish after the jump straight. Its early bends have wider gates and shore clearance for weapon knockback; the eastern channel puts a sustained wave train across the racing line. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
+Each course has 16 gates. Palm has a pair of linked optional ramps plus a smaller opening ramp, and turns directly toward the finish after the jump straight. Port has no ramps: its dock passages and sheltered basins lead into a direct final approach. Storm runs counterclockwise, with a west wave train, an open-water weave, and broad sweeps through the east-channel swell instead of ramps. Palm's early bends have wider gates and shore clearance for weapon knockback; the eastern channel puts a sustained wave train across the racing line. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
 
 After finishing, AI keeps the craft riding while results appear with a brief headline scramble and panel sweep. Reduced motion uses a fade. The board lists every racer by position and adds their recorded time as they finish; disconnected racers appear last. Finishers cannot collide with racers still competing.
 
@@ -165,7 +165,7 @@ The rider has articulated knees and elbows, a padded racing vest, a full-face he
 
 Load a trick by holding E or gamepad RB on the approach, then release near takeoff. Steering selects a spin. Releases up to 300 ms before takeoff are buffered; earlier releases cancel. Holding visibly crouches the rider. Flips and spins need enough airtime to finish. Landing a completed flip adds 10 percent to horizontal speed, capped at 2 m/s, once per landing. An unfinished trick throws the rider off; the rider falls, swims back beside the craft, and climbs aboard. Checkpoints cannot advance while detached. Ordinary jumps remain forgiving.
 
-The close chase camera follows horizontal movement directly, maintaining its distance at speed, and stays above the wave surface. Rendering and physics have separate timing. The game pauses when focus is lost or the page is hidden. The course menu shows a single floating craft with course markers hidden. Multiplayer lobbies show the joined racers lined up on the water. Palm fronds curve and taper; sparse island clusters and varied tower silhouettes break up repeated scenery. A three-dolphin pod breaches near the first third of the course when approached, then dives away, once per lap. The menu and HUD are semantic HTML over the WebGL canvas.
+The close chase camera follows horizontal movement directly, maintaining its distance at speed, and stays above the wave surface. Rendering and physics have separate timing. The game pauses when focus is lost or the page is hidden. The course menu shows a single floating craft with course markers hidden. Multiplayer lobbies show the joined racers lined up on the water. Palm fronds curve and taper; sparse island clusters and varied tower silhouettes break up repeated scenery. On Palm and Port, a three-dolphin pod breaches near the first third of the course when approached, then dives away, once per lap. Storm has a distant cargo boat cruising beyond the offshore ridge with navigation lights and a small wake. The menu and HUD are semantic HTML over the WebGL canvas.
 
 ## Verification
 

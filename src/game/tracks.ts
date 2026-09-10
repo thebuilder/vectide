@@ -61,7 +61,7 @@ const definitions = [
     name: 'PORT AFTERDARK',
     subtitle: 'Between the iron giants',
     description:
-      'Thread the docks, cross the harbor swell, and line up the double jump beneath violet city lights.',
+      'Thread the docks, cross the harbor swell, and carve through sheltered basins beneath violet city lights.',
     sea: 'CHOPPY',
     accent: '#b890ff',
     sky: '#07081d',
@@ -74,7 +74,7 @@ const definitions = [
     name: 'STORM SIGNAL',
     subtitle: 'Out past the breakwater',
     description:
-      'Heavy swell between rocky islands. Find the sheltered line, or launch off the exposed wave trains.',
+      'Run counterclockwise through the west wave train, weave across open water, and sweep home through heavy swell.',
     sea: 'ROUGH',
     accent: '#ffbc57',
     sky: '#080f20',

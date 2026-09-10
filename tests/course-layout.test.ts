@@ -35,37 +35,40 @@ it.each(TRACKS)('leaves the navigation line clear of authored shores on $name', 
       ).toBeNull();
   }
 });
-it.each(TRACKS)('can chain both ramps and settle between them on $name', (track) => {
-  const first = track.ramps[0],
-    r = createRacer(track, 0);
-  Object.assign(r, {
-    x: first.x - first.tx * 30,
-    z: first.z - first.tz * 30,
-    yaw: Math.atan2(first.tx, first.tz),
-    vx: first.tx * 22,
-    vz: first.tz * 22,
-  });
-  r.y = waterHeight(r.x, r.z, 0, track) + 0.5;
-  const touched = new Set<number>();
-  let waterBetween = false;
-  for (let f = 0; f < 120 * 13; f++) {
-    stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, f / 120, 1 / 120);
-    if (r.onRamp)
-      track.ramps.forEach((ramp, i) => {
-        if (Math.hypot(r.x - ramp.x, r.z - ramp.z) < ramp.length / 2 + 1) touched.add(i);
-      });
-    if (
-      touched.has(0) &&
-      !touched.has(1) &&
-      !r.onRamp &&
-      r.wet > 0 &&
-      r.x < first.x - first.length / 2
-    )
-      waterBetween = true;
-  }
-  expect([...touched]).toEqual([0, 1]);
-  expect(waterBetween).toBe(true);
-});
+it.each(TRACKS.filter((track) => track.ramps.length > 0))(
+  'can chain both ramps and settle between them on $name',
+  (track) => {
+    const first = track.ramps[0],
+      r = createRacer(track, 0);
+    Object.assign(r, {
+      x: first.x - first.tx * 30,
+      z: first.z - first.tz * 30,
+      yaw: Math.atan2(first.tx, first.tz),
+      vx: first.tx * 22,
+      vz: first.tz * 22,
+    });
+    r.y = waterHeight(r.x, r.z, 0, track) + 0.5;
+    const touched = new Set<number>();
+    let waterBetween = false;
+    for (let f = 0; f < 120 * 13; f++) {
+      stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, f / 120, 1 / 120);
+      if (r.onRamp)
+        track.ramps.forEach((ramp, i) => {
+          if (Math.hypot(r.x - ramp.x, r.z - ramp.z) < ramp.length / 2 + 1) touched.add(i);
+        });
+      if (
+        touched.has(0) &&
+        !touched.has(1) &&
+        !r.onRamp &&
+        r.wet > 0 &&
+        r.x < first.x - first.length / 2
+      )
+        waterBetween = true;
+    }
+    expect([...touched]).toEqual([0, 1]);
+    expect(waterBetween).toBe(true);
+  },
+);
 it('keeps Palm entirely tropical', () => {
   expect(TRACKS[0].land.every((land) => land.kind === 'island')).toBe(true);
 });

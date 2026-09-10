@@ -243,6 +243,7 @@ export class NetworkRace {
       this.host ||
       state.tick <= this.latestTick ||
       state.racers.length !== this.racers.length ||
+      state.items.cooldowns.length !== this.items.boxes.length ||
       !state.racers.every((r) => this.racers.some((local) => local.id === r.id))
     )
       return;

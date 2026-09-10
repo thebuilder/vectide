@@ -1,4 +1,4 @@
-import { gatePointClear } from './course-layout';
+import { fitGateToShore, gatePointClear } from './course-layout';
 import { angle, clamp, racePosition, rampSurface, type Racer } from './physics';
 import type { Track } from './tracks';
 import { waterHeight, type WaterProfile } from './water';
@@ -42,17 +42,32 @@ export interface PickupState {
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
   // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
-  const used = new Set<number>();
-  return [1, 4, track.id === 'palms' ? 10 : 9, 12, 14].flatMap((index, row) => {
+  // The ramp-free courses use narrower rows between gates, with room to use each item.
+  const betweenGates = track.id !== 'palms',
+    lanes = betweenGates ? 3 : 5,
+    rows = betweenGates ? [1.5, 4.5, 7.5, 10.5, 13.5] : [1, 4, 10, 12, 14],
+    used = new Set<number>();
+  return rows.flatMap((index, row) => {
     // Gates already fit the navigable water. Avoid placing a row on a ramp deck.
-    for (let offset = 0; offset < track.gates.length; offset++) {
+    for (let offset = 0; offset < (betweenGates ? 1 : track.gates.length); offset++) {
       const gateIndex = (index + offset) % track.gates.length;
       if (used.has(gateIndex)) continue;
-      const gate = track.gates[gateIndex];
-      const spacing = Math.min(5, (gate.width - 8) / 4);
-      const points = Array.from({ length: 5 }, (_, lane) => ({
-        x: gate.x - gate.tz * (lane - 2) * spacing,
-        z: gate.z + gate.tx * (lane - 2) * spacing,
+      let gate = track.gates[gateIndex];
+      if (betweenGates) {
+        const pointIndex = Math.round((gateIndex / track.gates.length) * track.points.length),
+          p = track.points[pointIndex],
+          before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
+          after = track.points[(pointIndex + 1) % track.points.length],
+          length = Math.hypot(after.x - before.x, after.z - before.z);
+        gate = fitGateToShore(
+          { ...p, tx: (after.x - before.x) / length, tz: (after.z - before.z) / length, width: 24 },
+          track.land,
+        );
+      }
+      const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
+      const points = Array.from({ length: lanes }, (_, lane) => ({
+        x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
+        z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,
         row,
       }));
       if (
