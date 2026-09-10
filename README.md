@@ -139,11 +139,11 @@ send only input and receive bounded item snapshots alongside the race state.
 
 ## Courses
 
-- **Palm Circuit**: rolling swells, palm islands, a coastal arch, and a sweeping approach to the checkered finish.
+- **Palm Circuit**: rolling swells, palm islands, a coastal arch, and a direct return to the checkered finish.
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 16 gates and a pair of linked optional ramps. Palm also has a smaller opening ramp and turns directly toward the finish after the jump straight. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
+Each course has 16 gates and a pair of linked optional ramps. Palm also has a smaller opening ramp and turns directly toward the finish after the jump straight. Its early bends have wider gates and shore clearance for weapon knockback; the eastern channel puts a sustained wave train across the racing line. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
 
 After finishing, AI keeps the craft riding while results appear with a brief headline scramble and panel sweep. Reduced motion uses a fade. The board lists every racer by position and adds their recorded time as they finish; disconnected racers appear last. Finishers cannot collide with racers still competing.
 

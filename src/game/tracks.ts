@@ -108,7 +108,9 @@ export const TRACKS: Track[] = definitions.map((d) => {
         ? 46
         : d.id === 'harbor'
           ? 24
-          : 32;
+          : d.id === 'palms'
+            ? 40
+            : 32;
     return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
   // Keep checkpoint spacing readable on the compact one-minute courses.
