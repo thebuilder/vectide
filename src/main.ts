@@ -353,7 +353,7 @@ engine.onUpdate = (s) => {
 };
 engine.onFinish = (s) => {
   const best = Math.min(...s.player.laps),
-    courseVersion = s.track.id === 'palms' ? 'v8' : 'v9',
+    courseVersion = s.track.id === 'storm' ? 'v10' : s.track.id === 'palms' ? 'v8' : 'v9',
     key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;

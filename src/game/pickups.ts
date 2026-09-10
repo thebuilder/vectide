@@ -45,7 +45,12 @@ export function pickupRows(track: Track): Pickup[] {
   // The ramp-free courses use narrower rows between gates, with room to use each item.
   const betweenGates = track.id !== 'palms',
     lanes = betweenGates ? 3 : 5,
-    rows = betweenGates ? [1.5, 4.5, 7.5, 10.5, 13.5] : [1, 4, 10, 12, 14],
+    rows =
+      track.id === 'storm'
+        ? [2.5, 6.5, 9.5, 12.5, 15.5]
+        : betweenGates
+          ? [1.5, 4.5, 7.5, 10.5, 13.5]
+          : [1, 4, 10, 12, 14],
     used = new Set<number>();
   return rows.flatMap((index, row) => {
     // Gates already fit the navigable water. Avoid placing a row on a ramp deck.

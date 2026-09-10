@@ -4,7 +4,7 @@ import { TRACKS } from '../game/tracks';
 
 export const MAX_RACERS = 10;
 // Course geometry and handling must match on host and predicting clients.
-export const VERSION = 9;
+export const VERSION = 10;
 export const STEP = 1 / 120;
 export const SEND_EVERY = 6;
 export const NEUTRAL: Input = { throttle: 0, steer: 0, brake: 1, lean: 0, trick: 0 };

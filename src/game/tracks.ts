@@ -115,8 +115,9 @@ export const TRACKS: Track[] = definitions.map((d) => {
   };
   // Keep checkpoint spacing readable on the compact one-minute courses.
   const gateCount = 16;
+  // Storm's opening gate must face the grid before the first bend, not sit beyond it.
   const gates = Array.from({ length: gateCount }, (_, i) =>
-    fitGateToShore(at(i / gateCount), layout.land),
+    fitGateToShore(at(d.id === 'storm' && i === 1 ? 0.02 : i / gateCount), layout.land),
   );
   const ramps: Ramp[] = layout.rampCenters.map(([x, z, tx = -1, tz = 0]) => {
     const early = d.id === 'palms' && tz === -1;
