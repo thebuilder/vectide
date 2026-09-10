@@ -10,8 +10,9 @@ test('final split leads into animated results while autopilot keeps riding', asy
     });
   });
   await page.goto('/');
+  await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
-  await page.getByRole('button', { name: 'HIT THE WATER' }).click();
+  await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeHidden({ timeout: 10000 });
   await page.evaluate(() => {
     const e = (window as any).__testEngine;

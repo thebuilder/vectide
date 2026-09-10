@@ -1,0 +1,261 @@
+/* Both screens occupy the same space so transitions leave the ocean live. */
+#menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 90px 40px 0;
+  overflow: hidden;
+}
+#menu-panels {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  opacity: 0;
+  transform: translateX(24px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease-out,
+    transform 240ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s 240ms;
+}
+#menu-home {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px max(0px, calc((100% - 1140px) / 2));
+  transform: translateX(-24px);
+}
+.menu-screen.is-active,
+#menu-home.is-active {
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+#menu[data-instant='true'] .menu-screen {
+  transition: none;
+}
+#menu-home .hero {
+  position: static;
+  margin: 0;
+  flex: none;
+}
+#menu-home h1 {
+  font-size: clamp(56px, 7vw, 106px);
+}
+#menu-home .intro {
+  margin: 24px 0 0;
+}
+.home-actions {
+  width: 360px;
+  max-width: 100%;
+  margin-top: 40px;
+  flex: none;
+}
+#open-setup {
+  width: 100%;
+  min-height: 58px;
+  justify-content: space-between;
+}
+#open-setup svg {
+  flex-shrink: 0;
+}
+.home-actions .multiplayer-launch {
+  display: block;
+  padding: 0;
+  margin: 24px 0 0;
+  border: 0;
+  background: transparent;
+}
+.home-actions .multiplayer-launch .eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 9px;
+}
+.home-actions .multiplayer-launch > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.home-actions .multiplayer-launch button {
+  min-width: 0;
+  min-height: 48px;
+}
+#race-setup {
+  display: flex;
+  align-items: safe end;
+  padding: 24px 0;
+}
+#race-setup .launch {
+  margin: auto auto 0;
+  padding: 4px;
+}
+.setup-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.setup-heading h2 {
+  margin: 0;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: clamp(36px, 4.5vw, 60px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+#setup-back {
+  min-height: 44px;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  background: #071a21c9;
+}
+#race-setup #start {
+  justify-content: center;
+}
+#menu .menu-footer {
+  position: static;
+  flex: none;
+  padding: 20px 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-screen {
+    transition: none;
+    transform: none;
+  }
+}
+@media (max-width: 700px) {
+  #menu {
+    padding: 70px max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  }
+  #menu-home {
+    padding: 24px 0;
+    justify-content: safe center;
+  }
+  #menu-home h1 {
+    font-size: clamp(46px, 12vw, 76px);
+  }
+  #menu-home .hero .eyebrow {
+    margin-bottom: 14px;
+  }
+  #menu-home .intro {
+    margin-top: 16px;
+  }
+  .home-actions {
+    width: 100%;
+    margin-top: 32px;
+  }
+  #menu .menu-footer {
+    padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  }
+  #race-setup {
+    padding: 12px 0 20px;
+  }
+  #race-setup .launch {
+    padding: 4px;
+  }
+  .setup-heading {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .setup-heading h2 {
+    font-size: 34px;
+  }
+  #setup-back {
+    padding: 10px 12px;
+  }
+  #race-setup .course {
+    min-height: 54px;
+    padding: 10px 12px;
+  }
+  #race-setup .course small {
+    margin-top: 5px;
+  }
+  #race-setup .course-heading {
+    padding-bottom: 10px;
+  }
+  #race-setup .setup-options {
+    margin: 8px 0 16px;
+    gap: 8px;
+  }
+  #race-setup #start {
+    min-height: 52px;
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  #menu {
+    padding-top: 64px;
+  }
+  #menu-home {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 32px;
+    padding: 16px 0;
+  }
+  #menu-home h1 {
+    font-size: 48px;
+  }
+  #menu-home .eyebrow {
+    font-size: 8px;
+  }
+  #menu-home .intro {
+    margin-top: 12px;
+    font-size: 10px;
+  }
+  .home-actions {
+    margin: 0;
+  }
+  .home-actions .multiplayer-launch {
+    margin-top: 16px;
+  }
+  #menu .menu-footer {
+    padding: 10px 0;
+  }
+  #race-setup {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 700px) and (max-height: 740px) {
+  #race-setup .course-description {
+    display: none;
+  }
+  #race-setup .setup-options {
+    margin-top: 16px;
+  }
+  .setup-heading {
+    margin-bottom: 12px;
+  }
+  #race-setup .course {
+    min-height: 48px;
+    padding-block: 8px;
+  }
+  #race-setup .setup-options {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 700px) and (max-height: 740px) {
+  .setup-heading {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .setup-heading h2 {
+    font-size: clamp(26px, 7.5vw, 34px);
+  }
+}

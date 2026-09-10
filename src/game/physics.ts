@@ -4,7 +4,7 @@ import { hullPoints, polygonContact } from './hull-contact';
 import { collideTerrain } from './terrain-collision';
 import { createRiderLoad, stepRiderLoad, type RiderLoad } from './rider-load';
 import { collideRampWalls } from './ramp-collision';
-import { waterHeight } from './water';
+import { waterHeight, type WaterProfile } from './water';
 import { nearestPoint, routePoint, type Track, type Gate } from './tracks';
 export interface Input {
   throttle: number;
@@ -12,9 +12,15 @@ export interface Input {
   brake: number;
   lean: number;
   trick?: number;
+  use?: boolean;
 }
 export interface Racer {
   id: number;
+  item: number;
+  itemPressed: boolean;
+  itemReadyIn: number;
+  boost: number;
+  boostPower: number;
   name: string;
   color: string;
   x: number;
@@ -56,6 +62,11 @@ export function createRacer(track: Track, id: number): Racer {
     z = g.z - g.tz * back + g.tx * side;
   return {
     id,
+    item: 0,
+    itemPressed: false,
+    itemReadyIn: 0,
+    boost: 0,
+    boostPower: 1,
     name: ['YOU', 'NOVA', 'ECHO', 'FLUX', 'ONYX', 'SOL'][id],
     color: ['#86fadd', '#ff5b82', '#ffbc57', '#b890ff', '#8dbdf5', '#ffffff'][id],
     x,
@@ -104,9 +115,15 @@ export function stepRacer(
   t: number,
   dt: number,
   power = 1,
+  surface: WaterProfile = track,
 ): void {
+  r.itemReadyIn = Math.max(0, r.itemReadyIn - dt);
+  if (r.boost > 0) {
+    r.boost = Math.max(0, r.boost - dt);
+    if (r.recovery.phase === 'riding') power *= r.boostPower;
+  }
   if (r.recovery.phase !== 'riding') input = { throttle: 0, steer: 0, brake: 0.7, lean: 0 };
-  stepAerial(r, input, r.y - waterHeight(r.x, r.z, t, track), dt);
+  stepAerial(r, input, r.y - waterHeight(r.x, r.z, t, surface), dt);
   stepRiderLoad(r, input, dt);
   const wasAirborne = r.body.airtime > 0.12;
   const entryVelocity = r.vy;
@@ -128,8 +145,8 @@ export function stepRacer(
       const x = r.x + fx * along + rx * side,
         z = r.z + fz * along + rz * side;
       const localY = r.y + Math.sin(r.pitch) * along + Math.sin(r.roll) * side;
-      const h = waterHeight(x, z, t, track),
-        waterV = (waterHeight(x, z, t + 0.025, track) - h) / 0.025;
+      const h = waterHeight(x, z, t, surface),
+        waterV = (waterHeight(x, z, t + 0.025, surface) - h) / 0.025;
       const immersion = h + 0.48 + Math.min(speed / 120, 0.2) - localY;
       const pointV = r.vy + r.pitchVelocity * along + r.rollVelocity * side;
       const spring =
@@ -190,9 +207,9 @@ export function stepRacer(
   r.vz += (fz * (thrust - drag) - rz * sideDrag) * dt;
   if (!r.onRamp && r.wet > 0) {
     const slopeX =
-      (waterHeight(r.x + 1.5, r.z, t, track) - waterHeight(r.x - 1.5, r.z, t, track)) / 3;
+      (waterHeight(r.x + 1.5, r.z, t, surface) - waterHeight(r.x - 1.5, r.z, t, surface)) / 3;
     const slopeZ =
-      (waterHeight(r.x, r.z + 1.5, t, track) - waterHeight(r.x, r.z - 1.5, t, track)) / 3;
+      (waterHeight(r.x, r.z + 1.5, t, surface) - waterHeight(r.x, r.z - 1.5, t, surface)) / 3;
     const waveDrive = clamp(speed / 6, 0, 1);
     r.vx -= slopeX * 4.5 * r.wet * waveDrive * dt;
     r.vz -= slopeZ * 4.5 * r.wet * waveDrive * dt;
@@ -246,7 +263,7 @@ export function stepRacer(
       }
     }
   }
-  stepRecovery(r, track, t, dt);
+  stepRecovery(r, surface, t, dt);
 }
 
 export function collideRacers(a: Racer, b: Racer): boolean {
@@ -324,6 +341,19 @@ export function updateProgress(
 export function raceProgress(r: Racer, track: Track): number {
   const g = track.gates[r.nextGate];
   return r.passed - Math.min(Math.hypot(g.x - r.x, g.z - r.z) / 120, 0.99);
+}
+/** Ties share a position, matching the number shown in the race HUD. */
+export function racePosition(player: Racer, racers: Racer[], track: Track): number {
+  return (
+    1 +
+    racers.filter(
+      (r) =>
+        r !== player &&
+        (r.finished
+          ? !player.finished || r.finishTime < player.finishTime
+          : !player.finished && raceProgress(r, track) > raceProgress(player, track)),
+    ).length
+  );
 }
 export function catchupPower(r: Racer, player: Racer, track: Track): number {
   if (r.id !== 1 && r.id !== 2) return 1;

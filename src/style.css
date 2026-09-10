@@ -965,11 +965,15 @@ body[data-input='gamepad'] :is(button, summary, a):focus {
   display: flex;
   gap: 8px;
 }
-#touch-controls [data-touch-key='throttle'] {
+#touch-controls [data-touch-key='flip'] {
   height: 70px;
   width: 72px;
   background: #86faddd9;
   color: #07171e;
+}
+#touch-controls [data-touch-key='flip'] span {
+  display: block;
+  line-height: 1.45;
 }
 #touch-controls [data-touch-key='brake'] {
   height: 70px;

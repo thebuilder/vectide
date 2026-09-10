@@ -1,8 +1,8 @@
 import * as T from 'three';
 import type { Spectrum } from './spectrum';
 import { batchStatic } from './batch';
-import { CELL, waterHeight } from './water';
-import { createWaterMaterial } from './water-material';
+import { CELL, waterHeight, type WaterProfile } from './water';
+import { createWaterMaterial, updateWaterPulses } from './water-material';
 import { type Track } from './tracks';
 import { type Racer } from './physics';
 
@@ -17,7 +17,7 @@ export interface World {
   waterMaterial: T.ShaderMaterial;
   gates: T.Group[];
   turbines: T.Group[];
-  update: (t: number, player: Racer, bands?: Spectrum) => void;
+  update: (t: number, player: Racer, bands?: Spectrum, surface?: WaterProfile) => void;
   dispose: () => void;
 }
 export function createWorld(track: Track): World {
@@ -66,7 +66,7 @@ export function createWorld(track: Track): World {
   farWater.position.y = -4;
   group.add(farWater);
   // The course is marked along both banks, leaving the middle open for racing lines.
-  track.gates.forEach((g, i) => {
+  (track.practiceRadius ? [] : track.gates).forEach((g, i) => {
     const gate = new T.Group();
     gate.position.set(g.x, 0, g.z);
     for (const side of [-1, 1]) {
@@ -247,7 +247,37 @@ export function createWorld(track: Track): World {
       new T.PointsMaterial({ color: 0xaab9d4, size: 2.1, sizeAttenuation: true }),
     ),
   );
-  addLandmarks(group, track);
+  if (track.practiceRadius) {
+    const radius = track.practiceRadius;
+    for (let i = 0; i < 96; i++) {
+      const a = (i * Math.PI) / 48;
+      const rail = box(
+        group,
+        (2 * Math.PI * radius) / 96 + 0.1,
+        0.75,
+        0.8,
+        Math.sin(a) * radius,
+        0.65,
+        Math.cos(a) * radius,
+        0xffbc57,
+        new T.MeshStandardMaterial({ color: i % 2 ? 0x143c39 : 0xffbc57 }),
+      );
+      rail.rotation.y = a;
+      if (i % 4 === 0) {
+        box(
+          group,
+          0.4,
+          3.2,
+          0.4,
+          Math.sin(a) * radius,
+          1.8,
+          Math.cos(a) * radius,
+          0xffbc57,
+          glowing(0xffbc57, 0.5),
+        );
+      }
+    }
+  } else addLandmarks(group, track);
   const musicVisuals = createMusicVisuals(track, skylineBounds);
   group.add(musicVisuals.group);
   const dolphins = createDolphins(track);
@@ -275,7 +305,8 @@ export function createWorld(track: Track): World {
     waterMaterial,
     gates,
     turbines,
-    update(t, player, bands = { low: 0, mid: 0, high: 0 }) {
+    update(t, player, bands = { low: 0, mid: 0, high: 0 }, surface = track) {
+      updateWaterPulses(waterMaterial, surface, t);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {
         const sand = material.name === 'sand-wire';
@@ -295,7 +326,7 @@ export function createWorld(track: Track): World {
       water.position.z = Math.floor(player.z / CELL) * CELL;
       gates.forEach((g, i) => {
         const p = track.gates[i];
-        g.position.y = i === 0 ? 0 : waterHeight(p.x, p.z, t, track);
+        g.position.y = i === 0 ? 0 : waterHeight(p.x, p.z, t, surface);
         g.getObjectByName('next')!.visible = i === player.nextGate;
       });
       turbines.forEach((r, i) => (r.rotation.z = t * 0.3 + i));

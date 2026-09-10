@@ -1,0 +1,434 @@
+import { test, expect, type Page } from '@playwright/test';
+import { PeerServer } from 'peer';
+import type { Server } from 'node:http';
+import type { Room } from '../src/multiplayer/room';
+import type { Snapshot } from '../src/game/engine';
+
+declare global {
+  interface Window {
+    room: Room;
+    error: string;
+    drive: { throttle: number; steer: number; brake: number; lean: number };
+  }
+}
+let server: Server;
+test.beforeAll(async () => {
+  await new Promise<void>((resolve) => {
+    PeerServer({ host: '127.0.0.1', port: 9001 }, (listener) => {
+      server = listener;
+      resolve();
+    });
+  });
+});
+test.afterAll(async () => {
+  await new Promise<void>((resolve) => server?.close(() => resolve()));
+});
+const state = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __vectide: Snapshot }).__vectide);
+async function openOnline(page: Page, action = 'HOST') {
+  await page.goto('/');
+  await page.getByRole('button', { name: action, exact: true }).click();
+}
+
+test('two rendered racers join, sync course and countdown, drive, open menu and leave', async ({
+  browser,
+}) => {
+  const hostContext = await browser.newContext({ reducedMotion: 'reduce' });
+  const guestContext = await browser.newContext({ reducedMotion: 'reduce' });
+  const host = await hostContext.newPage(),
+    guest = await guestContext.newPage();
+  const errors: string[] = [];
+  host.on('pageerror', (e) => errors.push(e.message));
+  guest.on('pageerror', (e) => errors.push(e.message));
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    await expect(host.getByRole('button', { name: 'START RACE', exact: true })).toBeDisabled();
+    await openOnline(guest, 'JOIN');
+    await guest.getByLabel('Racer name').fill('<img src=x>');
+    await guest.getByLabel('Room code', { exact: true }).fill(code);
+    await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    await expect(host.locator('#room-racers')).toContainText('<img src=x>');
+    await expect(host.locator('#room-racers img')).toHaveCount(0);
+    await expect.poll(async () => (await state(host)).state).toBe('lobby');
+    await expect.poll(async () => (await state(guest)).racers.length).toBe(2);
+    await guest.getByLabel('Your name').fill('WAVE RUNNER');
+    await guest.getByLabel('Your name').press('Enter');
+    await guest.getByRole('button', { name: 'Gold', exact: true }).click();
+    await expect(host.locator('#room-racers')).toContainText('WAVE RUNNER');
+    await expect.poll(async () => (await state(host)).racers[1].color).toBe('#ffbc57');
+    await expect(guest.getByRole('button', { name: 'Gold', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await host.getByLabel('Your name').fill('HOST');
+    await host.getByLabel('Your name').press('Enter');
+    await expect(guest.locator('#room-racers')).toContainText('HOST');
+    await host.locator('[data-room-track="1"]').click();
+    await expect(guest.locator('[data-room-track="1"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(guest.locator('[data-room-track="1"]')).toBeDisabled();
+    await host.screenshot({ path: 'artifacts/multiplayer-lobby.png' });
+    await host.getByRole('button', { name: 'START RACE', exact: true }).click();
+    await expect(host.locator('#hud')).toBeVisible();
+    await expect(guest.locator('#hud')).toBeVisible();
+    await expect.poll(async () => (await state(guest)).state).toBe('racing');
+    expect((await state(host)).racers).toHaveLength(2);
+    expect((await state(guest)).player.id).toBe(1);
+    expect((await state(guest)).track.id).toBe('harbor');
+    expect(Math.abs((await state(host)).time - (await state(guest)).time)).toBeLessThan(0.3);
+    await guest.bringToFront();
+    await guest.keyboard.down('w');
+    await expect.poll(async () => (await state(guest)).speed).toBeGreaterThan(15);
+    await expect
+      .poll(async () => {
+        const racer = (await state(host)).racers[1];
+        return Math.hypot(racer.vx, racer.vz) * 3.6;
+      })
+      .toBeGreaterThan(15);
+    await guest.keyboard.up('w');
+    await guest.keyboard.press('Escape');
+    await expect(guest.locator('#pause-dialog')).toBeVisible();
+    await expect(guest.locator('#pause-note')).toContainText('keeps running');
+    const time = (await state(guest)).time;
+    await expect.poll(async () => (await state(guest)).time).toBeGreaterThan(time + 0.15);
+    await guest.getByRole('button', { name: 'KEEP RIDING' }).click();
+    await guest.keyboard.press('r');
+    await expect.poll(async () => (await state(host)).racers[1].recovered).toBe(true);
+    await guest.screenshot({ path: 'artifacts/multiplayer-race.png' });
+    await guest.keyboard.press('Escape');
+    await guest.getByRole('button', { name: 'LEAVE RACE', exact: true }).click();
+    await expect(guest.locator('#menu')).toBeVisible();
+    await expect(host.locator('#online-race-status')).toContainText('1 DISCONNECTED');
+    await host.keyboard.press('Escape');
+    await host.getByRole('button', { name: 'CLOSE ROOM', exact: true }).click();
+    // A departed guest can immediately join a fresh room without stale callbacks.
+    await host.getByRole('button', { name: 'HOST', exact: true }).click();
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const next = await host.locator('#room-code').inputValue();
+    await guest.getByRole('button', { name: 'JOIN', exact: true }).click();
+    await guest.getByLabel('Room code', { exact: true }).fill(next);
+    await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    await host.getByRole('button', { name: 'Leave room' }).click();
+    await expect(guest.locator('#online-status')).toContainText('host');
+    expect(errors).toEqual([]);
+  } finally {
+    await hostContext.close();
+    await guestContext.close();
+  }
+});
+
+test('ten real WebRTC clients race, reject an eleventh and late joins, and detect host loss', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const clients: Page[] = [];
+  const errors: string[] = [];
+  try {
+    const host = await context.newPage();
+    host.on('pageerror', (error) => errors.push(error.message));
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    for (let i = 0; i < 10; i++) {
+      const page = await context.newPage();
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.goto('/e2e/fixtures/multiplayer.html');
+      await page.waitForFunction(() => !!window.room);
+      clients.push(page);
+    }
+    await Promise.all(
+      clients.slice(0, 9).map((page, index) =>
+        page.evaluate(({ code, index }) => room.open(false, `RACER ${index}`, code), {
+          code,
+          index,
+        }),
+      ),
+    );
+    await expect(host.locator('#room-count')).toHaveText('10 RACERS');
+    await clients[9].evaluate((code) => room.open(false, 'ELEVEN', code), code);
+    await expect.poll(() => clients[9].evaluate(() => window.error)).toContain('full');
+    await host.bringToFront();
+    await host.screenshot({ path: 'artifacts/multiplayer-ten-lobby.png' });
+    await host.setViewportSize({ width: 375, height: 667 });
+    for (const id of ['room-code', 'leave-room', 'profile-name', 'room-courses', 'start-room']) {
+      const box = await host.locator(`#${id}`).boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(667);
+    }
+    await host.screenshot({ path: 'artifacts/multiplayer-ten-mobile.png' });
+    await host.setViewportSize({ width: 1280, height: 800 });
+    await host.getByRole('button', { name: 'START RACE', exact: true }).click();
+    await expect
+      .poll(() => Promise.all(clients.slice(0, 9).map((p) => p.evaluate(() => room.phase))))
+      .toEqual(Array(9).fill('racing'));
+    await expect.poll(async () => (await state(host)).state).toBe('racing');
+    const slots = await Promise.all(
+      clients.slice(0, 9).map((p) => p.evaluate(() => room.race!.player.id)),
+    );
+    expect(new Set([0, ...slots]).size).toBe(10);
+    expect((await state(host)).racers).toHaveLength(10);
+    // Disconnect only PeerJS signaling; keep the actual WebRTC data channel alive.
+    await clients[0].evaluate(() => {
+      (room as unknown as { peer: { disconnect(): void } }).peer.disconnect();
+    });
+    await expect.poll(() => clients[0].evaluate(() => room.signalingConnected)).toBe(true);
+    expect(await clients[0].evaluate(() => room.phase)).toBe('racing');
+    expect(await clients[0].evaluate(() => room.members.length)).toBe(10);
+
+    await expect(host.locator('#position')).toContainText('/ 10');
+    await Promise.all(
+      clients.slice(0, 9).map((p) =>
+        p.evaluate(() => {
+          window.drive = { throttle: 1, brake: 0, steer: 0, lean: 0 };
+        }),
+      ),
+    );
+    await host.keyboard.down('w');
+    await expect
+      .poll(async () => (await state(host)).racers.filter((r) => Math.hypot(r.vx, r.vz) > 3).length)
+      .toBe(10);
+    await host.keyboard.up('w');
+    await host.screenshot({ path: 'artifacts/multiplayer-ten-race.png' });
+    const pending = await Promise.all(
+      clients.slice(0, 9).map((p) => p.evaluate(() => room.race!.pendingCount)),
+    );
+    expect(Math.max(...pending)).toBeLessThan(120);
+    await clients[9].evaluate((code) => room.open(false, 'LATE', code), code);
+    await expect.poll(() => clients[9].evaluate(() => window.error)).toContain('already started');
+    await clients[8].evaluate(() => room.close());
+    await expect(host.locator('#online-race-status')).toContainText('1 DISCONNECTED');
+    await host.close();
+    await expect
+      .poll(() => clients[0].evaluate(() => window.error), { timeout: 10000 })
+      .toContain('host');
+    expect(errors).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('phone menu exposes host and join without scrolling and opens a water lobby', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 667 },
+    reducedMotion: 'reduce',
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  try {
+    await page.goto('/');
+    for (const size of [
+      { width: 375, height: 667 },
+      { width: 320, height: 568 },
+    ]) {
+      await page.setViewportSize(size);
+      for (const id of ['host-online', 'join-online']) {
+        const box = await page.locator(`#${id}`).boundingBox();
+        expect(box!.y).toBeGreaterThan(0);
+        expect(box!.y + box!.height).toBeLessThan(size.height);
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(await page.locator('#menu').evaluate((el) => el.scrollTop)).toBe(0);
+    }
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.screenshot({ path: 'artifacts/multiplayer-menu-mobile.png' });
+    await page.getByRole('button', { name: 'JOIN', exact: true }).tap();
+    await expect(page.getByLabel('Room code', { exact: true })).toBeVisible();
+    await page.locator('#cancel-online').tap();
+    await page.getByRole('button', { name: 'HOST', exact: true }).tap();
+    await expect(page.locator('#online-lobby')).toBeVisible();
+    await expect.poll(async () => (await state(page)).state).toBe('lobby');
+    for (const id of ['room-code', 'leave-room', 'profile-name', 'room-courses', 'start-room']) {
+      const box = await page.locator(`#${id}`).boundingBox();
+      expect(box!.y + box!.height).toBeLessThanOrEqual(667);
+    }
+    const roomPanel = await page.locator('.room-code-panel').boundingBox();
+    await page.screenshot({ path: 'artifacts/multiplayer-lobby-mobile.png' });
+    await page.getByRole('button', { name: 'FREE RIDE', exact: true }).tap();
+    await expect.poll(async () => (await state(page)).state).toBe('freeride');
+    await expect(page.locator('#room-code')).toBeVisible();
+    expect(await page.locator('.room-code-panel').boundingBox()).toEqual(roomPanel);
+    await expect(page.locator('#leave-room')).toBeHidden();
+    await expect(page.locator('#touch-controls')).toBeVisible();
+    await expect(page.locator('#touch-controls')).toHaveJSProperty('inert', false);
+    await expect(page.locator('#lobby-labels [data-slot="0"]')).toHaveCount(0);
+    await expect(page.locator('[data-touch-key="throttle"]')).toHaveCount(0);
+    await expect.poll(async () => (await state(page)).speed).toBeGreaterThan(20);
+    const brake = page.locator('[data-touch-key="brake"]');
+    const brakeBox = (await brake.boundingBox())!;
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: brakeBox.x + brakeBox.width / 2, y: brakeBox.y + brakeBox.height / 2 }],
+    });
+    await expect(brake).toHaveClass(/held/);
+    await expect.poll(async () => (await state(page)).speed).toBeLessThan(3);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(async () => (await state(page)).speed).toBeGreaterThan(12);
+    await page.screenshot({ path: 'artifacts/multiplayer-free-ride-mobile.png' });
+    await page.getByRole('button', { name: 'BACK TO LOBBY' }).tap();
+    await expect.poll(async () => (await state(page)).state).toBe('lobby');
+    await expect(page.getByLabel('Your name')).toBeVisible();
+    await expect(page.locator('#touch-controls')).toBeHidden();
+    await page.getByRole('button', { name: 'Leave room' }).tap();
+    await expect(page.locator('#menu')).toBeVisible();
+    expect((await state(page)).state).toBe('menu');
+  } finally {
+    await context.close();
+  }
+});
+
+test('lobby free ride synchronizes riders and moves everyone to a fresh race', async ({
+  browser,
+}) => {
+  const hostContext = await browser.newContext({ reducedMotion: 'reduce' });
+  const guestContext = await browser.newContext({ reducedMotion: 'reduce' });
+  const host = await hostContext.newPage(),
+    guest = await guestContext.newPage();
+  const errors: string[] = [];
+  for (const page of [host, guest]) page.on('pageerror', (e) => errors.push(e.message));
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    await openOnline(guest, 'JOIN');
+    await guest.getByLabel('Room code', { exact: true }).fill(code);
+    await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
+    await expect(guest.locator('#room-count')).toHaveText('2 RACERS');
+    await host.locator('#room-pickups').click();
+    await expect(guest.locator('#room-pickups')).toHaveAttribute('aria-pressed', 'false');
+    await expect(guest.locator('#room-pickups')).toBeDisabled();
+    await host.locator('#room-pickups').click();
+    await expect(guest.locator('#room-pickups')).toHaveAttribute('aria-pressed', 'true');
+    const music = () =>
+      guest.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __vectide: { audio: { song: string; time: number; playing: boolean } };
+            }
+          ).__vectide.audio,
+      );
+    await expect.poll(async () => (await music()).time).toBeGreaterThan(0.15);
+    const lobbyMusic = await music();
+    const start = await state(guest);
+    await guest.getByRole('button', { name: 'FREE RIDE', exact: true }).click();
+    await expect.poll(async () => (await state(guest)).state).toBe('freeride');
+    expect((await music()).song).toBe('Horizon Lane');
+    await expect.poll(async () => (await music()).time).toBeGreaterThan(0.3);
+    expect((await music()).playing).toBe(true);
+    await expect(guest.locator('.lobby-panel')).toBeHidden();
+    await expect(guest.locator('#room-code')).toBeVisible();
+    await expect(guest.locator('#room-code')).toHaveValue(code);
+    await guestContext.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await guest.getByRole('button', { name: 'COPY', exact: true }).click();
+    await expect(guest.locator('#copy-room')).toHaveText('COPIED');
+    expect(await guest.evaluate(() => navigator.clipboard.readText())).toBe(code);
+    await expect(guest.locator('#checkpoint')).toBeHidden();
+    await expect(guest.locator('.race-top')).toBeHidden();
+    await guest.bringToFront();
+    await guest.keyboard.down('w');
+    await expect.poll(async () => (await state(guest)).speed).toBeGreaterThan(35);
+    await expect
+      .poll(async () => (await state(host)).racers[1].z - start.player.z)
+      .toBeGreaterThan(15);
+    await guest.keyboard.up('w');
+    expect((await state(host)).state).toBe('lobby');
+    expect((await state(guest)).player.passed).toBe(0);
+    expect((await state(guest)).track.ramps).toHaveLength(2);
+    await guest.screenshot({ path: 'artifacts/multiplayer-free-ride.png' });
+    await guest.keyboard.press('Escape');
+    await expect(guest.locator('.lobby-panel')).toBeVisible();
+    await expect.poll(async () => (await state(guest)).state).toBe('lobby');
+    expect((await music()).song).toBe(lobbyMusic.song);
+    await expect.poll(async () => (await music()).time).toBeGreaterThan(0.15);
+    await guest.getByLabel('Your name').fill('PRACTICED');
+    await guest.getByLabel('Your name').press('Enter');
+    await expect(host.locator('#room-racers')).toContainText('PRACTICED');
+    await host.locator('[data-room-track="1"]').click();
+    await guest.getByRole('button', { name: 'FREE RIDE', exact: true }).click();
+    await expect.poll(async () => (await state(guest)).state).toBe('freeride');
+    expect((await music()).song).toBe('Horizon Lane');
+    await host.getByRole('button', { name: 'START RACE', exact: true }).click();
+    await expect(guest.locator('#countdown')).toBeVisible();
+    expect((await music()).song).toBe('Apex Run');
+    expect((await state(guest)).track.id).toBe('harbor');
+    expect((await state(guest)).player.passed).toBe(0);
+    await expect(guest.locator('#practice-controls')).toBeHidden();
+    await expect(guest.locator('.room-code-panel')).toBeHidden();
+    await expect(guest.locator('.race-top')).toBeVisible();
+    await expect.poll(async () => (await state(guest)).state).toBe('racing');
+    expect(errors).toEqual([]);
+  } finally {
+    await guestContext.close();
+    await hostContext.close();
+  }
+});
+
+test('real WebRTC item commands are owned by the host and effects reach the guest', async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const host = await context.newPage(),
+    guest = await context.newPage();
+  try {
+    for (const page of [host, guest]) await page.goto('/e2e/fixtures/multiplayer.html');
+    await host.evaluate(() => room.open(true, 'HOST'));
+    await expect.poll(() => host.evaluate(() => room.phase)).toBe('lobby');
+    const code = await host.evaluate(() => room.code);
+    await guest.evaluate((code) => room.open(false, 'GUEST', code), code);
+    await expect.poll(() => host.evaluate(() => room.members.length)).toBe(2);
+    await host.evaluate(() => room.start());
+    await expect.poll(() => guest.evaluate(() => room.race?.countdown)).toBe(0);
+    for (const item of [1, 2, 3, 4, 5, 6]) {
+      await guest.evaluate(() => Object.assign(drive, { use: false }));
+      await expect.poll(() => host.evaluate(() => room.race!.racers[1].itemPressed)).toBe(false);
+      await host.evaluate(async (item) => {
+        const path = '/src/game/physics.ts',
+          waterPath = '/src/game/water.ts';
+        const { createRacer } = await import(path),
+          { waterHeight } = await import(waterPath);
+        const race = room.race!;
+        race.items.state.effects = [];
+        for (const r of race.racers)
+          Object.assign(r, createRacer(race.track, r.id), {
+            x: -100,
+            z: -150 - r.id * 15,
+            y: waterHeight(-100, -150 - r.id * 15, race.tick / 120, race.track) + 0.6,
+            yaw: 0,
+          });
+        race.racers[1].item = item;
+      }, item);
+      await expect.poll(() => guest.evaluate(() => room.race!.player.item)).toBe(item);
+      await guest.evaluate(() => Object.assign(drive, { use: true }));
+      await expect.poll(() => host.evaluate(() => room.race!.racers[1].item)).toBe(0);
+      await expect.poll(() => guest.evaluate(() => room.race!.player.item)).toBe(0);
+      if (item === 4 || item === 5) {
+        expect(await guest.evaluate(() => room.race!.player.boost)).toBeGreaterThan(0);
+      } else {
+        await expect
+          .poll(() =>
+            guest.evaluate(() => room.race!.items.state.effects.some((e) => e.owner === 1)),
+          )
+          .toBe(true);
+        if (item === 3 || item === 6)
+          await expect
+            .poll(() =>
+              guest.evaluate(() =>
+                room.race!.items.state.effects.some(
+                  (e) => e.owner === 1 && e.launch && Number.isFinite(e.launch.y),
+                ),
+              ),
+            )
+            .toBe(true);
+      }
+    }
+  } finally {
+    await context.close();
+  }
+});

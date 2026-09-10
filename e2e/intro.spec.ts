@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-test('intro stages the interface, replays cleanly and releases the race', async ({ page }) => {
+test('intro stages the interface and releases the race', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -7,11 +7,10 @@ test('intro stages the interface, replays cleanly and releases the race', async 
   });
   await page.goto('/');
   await expect(page.locator('.hero')).not.toHaveClass(/intro-visible/);
-  await expect(page.locator('.launch-row')).toHaveJSProperty('inert', true);
-  await expect(page.locator('.launch-row')).toHaveJSProperty('inert', false);
-  await page.locator('#replay-intro').click();
-  await expect(page.locator('.hero')).not.toHaveClass(/intro-visible/);
+  await expect(page.locator('.home-actions')).toHaveJSProperty('inert', true);
+  await expect(page.locator('.home-actions')).toHaveJSProperty('inert', false);
   await expect(page.locator('.hero')).toHaveClass(/intro-visible/);
+  await page.locator('#open-setup').click();
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeVisible();
   expect(
@@ -26,7 +25,7 @@ test('intro stages the interface, replays cleanly and releases the race', async 
 test('reduced motion shows the complete menu immediately', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await expect(page.locator('.launch-row')).toHaveJSProperty('inert', false);
+  await expect(page.locator('.home-actions')).toHaveJSProperty('inert', false);
   expect(
     await page.evaluate(
       () =>

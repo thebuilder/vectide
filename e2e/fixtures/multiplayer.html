@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <title>WebRTC race test client</title>
+  <body>
+    <script type="module">
+      // Lightweight browser clients use the production transport and simulation without
+      // rendering nine extra oceans. No test controls are exposed by the production app.
+      import { Room } from '/src/multiplayer/room.ts';
+      import { NEUTRAL, STEP } from '/src/multiplayer/protocol.ts';
+      window.room = new Room();
+      window.error = '';
+      window.drive = { ...NEUTRAL };
+      room.onEnd = (reason) => (window.error = reason);
+      let previous = performance.now(),
+        accumulator = 0;
+      setInterval(() => {
+        const now = performance.now();
+        accumulator += Math.min((now - previous) / 1000, 0.1);
+        previous = now;
+        while (accumulator >= STEP) {
+          room.race?.step(window.drive);
+          accumulator -= STEP;
+        }
+      }, 8);
+    </script>
+  </body>
+</html>

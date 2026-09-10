@@ -1,11 +1,15 @@
 import * as T from 'three';
 import type { Track } from './tracks';
-import { waterGLSL } from './water';
+import { MAX_WATER_PULSES, pulseGLSL, pulseUniformsGLSL } from './water-pulses';
+import { waterGLSL, type WaterProfile } from './water';
 
 export function createWaterMaterial(track: Track): T.ShaderMaterial {
   return new T.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
+      uPulseCount: { value: 0 },
+      uPulses: { value: Array.from({ length: MAX_WATER_PULSES }, () => new T.Vector4()) },
+      uPulseKinds: { value: new Float32Array(MAX_WATER_PULSES) },
       uIntro: { value: 1 },
       uMusic: { value: new T.Vector3() },
       uAmplitude: { value: track.wave },
@@ -17,15 +21,19 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
       uniform float uAmplitude;
       varying vec3 vWorld;
       varying float vHeight;
+      varying float vPulse;
       ${waterGLSL(track)}
+      ${pulseGLSL}
       void main() {
         vec4 world = modelMatrix * vec4(position, 1.);
-        world.y = heightAt(world.xz) * uAmplitude;
+        vPulse = pulseHeightAt(world.xz);
+        world.y = heightAt(world.xz) * uAmplitude + vPulse;
         vWorld = world.xyz;
         vHeight = world.y;
         gl_Position = projectionMatrix * viewMatrix * world;
       }`,
     fragmentShader: `
+      ${pulseUniformsGLSL}
       uniform float uIntro;
       uniform vec3 uMusic;
       uniform vec3 base;
@@ -34,6 +42,7 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
       uniform float uAmplitude;
       varying vec3 vWorld;
       varying float vHeight;
+      varying float vPulse;
       float hash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float noise(vec2 p) {
         vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);
@@ -60,7 +69,7 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         float specular=pow(max(dot(normal,halfDirection),0.),55.);
         color+=vec3(.66,.91,.87)*specular*.8;
         // Broken, moving foam follows crests rather than painting every polygon edge.
-        float breaking=smoothstep(.57,.92,vHeight/uAmplitude);
+        float breaking=max(smoothstep(.57,.92,vHeight/uAmplitude),smoothstep(.3,1.8,vPulse));
         float foam=breaking*smoothstep(.38,.68,broadNoise*.55+ripples*.45);
         color=mix(color,vec3(.53,.83,.77),foam*.85);
         color=mix(color,horizon*.23,1.-exp(-distanceToCamera*.0008));
@@ -70,6 +79,33 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         color+=vec3(.045,.34,.26)*crestLight*uMusic.x*nearField;
         color+=vec3(.025,.09,.12)*foam*uMusic.y*nearField;
         color+=vec3(.15,.24,.28)*uMusic.z*specular*nearField;
+        // Weapon light lands on the ocean's displaced facets, including crests and troughs.
+        for(int i=0;i<${MAX_WATER_PULSES};i++) {
+          if(i>=uPulseCount) break;
+          float kind=uPulseKinds[i];
+          if(kind>4.5) continue;
+          vec4 effect=uPulses[i];
+          vec2 offset=vWorld.xz-effect.xy;
+          if(dot(offset,offset)>900.) continue;
+          float distance=length(offset);
+          float age=effect.w;
+          float glow=0.;
+          if(kind<3.5) {
+            bool mine=kind>2.5;
+            float deploy=smoothstep(0.,.55,age);
+            float radius=mine?mix(2.,7.,deploy):5.5;
+            float halo=1.-smoothstep(0.,radius,distance);
+            float core=1.-smoothstep(0.,1.8,distance);
+            float power=mine ? .38+uMusic.x*1.35 : 1.;
+            float fade=mine ? deploy*(1.-smoothstep(16.,18.,age)) : 1.;
+            glow=(halo*halo*.75+core*.8)*power*fade;
+          } else if(age>=0. && age<1.1) {
+            float flash=(1.-smoothstep(0.,.32,age))*(1.-smoothstep(0.,12.,distance));
+            float ring=(1.-smoothstep(.4,2.8,abs(distance-age*23.)))*(1.-smoothstep(.35,1.1,age));
+            glow=flash*2.5+ring*1.2;
+          }
+          color+=vec3(1.8,.012,.035)*glow*(.65+normal.y*.35);
+        }
         // The grid uses the same world-space cells and displaced vertices as the ocean.
         if(uIntro<1.){
           vec2 cell=vWorld.xz/4.;
@@ -83,5 +119,19 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         }
         gl_FragColor=vec4(color,1.);
       }`,
+  });
+}
+
+export function updateWaterPulses(material: T.ShaderMaterial, profile: WaterProfile, time: number) {
+  const pulses = (profile.pulses ?? []).slice(0, MAX_WATER_PULSES);
+  material.uniforms.uPulseCount.value = pulses.length;
+  pulses.forEach((p, i) => {
+    material.uniforms.uPulses.value[i].set(
+      p.x,
+      p.z,
+      p.yaw,
+      p.age + time - (profile.pulseTime ?? time),
+    );
+    material.uniforms.uPulseKinds.value[i] = p.kind;
   });
 }
