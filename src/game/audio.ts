@@ -27,7 +27,7 @@ export class RaceAudio {
   error = '';
   constructor() {
     this.music.preload = 'none';
-    this.music.volume = 0.65;
+    this.music.volume = 0.5;
     this.music.src = TITLE_SONG.url;
     this.music.loop = true;
     this.music.addEventListener('ended', () => {
@@ -145,7 +145,7 @@ export class RaceAudio {
     if (!this.context || !this.oscillator || !this.gain) return;
     const t = this.context.currentTime;
     this.oscillator.frequency.setTargetAtTime(42 + speed * 4 + throttle * 20, t, 0.08);
-    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.025 : 0, t, 0.1);
+    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.045 : 0, t, 0.1);
   }
   explosion(distance = 0) {
     if (!this.enabled || !this.context || distance >= 140 || this.effects.size >= 8) return;
@@ -161,7 +161,7 @@ export class RaceAudio {
       for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
     }
     const output = context.createGain();
-    output.gain.value = Math.pow(1 - distance / 140, 2) * 0.5;
+    output.gain.value = Math.pow(1 - distance / 140, 2) * 0.65;
     output.connect(context.destination);
     this.effects.add(output);
     const noise = context.createBufferSource(),
@@ -209,7 +209,7 @@ export class RaceAudio {
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(frequency, t);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.065, t + 0.015 + index * 0.025);
+      gain.gain.linearRampToValueAtTime(0.09, t + 0.015 + index * 0.025);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
       oscillator.connect(gain).connect(this.context.destination);
       oscillator.start(t);
@@ -227,7 +227,7 @@ export class RaceAudio {
       t = this.context.currentTime;
     o.type = 'sine';
     o.frequency.value = frequency;
-    g.gain.setValueAtTime(0.075, t);
+    g.gain.setValueAtTime(0.1, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + duration);
     o.connect(g).connect(this.context.destination);
     o.start();
