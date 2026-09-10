@@ -321,7 +321,8 @@
 }
 #lobby-labels span {
   position: absolute;
-  transform: translate(-50%, -100%);
+  left: 0;
+  top: 0;
   max-width: 18ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -629,5 +630,19 @@
   }
   .lobby-launch {
     margin-top: 8px;
+  }
+}
+
+@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
+  #practice-controls {
+    display: none;
+  }
+  .in-free-ride .masthead {
+    display: flex;
+  }
+  .masthead #leave-practice {
+    font-size: 10px;
+    padding: 12px;
+    flex-shrink: 0;
   }
 }

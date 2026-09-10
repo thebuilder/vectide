@@ -119,6 +119,7 @@ export class Engine {
   }
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   onFrame: (now: number) => void = () => {};
+  onRender: () => void = () => {};
   onUpdate: (s: Snapshot) => void = () => {};
   onFinish: (s: Snapshot) => void = () => {};
   onPause: () => void = () => {};
@@ -314,8 +315,11 @@ export class Engine {
   }
   lobbyLabels() {
     if (!this.lobby) return [];
-    return this.racers.map((r) => {
-      const point = new T.Vector3(r.x, r.y + 3.6, r.z).project(this.camera);
+    return this.racers.map((r, index) => {
+      // Labels follow the exact interpolated pose drawn this frame, not network snapshots.
+      const point = this.jets[index].position.clone();
+      point.y += 3.6;
+      point.project(this.camera);
       return {
         id: r.id,
         x: (point.x + 1) * 50,
@@ -716,6 +720,7 @@ export class Engine {
     this.intro?.update(dt);
     this.renderer.info.reset();
     this.composer.render();
+    this.onRender();
     this.hudElapsed += dt;
     if (this.hudElapsed > 0.08) {
       this.hudElapsed = 0;

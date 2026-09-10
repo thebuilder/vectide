@@ -36,6 +36,14 @@ export function setupMultiplayer(
   const input = (id: string) => el<HTMLInputElement>(id);
   const button = (id: string) => el<HTMLButtonElement>(id);
   const status = el('online-status');
+  const mobileHeader = matchMedia('(max-width: 700px), (max-height: 500px) and (pointer: coarse)');
+  const placePracticeBack = () => {
+    const back = button('leave-practice');
+    if (mobileHeader.matches) document.querySelector('.masthead')!.prepend(back);
+    else el('practice-controls').append(back);
+  };
+  mobileHeader.addEventListener('change', placePracticeBack);
+  placePracticeBack();
   let entryAction = 'join-online';
   let name = 'RACER';
   const show = () => {
@@ -45,6 +53,7 @@ export function setupMultiplayer(
     lobby.hidden = true;
     document.body.classList.remove('in-lobby', 'in-free-ride');
     el('practice-controls').hidden = true;
+    button('leave-practice').hidden = true;
   };
   const positionLabels = () => {
     if (room.phase === 'lobby') {
@@ -52,8 +61,7 @@ export function setupMultiplayer(
         const label = lobby.querySelector<HTMLElement>(`[data-slot="${position.id}"]`);
         if (label) {
           label.hidden = !position.visible;
-          label.style.left = `${position.x}%`;
-          label.style.top = `${position.y}%`;
+          label.style.transform = `translate3d(${position.x}vw, ${position.y}vh, 0) translate(-50%, -100%)`;
         }
       }
     }
@@ -65,6 +73,7 @@ export function setupMultiplayer(
     const practicing = inLobby && room.riding.includes(room.slot);
     document.body.classList.toggle('in-free-ride', practicing);
     el('practice-controls').hidden = !practicing;
+    button('leave-practice').hidden = !practicing;
     el('online-entry').hidden = room.phase !== 'idle';
     if (inLobby) {
       dialog.close();
@@ -214,12 +223,11 @@ export function setupMultiplayer(
       room.close('The host tab was hidden. Keep it visible and create a new room.');
   });
   window.addEventListener('pagehide', () => room.close());
-  window.addEventListener('resize', positionLabels);
+  engine.onRender = positionLabels;
   refresh();
   return {
     room,
     update() {
-      positionLabels();
       const online = !!engine.network && !engine.track.practiceRadius;
       document.getElementById('online-race-status')!.hidden = !online;
       document.getElementById('online-results')!.hidden = !online;

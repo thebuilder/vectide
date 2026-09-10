@@ -107,3 +107,25 @@ test('setup keeps the start action visible on a compact phone', async ({ page })
   const panel = await page.locator('#race-setup').boundingBox();
   expect(start!.y + start!.height).toBeLessThanOrEqual(panel!.y + panel!.height);
 });
+
+test('logo keeps its desktop size and only appears on the mobile title', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const logo = page.locator('.wordmark');
+  const size = await logo.evaluate((el) => getComputedStyle(el).fontSize);
+  await page.locator('#open-setup').click();
+  await expect(logo).toHaveCSS('font-size', size);
+  await page.locator('#start').click();
+  await expect(logo).toHaveCSS('font-size', size);
+  await page.keyboard.press('Escape');
+  await page.locator('#exit').click();
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect(logo).toBeHidden();
+  await page.locator('#setup-back').click();
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveCSS('font-size', size);
+  await page.locator('#open-setup').click();
+  await expect(logo).toBeHidden();
+  await page.locator('#start').click();
+  await expect(logo).toBeHidden();
+});

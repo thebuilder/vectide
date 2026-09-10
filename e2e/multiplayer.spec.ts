@@ -236,6 +236,10 @@ test('phone menu exposes host and join without scrolling and opens a water lobby
       expect(await page.locator('#menu').evaluate((el) => el.scrollTop)).toBe(0);
     }
     await page.setViewportSize({ width: 375, height: 667 });
+    await expect(page.locator('.wordmark')).toBeVisible();
+    const logoSize = await page
+      .locator('.wordmark')
+      .evaluate((el) => getComputedStyle(el).fontSize);
     await page.screenshot({ path: 'artifacts/multiplayer-menu-mobile.png' });
     await page.getByRole('button', { name: 'JOIN', exact: true }).tap();
     await expect(page.getByLabel('Room code', { exact: true })).toBeVisible();
@@ -247,6 +251,7 @@ test('phone menu exposes host and join without scrolling and opens a water lobby
       const box = await page.locator(`#${id}`).boundingBox();
       expect(box!.y + box!.height).toBeLessThanOrEqual(667);
     }
+    await expect(page.locator('.wordmark')).toBeHidden();
     const roomPanel = await page.locator('.room-code-panel').boundingBox();
     await page.screenshot({ path: 'artifacts/multiplayer-lobby-mobile.png' });
     await page.getByRole('button', { name: 'FREE RIDE', exact: true }).tap();
@@ -254,6 +259,14 @@ test('phone menu exposes host and join without scrolling and opens a water lobby
     await expect(page.locator('#room-code')).toBeVisible();
     expect(await page.locator('.room-code-panel').boundingBox()).toEqual(roomPanel);
     await expect(page.locator('#leave-room')).toBeHidden();
+    await expect(page.locator('.masthead #leave-practice')).toBeVisible();
+    await expect(page.locator('#practice-controls')).toBeHidden();
+    const back = await page.locator('#leave-practice').boundingBox();
+    const sound = await page.locator('#sound').boundingBox();
+    expect(Math.abs(back!.y - sound!.y)).toBeLessThan(1);
+    expect(back!.x + back!.width).toBeLessThan(sound!.x);
+    expect(back!.y + back!.height).toBeLessThan(roomPanel!.y);
+    expect(back!.height).toBeGreaterThanOrEqual(44);
     await expect(page.locator('#touch-controls')).toBeVisible();
     await expect(page.locator('#touch-controls')).toHaveJSProperty('inert', false);
     await expect(page.locator('#lobby-labels [data-slot="0"]')).toHaveCount(0);
@@ -278,6 +291,10 @@ test('phone menu exposes host and join without scrolling and opens a water lobby
     await page.getByRole('button', { name: 'Leave room' }).tap();
     await expect(page.locator('#menu')).toBeVisible();
     expect((await state(page)).state).toBe('menu');
+    await expect(page.locator('.wordmark')).toBeVisible();
+    expect(await page.locator('.wordmark').evaluate((el) => getComputedStyle(el).fontSize)).toBe(
+      logoSize,
+    );
   } finally {
     await context.close();
   }
@@ -428,6 +445,67 @@ test('real WebRTC item commands are owned by the host and effects reach the gues
             .toBe(true);
       }
     }
+  } finally {
+    await context.close();
+  }
+});
+
+test('rider labels follow interpolated craft on every rendered frame', async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const host = await context.newPage(),
+    guest = await context.newPage();
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    await openOnline(guest, 'JOIN');
+    await guest.getByLabel('Room code', { exact: true }).fill(code);
+    await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
+    await expect(guest.locator('#room-count')).toHaveText('2 RACERS');
+    await host.getByRole('button', { name: 'FREE RIDE', exact: true }).click();
+    await host.keyboard.down('w');
+    await expect.poll(async () => (await state(host)).speed).toBeGreaterThan(15);
+    const samples = await guest.evaluate(async () => {
+      const path = '/src/game/engine.ts';
+      const { Engine } = await import(path);
+      const original = Engine.prototype.lobbyLabels;
+      const measured: { error: number; rawGap: number }[] = [];
+      // Compare the actual label's screen anchor to the mesh rendered by the same frame.
+      Engine.prototype.lobbyLabels = function () {
+        const labels = original.call(this);
+        const position = labels.find((p: { id: number }) => p.id === 0);
+        if (position?.visible) {
+          const mesh = this.jets[0];
+          const expected = mesh.position.clone();
+          expected.y += 3.6;
+          expected.project(this.camera);
+          const x = ((expected.x + 1) * innerWidth) / 2;
+          const y = ((1 - expected.y) * innerHeight) / 2;
+          const rawGap = mesh.position.distanceTo({ ...this.racers[0] });
+          queueMicrotask(() => {
+            const label = document.querySelector<HTMLElement>('#lobby-labels [data-slot="0"]')!;
+            const rect = label.getBoundingClientRect();
+            measured.push({
+              error: Math.hypot(rect.x + rect.width / 2 - x, rect.bottom - y),
+              rawGap,
+            });
+          });
+        }
+        return labels;
+      };
+      await new Promise<void>((resolve) => {
+        let frames = 0;
+        const next = () => (++frames >= 30 ? resolve() : requestAnimationFrame(next));
+        requestAnimationFrame(next);
+      });
+      Engine.prototype.lobbyLabels = original;
+      return measured;
+    });
+    expect(samples.length).toBeGreaterThanOrEqual(27);
+    expect(Math.max(...samples.map((s) => s.error))).toBeLessThan(0.1);
+    expect(Math.max(...samples.map((s) => s.rawGap))).toBeGreaterThan(0.05);
+    await guest.screenshot({ path: 'artifacts/multiplayer-labels-moving.png' });
+    await host.keyboard.up('w');
   } finally {
     await context.close();
   }
