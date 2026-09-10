@@ -93,6 +93,7 @@ export class Engine {
   private introReduced = matchMedia('(prefers-reduced-motion: reduce)');
   replayIntro() {
     this.intro?.finish();
+    this.world.ramps.visible = this.state !== 'menu';
     this.world.gates.forEach((g) => {
       g.visible = this.state !== 'menu';
     });
@@ -215,7 +216,7 @@ export class Engine {
   private visibility = () => {
     if (document.hidden) this.blur();
   };
-  private resetRacers() {
+  private resetRacers(menu = this.state === 'menu') {
     this.spray.clear();
     this.jets.forEach((j) => {
       this.scene.remove(j);
@@ -244,7 +245,14 @@ export class Engine {
       return jet;
     });
     const p = this.player;
-    this.camera.position.set(p.x - Math.sin(p.yaw) * 17, p.y + 8, p.z - Math.cos(p.yaw) * 17);
+    if (menu) {
+      // Stage the title offshore so the coast stays on the horizon, clear of the rider.
+      p.x = -320;
+      p.z = -250;
+      p.y = waterHeight(p.x, p.z, this.visualTime, this.track) + 0.6;
+      this.camera.position.set(p.x - Math.sin(1.72) * 12, p.y + 4, p.z - Math.cos(1.72) * 12);
+    } else
+      this.camera.position.set(p.x - Math.sin(p.yaw) * 17, p.y + 8, p.z - Math.cos(p.yaw) * 17);
     this.camTarget.set(p.x, p.y + 1, p.z);
     this.cameraAnchor.set(p.x, p.y, p.z);
   }
@@ -347,7 +355,7 @@ export class Engine {
     this.visualTime = 0;
     this.accumulator = 0;
     this.countdown = 3;
-    this.resetRacers();
+    this.resetRacers(false);
     this.items =
       this.network?.items ?? new Pickups(this.track, this.pickupsEnabled && mode === 'race');
     this.keys.clear();
@@ -426,8 +434,8 @@ export class Engine {
       this.network = undefined;
       this.lobby = undefined;
       this.onlineMenuOpen = false;
-      this.resetRacers();
     }
+    this.resetRacers();
     this.keys.clear();
     this.itemRequested = false;
     cancelTrickSetup(this.player);
@@ -659,6 +667,7 @@ export class Engine {
       bands.low,
     );
     this.bloom.strength = 0.28 + bands.low * 0.05;
+    this.world.ramps.visible = this.state !== 'menu';
     this.world.gates.forEach((g, i) => {
       const next = p.nextGate,
         count = this.track.gates.length;
@@ -678,7 +687,10 @@ export class Engine {
       animateJet(jet, r, this.state === 'paused' || this.state === 'finished' ? 0 : dt);
     });
     if (this.state === 'menu') {
-      const a = p.yaw + 1.15 + Math.sin(this.visualTime * 0.1) * 0.12;
+      // Look across the islands toward the sunset instead of the empty outer sea.
+      const a =
+        (this.camera.aspect < 1 ? 1.4 : 1.72) +
+        (this.reducedMotion.matches ? 0 : Math.sin(this.visualTime * 0.1) * 0.06);
       const desired = new T.Vector3(p.x - Math.sin(a) * 12, p.y + 4, p.z - Math.cos(a) * 12);
       this.camera.position.lerp(desired, 1 - Math.exp(-dt * 2));
       this.camTarget.set(p.x, p.y + 1, p.z);

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Snapshot } from '../src/game/engine';
 test('intro stages the interface and releases the race', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -13,6 +14,13 @@ test('intro stages the interface and releases the race', async ({ page }) => {
   await page.locator('#open-setup').click();
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toBeVisible();
+  // Leaving the offshore title scene must restore the actual race grid.
+  expect(
+    await page.evaluate(() => {
+      const { player, track } = (window as unknown as { __vectide: Snapshot }).__vectide;
+      return Math.hypot(player.x - track.gates[0].x, player.z - track.gates[0].z);
+    }),
+  ).toBeLessThan(30);
   expect(
     await page.evaluate(
       () =>

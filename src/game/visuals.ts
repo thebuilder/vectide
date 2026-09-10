@@ -16,14 +16,18 @@ export interface World {
   water: T.Mesh;
   waterMaterial: T.ShaderMaterial;
   gates: T.Group[];
+  ramps: T.Group;
   turbines: T.Group[];
   update: (t: number, player: Racer, bands?: Spectrum, surface?: WaterProfile) => void;
   dispose: () => void;
 }
 export function createWorld(track: Track): World {
   const group = new T.Group(),
+    ramps = new T.Group(),
     gates: T.Group[] = [],
     turbines: T.Group[] = [];
+  ramps.name = 'ramps';
+  group.add(ramps);
   const skyGeo = new T.SphereGeometry(3000, 32, 16);
   const skyMat = new T.ShaderMaterial({
     side: T.BackSide,
@@ -167,7 +171,7 @@ export function createWorld(track: Track): World {
     );
     ramp.rotation.y = Math.atan2(r.tx, r.tz);
     ramp.position.set(r.x, r.baseHeight, r.z);
-    group.add(ramp);
+    ramps.add(ramp);
     for (let i = 0; i < 5; i++) {
       const mark = box(
         ramp,
@@ -282,7 +286,8 @@ export function createWorld(track: Track): World {
   group.add(musicVisuals.group);
   const dolphins = createDolphins(track);
   group.add(dolphins.group);
-  batchStatic(group, [water, ...gates, ...turbines, dolphins.group, musicVisuals.group]);
+  batchStatic(ramps, []);
+  batchStatic(group, [water, ramps, ...gates, ...turbines, dolphins.group, musicVisuals.group]);
   const pulseMaterials = new Map<T.MeshStandardMaterial, number>();
   const outlines = new Map<T.LineBasicMaterial, { color: T.Color; opacity: number }>();
   group.traverse((object) => {
@@ -304,6 +309,7 @@ export function createWorld(track: Track): World {
     water,
     waterMaterial,
     gates,
+    ramps,
     turbines,
     update(t, player, bands = { low: 0, mid: 0, high: 0 }, surface = track) {
       updateWaterPulses(waterMaterial, surface, t);
