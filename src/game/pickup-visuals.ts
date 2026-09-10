@@ -6,6 +6,9 @@ import { waterHeight } from './water';
 export class PickupVisuals {
   readonly group = new T.Group();
   private boxes = new T.Group();
+  private boxAnimations: { available: boolean; started: number; from: number; amount: number }[] =
+    [];
+  private previousTime = -Infinity;
   private effects = new Map<number, T.Group>();
   private source?: Pickups;
   private cube = new T.BoxGeometry(1.65, 1.65, 1.65);
@@ -48,22 +51,42 @@ export class PickupVisuals {
     this.dark.map = this.texture;
     this.group.add(this.boxes);
   }
-  update(items: Pickups, time: number, visible: boolean, bass = 0) {
+  update(items: Pickups, time: number, visible: boolean, bass = 0, reducedMotion = false) {
     this.group.visible = visible && items.enabled;
     if (!this.group.visible) return;
-    if (this.source !== items) {
+    if (this.source !== items || time < this.previousTime) {
       for (const [id, mesh] of this.effects) this.remove(id, mesh);
       this.source = items;
-      this.boxes.clear();
-      items.boxes.forEach(() => {
+      this.clearBoxes();
+      items.boxes.forEach((_, i) => {
         const box = new T.Group();
-        box.add(new T.Mesh(this.cube, this.dark), new T.Mesh(this.cage, this.mint));
+        box.add(new T.Mesh(this.cube, this.dark.clone()), new T.Mesh(this.cage, this.mint.clone()));
         this.boxes.add(box);
+        const available = items.state.cooldowns[i] <= 0;
+        this.boxAnimations.push({ available, started: time, from: 0, amount: 0 });
       });
     }
+    this.previousTime = time;
     items.boxes.forEach((box, i) => {
       const mesh = this.boxes.children[i];
-      mesh.visible = items.state.cooldowns[i] <= 0;
+      const animation = this.boxAnimations[i],
+        available = items.state.cooldowns[i] <= 0;
+      if (available !== animation.available) {
+        animation.available = available;
+        animation.started = time;
+        animation.from = animation.amount;
+      }
+      const progress = T.MathUtils.smoothstep(time - animation.started, 0, available ? 0.25 : 0.18);
+      animation.amount = T.MathUtils.lerp(animation.from, available ? 1 : 0, progress);
+      mesh.visible = available || animation.amount > 0;
+      mesh.scale.setScalar(reducedMotion ? 1 : Math.max(0.001, animation.amount));
+      mesh.rotation.y = !available && !reducedMotion ? progress * Math.PI * 2 : 0;
+      for (const child of mesh.children) {
+        const material = (child as T.Mesh<T.BufferGeometry, T.MeshBasicMaterial>).material;
+        material.transparent = reducedMotion;
+        material.opacity = reducedMotion ? animation.amount : 1;
+        material.depthWrite = !reducedMotion || animation.amount === 1;
+      }
       mesh.position.set(
         box.x,
         waterHeight(box.x, box.z, time, items.surface) + 2 + Math.sin(time * 2 + i) * 0.22,
@@ -163,7 +186,15 @@ export class PickupVisuals {
     this.group.remove(group);
     this.effects.delete(id);
   }
+  private clearBoxes() {
+    for (const box of this.boxes.children)
+      for (const child of box.children)
+        (child as T.Mesh<T.BufferGeometry, T.Material>).material.dispose();
+    this.boxes.clear();
+    this.boxAnimations = [];
+  }
   dispose() {
+    this.clearBoxes();
     for (const [id, group] of this.effects) this.remove(id, group);
     [
       this.cube,
