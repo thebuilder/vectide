@@ -3,7 +3,8 @@ import { createRacer, type Input, type Racer } from '../game/physics';
 import { TRACKS } from '../game/tracks';
 
 export const MAX_RACERS = 10;
-export const VERSION = 6;
+// Course geometry and handling must match on host and predicting clients.
+export const VERSION = 12;
 export const STEP = 1 / 120;
 export const SEND_EVERY = 6;
 export const NEUTRAL: Input = { throttle: 0, steer: 0, brake: 1, lean: 0, trick: 0 };
@@ -132,6 +133,7 @@ function matches(value: unknown, template: unknown): boolean {
   );
 }
 const racerTemplate = createRacer(TRACKS[0], 0);
+const maxGateIndex = Math.max(...TRACKS.map((track) => track.gates.length)) - 1;
 // Fixed field order removes repeated property names. Four decimals preserve sub-mm
 // positions while keeping ten racers comfortably below PeerJS's JSON message limit.
 function pack(value: unknown, template: unknown): unknown {
@@ -166,7 +168,7 @@ export function validItems(value: unknown): value is PickupState {
   return (
     record(value) &&
     Array.isArray(value.cooldowns) &&
-    [0, 25].includes(value.cooldowns.length) &&
+    [0, 15, 25].includes(value.cooldowns.length) &&
     value.cooldowns.every((t) => finite(t, 0, 7)) &&
     Array.isArray(value.effects) &&
     value.effects.length <= MAX_EFFECTS &&
@@ -218,7 +220,7 @@ export function validSnapshot(value: unknown): value is RaceSnapshot {
         finite(r.itemReadyIn, 0, ITEM_REVEAL_SECONDS) &&
         finite(r.boost, 0, 4) &&
         finite(r.boostPower, 1, 2.8) &&
-        integer(r.nextGate, 0, TRACKS[0].gates.length - 1) &&
+        integer(r.nextGate, 0, maxGateIndex) &&
         integer(r.lap, 0, 4) &&
         integer(r.passed, 0, 100) &&
         ['riding', 'falling', 'swimming', 'remounting'].includes(r.recovery.phase) &&

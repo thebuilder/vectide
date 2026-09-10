@@ -38,7 +38,7 @@ pnpm build
 | Enter / Space / gamepad A          | Select focused control                                  |
 | Gamepad B                          | Back or close dialog                                    |
 
-Pass between both buoys at each gate, in order and in the forward direction. The amber marker, HUD arrow, and minimap identify the next gate. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Manual reset does not advance a checkpoint, and reset runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
+Pass between both buoys at each gate, in order and in the forward direction. The compact HUD arrow and minimap point toward the next gate. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Manual reset does not advance a checkpoint, and reset runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
 
 ## Multiplayer
 
@@ -59,8 +59,9 @@ players, never your own craft.
 Keep the host's tab visible. Opening the race menu releases driving controls while
 the race continues. A departing guest is marked disconnected. If the host leaves,
 hides the tab, or stops sending updates, guests return to the menu with an
-explanation. To race again, create a new room. There is no host migration or mid-race
-rejoining. A signaling interruption retries the PeerServer connection while existing
+explanation. The host can use **Return to lobby** from results or the race menu
+to bring everyone back together, preserving the room code, profiles, and settings.
+The host can then start another race. There is no host migration or mid-race rejoining. A signaling interruption retries the PeerServer connection while existing
 WebRTC racers keep playing; losing the host data connection still ends the room.
 
 The host runs physics and validates checkpoints, collisions and finish times at
@@ -118,7 +119,7 @@ input simulation and snapshot interpolation; no reference source was copied.
 ## Pickups
 
 Race setup and the host lobby have a Pickups toggle, enabled by default. Each course
-has five rows of five mystery crates, clear of ramp approaches and landings. Collect
+has five pickup rows. Palm uses five crates per row; Port and Storm use three, spaced between checkpoints with time to use each item. Rows stay clear of ramp approaches and landings. Distant crates fade in between 100 and 65 meters so later rows do not distract from checkpoints. Collect
 one item at a time; a collected crate returns after seven seconds. Time trials and
 lobby free ride have no items. Best laps with pickups use a separate local record.
 
@@ -138,17 +139,19 @@ send only input and receive bounded item snapshots alongside the race state.
 
 ## Courses
 
-- **Palm Circuit**: rolling swells, palm islands, a coastal arch, and a sweeping approach to the checkered finish.
+- **Palm Circuit**: rolling swells, palm islands, a coastal arch, and a direct return to the checkered finish.
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 24 gates and a pair of linked optional ramps. Palm also has a smaller opening ramp. Normal AI solo laps are approximately 115, 120, and 146 seconds. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Top speed is approximately 80 km/h.
+Each course has 16 gates. Storm's start line faces its first checkpoint across an open launch straight. Palm has a pair of linked optional ramps plus a smaller opening ramp, and turns directly toward the finish after the jump straight. Port has no ramps: its dock passages and sheltered basins lead into a direct final approach. Storm runs counterclockwise, with a west wave train, an open-water weave, and broad sweeps through the east-channel swell instead of ramps. Its western reef and shore leave open checkpoint approaches, the weave checkpoint sits before the turn, and the signal platform sits farther offshore. Each buoy follows its own local wave height; Storm uses taller masts to keep the gate opening readable above the swell. Palm's early bends have wider gates and shore clearance for weapon knockback; the eastern channel puts a sustained wave train across the racing line. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
+
+After finishing, AI keeps the craft riding while results appear with a brief headline scramble and panel sweep. Reduced motion uses a fade. The board lists every racer by position and adds their recorded time as they finish; disconnected racers appear last. Finishers cannot collide with racers still competing.
 
 ## Water and handling
 
 `src/game/water.ts` owns three directional wave components and a four-meter world-space grid. Localized sheltered bays and directional swell zones modify the shared water field. The water vertex shader uses those same components and zones. The CPU interpolates the same mesh triangles rather than sampling a different smooth surface.
 
-`src/game/physics.ts` advances at 120 fixed steps per second. Four hull contact points apply buoyancy and damping relative to the moving surface. Their force differences drive pitch and roll. Thrust, quadratic drag, lateral resistance, and steering depend on water contact. Speed adds planing lift. The rendered wave slopes also apply a gentle downhill horizontal force and yaw influence while the hull is in the water; cross-swells require small steering corrections. Closed wedge ramps extend their slope four meters below the surface and use rigid deck contact, hold the keel above their surface, and supply slope-based takeoff velocity. Ramp contact does not emit water spray. Swept side and rear wall collisions bounce riders away below deck height, while airborne riders can clear those faces. Airborne craft follow gravity without engine thrust.
+`src/game/physics.ts` advances at 120 fixed steps per second. Four hull contact points apply buoyancy and damping relative to the moving surface. Their force differences drive pitch and roll. Thrust, quadratic drag, lateral resistance, and steering depend on water contact. Speed adds planing lift. Launch acceleration stays quick, with roughly four seconds to build to 95 percent of cruising speed. Brief throttle releases preserve momentum; braking still slows the craft firmly, and prolonged coasting settles to a stop. Water-entry losses use impact speed relative to the moving wave face and hull alignment. Following a descending face adds bounded drive while in contact; airborne throttle adds no speed. Engine pitch and volume respond to loss of water contact. The rendered wave slopes also apply a gentle downhill horizontal force and yaw influence while the hull is in the water; cross-swells require small steering corrections. Closed wedge ramps extend their slope four meters below the surface and use rigid deck contact, hold the keel above their surface, and supply slope-based takeoff velocity. Ramp contact does not emit water spray. Swept side and rear wall collisions bounce riders away below deck height, while airborne riders can clear those faces. Airborne craft follow gravity without engine thrust.
 
 This is an arcade model inspired by Wave Race's feel, not a reconstruction of Nintendo's source or a full fluid solver. The tuning keeps turns responsive while making rough water, landings, and loss of contact affect control.
 
@@ -162,7 +165,7 @@ The rider has articulated knees and elbows, a padded racing vest, a full-face he
 
 Load a trick by holding E or gamepad RB on the approach, then release near takeoff. Steering selects a spin. Releases up to 300 ms before takeoff are buffered; earlier releases cancel. Holding visibly crouches the rider. Flips and spins need enough airtime to finish. Landing a completed flip adds 10 percent to horizontal speed, capped at 2 m/s, once per landing. An unfinished trick throws the rider off; the rider falls, swims back beside the craft, and climbs aboard. Checkpoints cannot advance while detached. Ordinary jumps remain forgiving.
 
-The close chase camera follows horizontal movement directly, maintaining its distance at speed, and stays above the wave surface. Rendering and physics have separate timing. The game pauses when focus is lost or the page is hidden. The course menu shows a single floating craft with course markers hidden. Multiplayer lobbies show the joined racers lined up on the water. Palm fronds curve and taper; sparse island clusters and varied tower silhouettes break up repeated scenery. A three-dolphin pod breaches near the first third of the course when approached, then dives away, once per lap. The menu and HUD are semantic HTML over the WebGL canvas.
+The close chase camera follows horizontal movement directly, maintaining its distance at speed, and stays above the wave surface. Rendering and physics have separate timing. The game pauses when focus is lost or the page is hidden. The course menu shows a single floating craft with course markers hidden. Multiplayer lobbies show the joined racers lined up on the water. Palm fronds curve and taper; sparse island clusters and varied tower silhouettes break up repeated scenery. On Palm and Port, a three-dolphin pod breaches near the first third of the course when approached, then dives away, once per lap. Storm has a distant cargo boat cruising beyond the offshore ridge with navigation lights and a small wake. The menu and HUD are semantic HTML over the WebGL canvas.
 
 ## Verification
 

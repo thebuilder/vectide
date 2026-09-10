@@ -35,37 +35,40 @@ it.each(TRACKS)('leaves the navigation line clear of authored shores on $name', 
       ).toBeNull();
   }
 });
-it.each(TRACKS)('can chain both ramps and settle between them on $name', (track) => {
-  const first = track.ramps[0],
-    r = createRacer(track, 0);
-  Object.assign(r, {
-    x: first.x - first.tx * 30,
-    z: first.z - first.tz * 30,
-    yaw: Math.atan2(first.tx, first.tz),
-    vx: first.tx * 22,
-    vz: first.tz * 22,
-  });
-  r.y = waterHeight(r.x, r.z, 0, track) + 0.5;
-  const touched = new Set<number>();
-  let waterBetween = false;
-  for (let f = 0; f < 120 * 13; f++) {
-    stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, f / 120, 1 / 120);
-    if (r.onRamp)
-      track.ramps.forEach((ramp, i) => {
-        if (Math.hypot(r.x - ramp.x, r.z - ramp.z) < ramp.length / 2 + 1) touched.add(i);
-      });
-    if (
-      touched.has(0) &&
-      !touched.has(1) &&
-      !r.onRamp &&
-      r.wet > 0 &&
-      r.x < first.x - first.length / 2
-    )
-      waterBetween = true;
-  }
-  expect([...touched]).toEqual([0, 1]);
-  expect(waterBetween).toBe(true);
-});
+it.each(TRACKS.filter((track) => track.ramps.length > 0))(
+  'can chain both ramps and settle between them on $name',
+  (track) => {
+    const first = track.ramps[0],
+      r = createRacer(track, 0);
+    Object.assign(r, {
+      x: first.x - first.tx * 30,
+      z: first.z - first.tz * 30,
+      yaw: Math.atan2(first.tx, first.tz),
+      vx: first.tx * 22,
+      vz: first.tz * 22,
+    });
+    r.y = waterHeight(r.x, r.z, 0, track) + 0.5;
+    const touched = new Set<number>();
+    let waterBetween = false;
+    for (let f = 0; f < 120 * 13; f++) {
+      stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, f / 120, 1 / 120);
+      if (r.onRamp)
+        track.ramps.forEach((ramp, i) => {
+          if (Math.hypot(r.x - ramp.x, r.z - ramp.z) < ramp.length / 2 + 1) touched.add(i);
+        });
+      if (
+        touched.has(0) &&
+        !touched.has(1) &&
+        !r.onRamp &&
+        r.wet > 0 &&
+        r.x < first.x - first.length / 2
+      )
+        waterBetween = true;
+    }
+    expect([...touched]).toEqual([0, 1]);
+    expect(waterBetween).toBe(true);
+  },
+);
 it('keeps Palm entirely tropical', () => {
   expect(TRACKS[0].land.every((land) => land.kind === 'island')).toBe(true);
 });
@@ -78,5 +81,47 @@ it.each(TRACKS)('keeps the whole checkpoint opening clear of shore on $name', (t
         true,
       );
     }
+  }
+});
+
+it('floats each Storm buoy on its own wave and keeps its light above the water', () => {
+  const track = TRACKS[2],
+    world = createWorld(track),
+    player = createRacer(track, 0);
+  for (const time of [0, 3, 9, 20]) {
+    world.update(time, player);
+    for (const gate of world.gates) {
+      for (const buoy of gate.children.filter((child) => child.name === 'buoy')) {
+        const surface = waterHeight(
+          gate.position.x + buoy.position.x,
+          gate.position.z + buoy.position.z,
+          time,
+          track,
+        );
+        expect(gate.position.y + buoy.position.y).toBeCloseTo(surface);
+        expect(buoy.children[2].position.y).toBeGreaterThanOrEqual(6);
+      }
+    }
+  }
+  world.dispose();
+});
+
+it('keeps Storm’s signal platform offshore and clear of the driving view through the weave', () => {
+  const track = TRACKS[2],
+    platform = track.obstacles[0];
+  expect(platform.x - platform.radius).toBeGreaterThan(
+    Math.max(...track.points.map((point) => point.x)) + 75,
+  );
+});
+
+it('keeps all ten Storm grid positions clear of the island after rotating the start', () => {
+  const track = TRACKS[2];
+  for (let slot = 0; slot < 10; slot++) {
+    const racer = createRacer(track, slot);
+    for (const land of track.land)
+      expect(
+        polygonContact(hullPoints(racer), land.outline),
+        `slot ${slot} at ${land.name}`,
+      ).toBeNull();
   }
 });

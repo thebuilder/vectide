@@ -32,12 +32,14 @@ describe('race pickups', () => {
       expect(box.x).toBeGreaterThan(track.ramps[0].x);
     }
   });
-  it('places five clear rows of five on every course', () => {
+  it('places five clear rows with room for each course', () => {
     for (const t of TRACKS) {
-      const boxes = pickupRows(t);
-      expect(boxes).toHaveLength(25);
-      expect(new Set(boxes.map((b) => `${b.x},${b.z}`)).size).toBe(25);
-      for (let row = 0; row < 5; row++) expect(boxes.filter((b) => b.row === row)).toHaveLength(5);
+      const boxes = pickupRows(t),
+        lanes = t.id === 'palms' ? 5 : 3;
+      expect(boxes).toHaveLength(5 * lanes);
+      expect(new Set(boxes.map((b) => `${b.x},${b.z}`)).size).toBe(5 * lanes);
+      for (let row = 0; row < 5; row++)
+        expect(boxes.filter((b) => b.row === row)).toHaveLength(lanes);
     }
   });
   it('respects front and back exclusions while keeping random rewards', () => {

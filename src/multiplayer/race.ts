@@ -3,6 +3,8 @@ import { createLobbyRacers } from './lobby';
 import { containPractice } from './practice';
 import {
   angle,
+  aiInput,
+  advanceFinishLap,
   collideRacers,
   createRacer,
   recoverRacer,
@@ -136,7 +138,7 @@ export class NetworkRace {
   }
   private advance(r: Racer, input: Input, tick: number, reset = false, progress = false) {
     const time = Math.max(0, (tick - 360) * STEP);
-    if (reset && tick - this.lastResetTick[r.id] >= 120) {
+    if (reset && !r.finished && tick - this.lastResetTick[r.id] >= 120) {
       if (this.track.practiceRadius) {
         const spawn = createLobbyRacers(this.track, this.members).find((s) => s.id === r.id)!;
         Object.assign(r, spawn);
@@ -149,13 +151,18 @@ export class NetworkRace {
       this.items.use(r, !!input.use);
     stepRacer(
       r,
-      r.finished || docked || this.disconnected.has(r.id) ? NEUTRAL : input,
+      docked || this.disconnected.has(r.id)
+        ? NEUTRAL
+        : r.finished
+          ? aiInput(r, this.track, this.racers)
+          : input,
       this.track,
       tick * STEP,
       STEP,
       1,
       this.items.surface,
     );
+    advanceFinishLap(r, before, this.track);
     if (docked || (!this.track.practiceRadius && tick <= 360))
       Object.assign(r, before, { vx: 0, vz: 0 });
     else if (!this.track.practiceRadius && progress && !this.disconnected.has(r.id))
@@ -195,7 +202,9 @@ export class NetworkRace {
               (!this.track.practiceRadius ||
                 (this.riding.has(this.racers[a].id) && this.riding.has(this.racers[b].id))) &&
               !this.disconnected.has(this.racers[a].id) &&
-              !this.disconnected.has(this.racers[b].id)
+              !this.disconnected.has(this.racers[b].id) &&
+              !this.racers[a].finished &&
+              !this.racers[b].finished
             )
               collideRacers(this.racers[a], this.racers[b]);
           }
@@ -234,7 +243,13 @@ export class NetworkRace {
       this.host ||
       state.tick <= this.latestTick ||
       state.racers.length !== this.racers.length ||
-      !state.racers.every((r) => this.racers.some((local) => local.id === r.id))
+      state.items.cooldowns.length !== this.items.boxes.length ||
+      !state.racers.every(
+        (r) =>
+          r.nextGate >= 0 &&
+          r.nextGate < this.track.gates.length &&
+          this.racers.some((local) => local.id === r.id),
+      )
     )
       return;
     this.items.state = structuredClone(state.items);

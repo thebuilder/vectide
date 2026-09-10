@@ -66,13 +66,16 @@ export function createDolphins(track: Track) {
         const age = t - started - i * 0.45;
         animal.visible = age >= 0 && age < 8;
         if (!animal.visible) return;
-        const x = location.x + location.tx * (age * 9 - 25) - location.tz * (19 + i * 3);
-        const z = location.z + location.tz * (age * 9 - 25) + location.tx * (19 + i * 3);
+        // Swim alongside the outside of the bend, without drifting into the racing line.
+        const forward = 20 + age * 14,
+          side = -(14 + i * 3);
+        const x = location.x + location.tx * forward - location.tz * side;
+        const z = location.z + location.tz * forward + location.tx * side;
         const phase = Math.min(age / 2.5, 1),
           jump = age < 2.5 ? Math.sin(phase * Math.PI) * 4 : -Math.min((age - 2.5) * 1.5, 6);
         animal.position.set(x, waterHeight(x, z, t, track) + jump - 0.5, z);
         animal.rotation.set(
-          -Math.atan2(age < 2.5 ? Math.cos(phase * Math.PI) * 5 : -1.5, 9),
+          -Math.atan2(age < 2.5 ? Math.cos(phase * Math.PI) * 5 : -1.5, 14),
           Math.atan2(location.tx, location.tz),
           0,
         );

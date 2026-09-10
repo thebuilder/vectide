@@ -1,4 +1,4 @@
-import { gatePointClear } from './course-layout';
+import { fitGateToShore, gatePointClear } from './course-layout';
 import { angle, clamp, racePosition, rampSurface, type Racer } from './physics';
 import type { Track } from './tracks';
 import { waterHeight, type WaterProfile } from './water';
@@ -42,14 +42,37 @@ export interface PickupState {
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
   // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
-  return [2, 6, track.id === 'palms' ? 14 : 11, 16, 21].flatMap((index, row) => {
+  // Ramp-free rows use lap fractions, independent of checkpoint count, with room to use each item.
+  const betweenGates = track.id !== 'palms',
+    lanes = betweenGates ? 3 : 5,
+    rows =
+      track.id === 'storm'
+        ? [0.1125, 0.32, 0.53125, 0.71875, 0.90625]
+        : betweenGates
+          ? [0.09375, 0.28125, 0.46875, 0.65625, 0.84375]
+          : [1, 4, 10, 12, 14],
+    used = new Set<number>();
+  return rows.flatMap((index, row) => {
     // Gates already fit the navigable water. Avoid placing a row on a ramp deck.
-    for (let offset = 0; offset < 4; offset++) {
-      const gate = track.gates[(index + offset) % track.gates.length];
-      const spacing = Math.min(7, (gate.width - 8) / 4);
-      const points = Array.from({ length: 5 }, (_, lane) => ({
-        x: gate.x - gate.tz * (lane - 2) * spacing,
-        z: gate.z + gate.tx * (lane - 2) * spacing,
+    for (let offset = 0; offset < (betweenGates ? 1 : track.gates.length); offset++) {
+      const gateIndex = (index + offset) % track.gates.length;
+      if (used.has(gateIndex)) continue;
+      let gate = track.gates[gateIndex];
+      if (betweenGates) {
+        const pointIndex = Math.round(gateIndex * track.points.length),
+          p = track.points[pointIndex],
+          before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
+          after = track.points[(pointIndex + 1) % track.points.length],
+          length = Math.hypot(after.x - before.x, after.z - before.z);
+        gate = fitGateToShore(
+          { ...p, tx: (after.x - before.x) / length, tz: (after.z - before.z) / length, width: 24 },
+          track.land,
+        );
+      }
+      const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
+      const points = Array.from({ length: lanes }, (_, lane) => ({
+        x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
+        z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,
         row,
       }));
       if (
@@ -68,8 +91,10 @@ export function pickupRows(track: Track): Pickup[] {
             }) &&
             track.obstacles.every((o) => Math.hypot(p.x - o.x, p.z - o.z) > o.radius + 3),
         )
-      )
+      ) {
+        used.add(gateIndex);
         return points;
+      }
     }
     throw new Error(`No clear pickup row on ${track.id} near gate ${index}`);
   });

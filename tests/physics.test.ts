@@ -97,9 +97,9 @@ describe('fair racing', () => {
       z: r.z,
     });
     expect(r.finished).toBe(true);
-    // Authored shorelines and wave sections target roughly two-minute laps.
-    expect(r.laps[0]).toBeGreaterThan(95);
-    expect(r.laps[0]).toBeLessThan(170);
+    // The compact harbor and offshore routes target one-minute laps.
+    expect(r.laps[0]).toBeGreaterThan(55);
+    expect(r.laps[0]).toBeLessThan(70);
   });
 });
 

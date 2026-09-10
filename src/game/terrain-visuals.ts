@@ -7,6 +7,15 @@ import { createPalm } from './palm';
 export function addTerrain(parent: T.Group, track: Track): T.Group[] {
   const turbines: T.Group[] = [];
   for (const [index, land] of track.land.entries()) {
+    const radius = Math.min(
+      ...land.outline.map((p, i) => {
+        const q = land.outline[(i + 1) % land.outline.length];
+        return (
+          Math.abs((q.x - p.x) * (land.z - p.z) - (q.z - p.z) * (land.x - p.x)) /
+          Math.hypot(q.x - p.x, q.z - p.z)
+        );
+      }),
+    );
     const positions: number[] = [],
       colors: number[] = [];
     const sand = new T.Color(
@@ -53,20 +62,20 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
     geo.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
     geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
     geo.computeVertexNormals();
-    parent.add(
-      new T.Mesh(
-        geo,
-        new T.MeshStandardMaterial({
-          vertexColors: true,
-          flatShading: true,
-          roughness: 0.93,
-          polygonOffset: true,
-          polygonOffsetFactor: 1,
-          polygonOffsetUnits: 1,
-          side: T.DoubleSide,
-        }),
-      ),
+    const shore = new T.Mesh(
+      geo,
+      new T.MeshStandardMaterial({
+        vertexColors: true,
+        flatShading: true,
+        roughness: 0.93,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+        side: T.DoubleSide,
+      }),
     );
+    shore.name = `Terrain: ${land.name}`;
+    parent.add(shore);
     const wire = new T.LineSegments(
       new T.WireframeGeometry(geo),
       new T.LineBasicMaterial({
@@ -83,6 +92,8 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
       resort.name = 'Reef lookout resort';
       resort.position.set(land.x, land.height, land.z);
       resort.rotation.y = -0.25;
+      // Fit the entire rotated footprint, including balconies, on its supporting island.
+      resort.scale.setScalar(Math.min(1, (radius * 0.85) / Math.hypot(32, 19.5)));
       box(resort, 60, 15, 34, 0, 7.5, 0, 0xd8bba0);
       box(resort, 64, 1.5, 38, 0, 15.5, 0, 0x694a47);
       for (let floor = 0; floor < 3; floor++) {
@@ -104,21 +115,26 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
     if (land.kind === 'island') {
       for (let n = 0; n < 8; n++) {
         const point = land.outline[(n * 3 + index) % land.outline.length];
+        const inset = land.name === 'Lookout point' ? 0.9 : 0.62;
         const tree = createPalm(9 + (n % 3) * 3, 1.4, (n * 2.4 + index) % 6.28);
         tree.position.set(
-          land.x + (point.x - land.x) * 0.62,
+          land.x + (point.x - land.x) * inset,
           land.height,
-          land.z + (point.z - land.z) * 0.62,
+          land.z + (point.z - land.z) * inset,
         );
         parent.add(tree);
       }
-      const hill = outlined(
-        new T.ConeGeometry(14 + (index % 3) * 6, 9 + (index % 2) * 7, 5),
-        track.accent,
-        new T.MeshStandardMaterial({ color: 0x355a3c, flatShading: true, roughness: 1 }),
-      );
-      hill.position.set(land.x, land.height + 4, land.z);
-      parent.add(hill);
+      if (land.name !== 'Lookout point') {
+        const height = 9 + (index % 2) * 7;
+        const hill = outlined(
+          new T.ConeGeometry(Math.min(14 + (index % 3) * 6, radius * 0.75), height, 5),
+          track.accent,
+          new T.MeshStandardMaterial({ color: 0x355a3c, flatShading: true, roughness: 1 }),
+        );
+        hill.name = `Hill: ${land.name}`;
+        hill.position.set(land.x, land.height + height / 2 - 0.2, land.z);
+        parent.add(hill);
+      }
     } else if (land.kind === 'dock') {
       const long =
         land.outline.length === 4
@@ -180,31 +196,6 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
         rotor.add(arm);
       }
     }
-  }
-  if (track.id === 'palms') {
-    const sign = new T.Group();
-    sign.name = 'Lagoon left turn chevrons';
-    sign.position.set(220, 9, 52);
-    sign.rotation.y = Math.PI;
-    box(sign, 38, 9, 1, 0, 0, 0, 0xffbc57);
-    for (const x of [-13, 0, 13]) {
-      const shape = new T.Shape();
-      shape.moveTo(3.5, 3);
-      shape.lineTo(0, 0);
-      shape.lineTo(3.5, -3);
-      shape.lineTo(0, -3);
-      shape.lineTo(-3.5, 0);
-      shape.lineTo(0, 3);
-      shape.closePath();
-      const arrow = new T.Mesh(
-        new T.ShapeGeometry(shape),
-        new T.MeshBasicMaterial({ color: 0xffbc57, toneMapped: false }),
-      );
-      arrow.position.set(x, 0, 0.6);
-      sign.add(arrow);
-    }
-    for (const x of [-15, 15]) box(sign, 0.7, 13, 0.7, x, -7, 0, 0xffbc57);
-    parent.add(sign);
   }
   return turbines;
 }

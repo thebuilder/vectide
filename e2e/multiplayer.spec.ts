@@ -102,11 +102,11 @@ test('two rendered racers join, sync course and countdown, drive, open menu and 
     await expect(guest.locator('#menu')).toBeVisible();
     await expect(host.locator('#online-race-status')).toContainText('1 DISCONNECTED');
     await host.keyboard.press('Escape');
-    await host.getByRole('button', { name: 'CLOSE ROOM', exact: true }).click();
-    // A departed guest can immediately join a fresh room without stale callbacks.
-    await host.getByRole('button', { name: 'HOST', exact: true }).click();
+    await host.getByRole('button', { name: 'RETURN TO LOBBY', exact: true }).click();
+    // The room survives the race, and a departed guest can rejoin the same code.
     await expect(host.locator('#online-lobby')).toBeVisible();
     const next = await host.locator('#room-code').inputValue();
+    expect(next).toBe(code);
     await guest.getByRole('button', { name: 'JOIN', exact: true }).click();
     await guest.getByLabel('Room code', { exact: true }).fill(next);
     await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
@@ -529,6 +529,92 @@ test('rider labels follow interpolated craft on every rendered frame', async ({ 
     expect(Math.max(...samples.map((s) => s.rawGap))).toBeGreaterThan(0.05);
     await guest.screenshot({ path: 'artifacts/multiplayer-labels-moving.png' });
     await host.keyboard.up('w');
+  } finally {
+    await context.close();
+  }
+});
+
+test('finishers keep riding, live results fill in, and the host returns everyone to the same lobby', async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const host = await context.newPage(),
+    guest = await context.newPage();
+  const errors: string[] = [];
+  for (const page of [host, guest]) {
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.route('**/src/main.ts*', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: (await response.text()) + '\nwindow.__testEngine = engine;',
+      });
+    });
+  }
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    await expect(host.locator('#room-code')).toHaveValue(/^[A-Z2-9]{8}$/);
+    const code = await host.locator('#room-code').inputValue();
+    await openOnline(guest, 'JOIN');
+    await guest.getByLabel('Racer name').fill('FINISHER');
+    await guest.getByLabel('Room code', { exact: true }).fill(code);
+    await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    await host.getByRole('button', { name: 'START RACE', exact: true }).click();
+    await expect.poll(async () => (await state(guest)).state).toBe('racing');
+    const finish = async (id: number) =>
+      host.evaluate((id) => {
+        const e = (window as any).__testEngine,
+          race = e.network,
+          r = race.racers[id],
+          g = race.track.gates[0];
+        race.tick = 360 + (180 + id * 10) * 120;
+        Object.assign(r, {
+          x: g.x - g.tx * 0.05,
+          z: g.z - g.tz * 0.05,
+          vx: g.tx * 12,
+          vz: g.tz * 12,
+          yaw: Math.atan2(g.tx, g.tz),
+          nextGate: 0,
+          lap: 3,
+          laps: [60, 60],
+          lapStart: 120,
+        });
+      }, id);
+    await finish(0);
+    await expect(host.locator('#results')).toBeVisible({ timeout: 5000 });
+    await expect(host.locator('#race-results li')).toHaveCount(2);
+    await expect(host.locator('[data-racer="1"] strong')).toHaveText('RACING');
+    const hostTime = await host.locator('[data-racer="0"] strong').textContent();
+    await finish(1);
+    await expect(guest.locator('#results')).toBeVisible({ timeout: 5000 });
+    await expect(host.locator('[data-racer="1"] strong')).toContainText('03:10.');
+    await expect(guest.locator('[data-racer="1"] strong')).toHaveText(
+      (await host.locator('[data-racer="1"] strong').textContent()) ?? '',
+    );
+    const before = (await state(guest)).player;
+    await guest.waitForTimeout(700);
+    const after = (await state(guest)).player;
+    expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(2);
+    expect(after.finishTime).toBe(before.finishTime);
+    await expect(host.locator('[data-racer="0"] strong')).toHaveText(hostTime!);
+    await host.getByRole('button', { name: 'RETURN TO LOBBY', exact: true }).click();
+    for (const page of [host, guest]) {
+      await expect(page.locator('#online-lobby')).toBeVisible();
+      await expect(page.locator('#results')).not.toBeVisible();
+      await expect(page.locator('#room-code')).toHaveValue(code);
+      await expect(page.locator('#room-count')).toHaveText('2 RACERS');
+      await expect(page.locator('#room-racers')).toContainText('FINISHER');
+    }
+    await host.getByRole('button', { name: 'START RACE', exact: true }).click();
+    await expect.poll(async () => (await state(guest)).state).toBe('racing');
+    expect((await state(guest)).player.laps).toEqual([]);
+    await host.keyboard.press('Escape');
+    await host.getByRole('button', { name: 'RETURN TO LOBBY', exact: true }).click();
+    await expect(guest.locator('#online-lobby')).toBeVisible();
+    await expect(host.locator('#room-code')).toHaveValue(code);
+    expect(errors).toEqual([]);
   } finally {
     await context.close();
   }

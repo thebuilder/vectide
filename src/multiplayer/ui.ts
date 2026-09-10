@@ -1,6 +1,5 @@
 import { courseCards } from '../course-cards';
 import type { Engine } from '../game/engine';
-import { raceProgress } from '../game/physics';
 import { TRACKS } from '../game/tracks';
 import type { NetworkRace } from './race';
 import { Room } from './room';
@@ -10,6 +9,7 @@ export function setupMultiplayer(
   engine: Engine,
   begin: (race: NetworkRace) => void,
   exit: () => void,
+  backToLobby: () => void,
 ) {
   const room = new Room();
   const dialog = document.createElement('dialog');
@@ -76,6 +76,7 @@ export function setupMultiplayer(
     button('leave-practice').hidden = !practicing;
     el('online-entry').hidden = room.phase !== 'idle';
     if (inLobby) {
+      if (engine.state !== 'lobby' && engine.state !== 'freeride') backToLobby();
       dialog.close();
       el('menu').hidden = true;
       const wasPracticing = engine.state === 'freeride';
@@ -221,20 +222,19 @@ export function setupMultiplayer(
       room.close('The host tab was hidden. Keep it visible and create a new room.');
   });
   window.addEventListener('pagehide', () => room.close());
-  engine.onRender = positionLabels;
   refresh();
   return {
     room,
+    render: positionLabels,
     update() {
       const online = !!engine.network && !engine.track.practiceRadius;
       document.getElementById('online-race-status')!.hidden = !online;
-      document.getElementById('online-results')!.hidden = !online;
       document.getElementById('restart')!.hidden = online;
       document.getElementById('again')!.hidden = online;
       for (const id of ['exit', 'result-exit'])
         document.getElementById(id)!.textContent = online
           ? room.host
-            ? 'CLOSE ROOM'
+            ? 'RETURN TO LOBBY'
             : 'LEAVE RACE'
           : 'BACK TO COURSES';
       document.getElementById('pause-title')!.textContent = online
@@ -242,7 +242,7 @@ export function setupMultiplayer(
         : 'Water can wait.';
       document.getElementById('pause-note')!.textContent = online
         ? room.host
-          ? 'The race keeps running. Closing the room ends the race for everyone.'
+          ? 'The race keeps running. Returning to the lobby brings everyone back together.'
           : 'The race keeps running while this menu is open.'
         : '';
       if (!online) return;
@@ -251,23 +251,6 @@ export function setupMultiplayer(
         room.phase === 'loading'
           ? 'WAITING FOR RACERS TO LOAD…'
           : `${room.host ? 'HOST' : `${room.ping} MS`} · ${room.members.length - disconnected} CONNECTED${disconnected ? ` · ${disconnected} DISCONNECTED` : ''}`;
-      if (engine.state !== 'finished') return;
-      const racers = [...engine.racers].sort((a, b) => {
-        const ad = engine.network!.disconnected.has(a.id) && !a.finished,
-          bd = engine.network!.disconnected.has(b.id) && !b.finished;
-        if (ad !== bd) return ad ? 1 : -1;
-        if (a.finished !== b.finished) return a.finished ? -1 : 1;
-        return a.finished
-          ? a.finishTime - b.finishTime
-          : raceProgress(b, engine.track) - raceProgress(a, engine.track);
-      });
-      document.getElementById('online-results')!.replaceChildren(
-        ...racers.map((r) => {
-          const li = document.createElement('li');
-          li.textContent = `${r.name} · ${r.finished ? `${r.finishTime.toFixed(3)}s` : engine.network!.disconnected.has(r.id) ? 'DISCONNECTED' : 'RACING'}`;
-          return li;
-        }),
-      );
     },
   };
 }

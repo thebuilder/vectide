@@ -15,9 +15,9 @@ const members = Array.from({ length: 10 }, (_, slot) => ({
   color: slot,
   connected: true,
 }));
-it('host owns collection, item use and effects while guest state converges', () => {
-  const host = new NetworkRace(TRACKS[0], members.slice(0, 2), 0, true, true);
-  const guest = new NetworkRace(TRACKS[0], members.slice(0, 2), 1, false, true);
+it.each(TRACKS)('host owns pickups and guest state converges on $name', (track) => {
+  const host = new NetworkRace(track, members.slice(0, 2), 0, true, true);
+  const guest = new NetworkRace(track, members.slice(0, 2), 1, false, true);
   host.tick = 360;
   host.running = true;
   const box = host.items.boxes[0];
@@ -53,6 +53,9 @@ it('host owns collection, item use and effects while guest state converges', () 
   expect(guest.player.item).toBe(0);
   const previous = structuredClone(guest.items.state);
   guest.receiveSnapshot({ ...host.snapshot(), tick: 1, items: { cooldowns: [], effects: [] } });
+  expect(guest.items.state).toEqual(previous);
+  const incompatible = { cooldowns: Array(track.id === 'palms' ? 15 : 25).fill(0), effects: [] };
+  guest.receiveSnapshot({ ...host.snapshot(), tick: host.tick + 1, items: incompatible });
   expect(guest.items.state).toEqual(previous);
 });
 it('rejects malformed item state and caps the largest legitimate wire packet', () => {
