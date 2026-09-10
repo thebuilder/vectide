@@ -384,7 +384,7 @@ test('lobby free ride synchronizes riders and moves everyone to a fresh race', a
     expect((await music()).song).toBe('Horizon Lane');
     await host.getByRole('button', { name: 'START RACE', exact: true }).click();
     await expect(guest.locator('#countdown')).toBeVisible();
-    expect((await music()).song).toBe('Apex Run');
+    expect((await music()).song).toBe('Sapphire Wake');
     expect((await state(guest)).track.id).toBe('harbor');
     expect((await state(guest)).player.passed).toBe(0);
     await expect(guest.locator('#practice-controls')).toBeHidden();

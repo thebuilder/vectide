@@ -23,7 +23,7 @@ test('plays all soundtrack files, analyses their spectrum, and mutes cleanly', a
     );
   await expect.poll(async () => (await audio()).playing).toBe(true);
   expect((await audio()).song).toBe('Before the First Credit');
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     await page.locator('#soundtrack-label').click();
     await page.locator(`[data-song="${i}"]`).click();
     expect((await audio()).song).toBe('Before the First Credit');
@@ -39,7 +39,7 @@ test('plays all soundtrack files, analyses their spectrum, and mutes cleanly', a
       .toBe(true);
     expect((await audio()).error).toBe('');
     expect((await audio()).song).toBe(
-      ['Apex Run', 'Crimson Slipstream', 'Neon Slipway', 'Horizon Lane'][i],
+      ['Sapphire Wake', 'Crimson Slipstream', 'Neon Slipway', 'Horizon Lane', 'Chrome Horizon'][i],
     );
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'BACK TO COURSES' }).click();

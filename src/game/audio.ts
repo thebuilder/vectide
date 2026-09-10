@@ -2,10 +2,11 @@ import { MusicSpectrum } from './spectrum';
 const TITLE_SONG = { name: 'Before the First Credit', url: '/music/before-the-first-credit.mp3' };
 const FREE_RIDE_SONG = { name: 'Horizon Lane', url: '/music/horizon-lane.mp3' };
 export const SONGS = [
-  { name: 'Apex Run', url: '/music/apex-run.mp3' },
+  { name: 'Sapphire Wake', url: '/music/sapphire-wake.mp3' },
   { name: 'Crimson Slipstream', url: '/music/crimson-slipstream.mp3' },
   { name: 'Neon Slipway', url: '/music/apex-runner.mp3' },
   FREE_RIDE_SONG,
+  { name: 'Chrome Horizon', url: '/music/chrome-horizon.mp3' },
 ];
 export class RaceAudio {
   private context?: AudioContext;
