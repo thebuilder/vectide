@@ -42,7 +42,10 @@ for (const [index, id] of [
     await page.screenshot({ path: `artifacts/${id}-pickup-spacing.png` });
     await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 8);
     await page.screenshot({ path: `artifacts/${id}-course-flow.png` });
-    await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 15);
+    await page.waitForFunction(() => {
+      const e = (window as any).__vectide;
+      return e.player.nextGate === e.track.gates.length - 1;
+    });
     await page.screenshot({ path: `artifacts/${id}-final-approach.png` });
     await page.waitForFunction(() => (window as any).__vectide.player.laps.length > 0);
     const lap = await page.evaluate(() => ({

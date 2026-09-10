@@ -244,7 +244,12 @@ export class NetworkRace {
       state.tick <= this.latestTick ||
       state.racers.length !== this.racers.length ||
       state.items.cooldowns.length !== this.items.boxes.length ||
-      !state.racers.every((r) => this.racers.some((local) => local.id === r.id))
+      !state.racers.every(
+        (r) =>
+          r.nextGate >= 0 &&
+          r.nextGate < this.track.gates.length &&
+          this.racers.some((local) => local.id === r.id),
+      )
     )
       return;
     this.items.state = structuredClone(state.items);

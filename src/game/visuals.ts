@@ -76,16 +76,21 @@ export function createWorld(track: Track): World {
     gate.position.set(g.x, 0, g.z);
     for (const side of [-1, 1]) {
       const buoy = new T.Group();
+      buoy.name = 'buoy';
       buoy.position.set(((-g.tz * g.width) / 2) * side, 0, ((g.tx * g.width) / 2) * side);
       const color = side < 0 ? 0xff5b82 : 0x86fadd;
       const base = outlined(new T.CylinderGeometry(0.55, 1.1, 0.9, 6), color);
       base.position.y = 0.5;
       buoy.add(base);
-      const mast = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 3.5, 5), glowing(color, 0.25));
-      mast.position.y = 2.2;
+      const mastHeight = track.id === 'storm' ? 6 : 3.5;
+      const mast = new T.Mesh(
+        new T.CylinderGeometry(0.09, 0.09, mastHeight, 5),
+        glowing(color, 0.25),
+      );
+      mast.position.y = 0.5 + mastHeight / 2;
       buoy.add(mast);
       const top = new T.Mesh(new T.OctahedronGeometry(0.6), glowing(color, 0.45));
-      top.position.y = 4;
+      top.position.y = mastHeight + 0.5;
       buoy.add(top);
       gate.add(buoy);
     }
@@ -334,6 +339,12 @@ export function createWorld(track: Track): World {
       gates.forEach((g, i) => {
         const p = track.gates[i];
         g.position.y = i === 0 ? 0 : waterHeight(p.x, p.z, t, surface);
+        g.children
+          .filter((child) => child.name === 'buoy')
+          .forEach((buoy) => {
+            buoy.position.y =
+              waterHeight(p.x + buoy.position.x, p.z + buoy.position.z, t, surface) - g.position.y;
+          });
         g.getObjectByName('next')!.visible = i === player.nextGate;
       });
       turbines.forEach((r, i) => (r.rotation.z = t * 0.3 + i));

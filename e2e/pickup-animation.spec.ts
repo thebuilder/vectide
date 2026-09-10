@@ -150,3 +150,34 @@ test('a fresh race resets animation and joining a collected pickup does not repl
   expect(result.ready).toEqual({ visible: true, scale: 1, spin: 0 });
   expect(result.rewound).toEqual(result.restarted);
 });
+
+test('distant pickup rows fade into view without changing their availability', async ({ page }) => {
+  await page.goto('/e2e/fixtures/pickup-water.html');
+  await page.waitForFunction(() => !!(window as any).demo);
+  const samples = await page.evaluate(async () => {
+    const path = '/src/game/pickups.ts';
+    const { Pickups } = await import(path);
+    const e = (window as any).demo;
+    const items = new Pickups(e.track, true),
+      box = items.boxes[0];
+    return [false, true].map((reduced) =>
+      [120, 82.5, 60].map((distance, i) => {
+        e.pickupVisuals.update(items, 10 + i, true, 0, reduced, { x: box.x + distance, z: box.z });
+        const mesh = e.pickupVisuals.group.children[0].children[0];
+        return {
+          visible: mesh.visible,
+          opacity: mesh.children[0].material.opacity,
+          cooldown: items.state.cooldowns[0],
+        };
+      }),
+    );
+  });
+  for (const [far, approaching, nearby] of samples) {
+    expect(far.visible).toBe(false);
+    expect(far.opacity).toBe(0);
+    expect(approaching.visible).toBe(true);
+    expect(approaching.opacity).toBeCloseTo(0.5);
+    expect(nearby.opacity).toBe(1);
+    expect([far.cooldown, approaching.cooldown, nearby.cooldown]).toEqual([0, 0, 0]);
+  }
+});

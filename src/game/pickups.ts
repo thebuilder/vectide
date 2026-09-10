@@ -42,14 +42,14 @@ export interface PickupState {
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
   // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
-  // The ramp-free courses use narrower rows between gates, with room to use each item.
+  // Ramp-free rows use lap fractions, independent of checkpoint count, with room to use each item.
   const betweenGates = track.id !== 'palms',
     lanes = betweenGates ? 3 : 5,
     rows =
       track.id === 'storm'
-        ? [2.5, 6.5, 9.5, 12.5, 15.5]
+        ? [0.1125, 0.2875, 0.475, 0.6625, 0.85]
         : betweenGates
-          ? [1.5, 4.5, 7.5, 10.5, 13.5]
+          ? [0.09375, 0.28125, 0.46875, 0.65625, 0.84375]
           : [1, 4, 10, 12, 14],
     used = new Set<number>();
   return rows.flatMap((index, row) => {
@@ -59,7 +59,7 @@ export function pickupRows(track: Track): Pickup[] {
       if (used.has(gateIndex)) continue;
       let gate = track.gates[gateIndex];
       if (betweenGates) {
-        const pointIndex = Math.round((gateIndex / track.gates.length) * track.points.length),
+        const pointIndex = Math.round(gateIndex * track.points.length),
           p = track.points[pointIndex],
           before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
           after = track.points[(pointIndex + 1) % track.points.length],

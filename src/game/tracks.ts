@@ -102,23 +102,27 @@ export const TRACKS: Track[] = definitions.map((d) => {
     const exposed = layout.zones.some(
       (zone) => zone.swell > 0 && waveZoneWeight(p.x, p.z, zone) > 0.15,
     );
-    const width = exposed
-      ? 56
-      : fraction > 0.55 && fraction < 0.8
-        ? 46
-        : d.id === 'harbor'
-          ? 24
-          : d.id === 'palms'
-            ? 40
-            : 32;
+    const width =
+      exposed || (d.id === 'storm' && fraction > 0.03 && fraction < 0.55)
+        ? 56
+        : fraction > 0.55 && fraction < 0.8
+          ? 46
+          : d.id === 'harbor'
+            ? 24
+            : d.id === 'palms'
+              ? 40
+              : 32;
     return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
-  // Keep checkpoint spacing readable on the compact one-minute courses.
-  const gateCount = 16;
-  // Storm's opening gate must face the grid before the first bend, not sit beyond it.
-  const gates = Array.from({ length: gateCount }, (_, i) =>
-    fitGateToShore(at(d.id === 'storm' && i === 1 ? 0.02 : i / gateCount), layout.land),
-  );
+  // Storm needs an extra gate through the western loop so its exit is not hidden around the bend.
+  const gateFractions =
+    d.id === 'storm'
+      ? [
+          0, 0.02, 0.085, 0.14, 0.205, 0.25, 0.3125, 0.35, 0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75,
+          0.8125, 0.875, 0.9375,
+        ]
+      : Array.from({ length: 16 }, (_, i) => i / 16);
+  const gates = gateFractions.map((fraction) => fitGateToShore(at(fraction), layout.land));
   const ramps: Ramp[] = layout.rampCenters.map(([x, z, tx = -1, tz = 0]) => {
     const early = d.id === 'palms' && tz === -1;
     const ramp = {
@@ -148,7 +152,10 @@ export const TRACKS: Track[] = definitions.map((d) => {
       .sort((a, b) => a.along - b.along)[0];
     return { ...ramp, targetGate: target?.index };
   });
-  const landmark = at(d.id === 'palms' ? 0.42 : d.id === 'harbor' ? 0.46 : 0.36);
+  const landmark =
+    d.id === 'storm'
+      ? { x: 260, z: 130, tx: 0, tz: 1, width: 56 }
+      : at(d.id === 'palms' ? 0.42 : 0.46);
   return {
     ...d,
     wave: d.id === 'palms' ? 0.8 : d.id === 'harbor' ? 0.95 : 1.25,

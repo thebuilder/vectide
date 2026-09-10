@@ -211,3 +211,21 @@ describe('network boundaries and smoothing', () => {
     expect(interpolateRacer(a, b, 10, 20, 15).x).toBe(100);
   });
 });
+
+it('transports Storm’s extra checkpoint and rejects it on shorter courses', () => {
+  const host = new NetworkRace(TRACKS[2], members.slice(0, 2), 0, true);
+  const guest = new NetworkRace(TRACKS[2], members.slice(0, 2), 1, false);
+  host.tick = 420;
+  host.racers[1].nextGate = TRACKS[2].gates.length - 1;
+  const message = parseMessage(
+    encodeMessage({ type: 'snapshot', race: 1, state: host.snapshot() }),
+  );
+  expect(message?.type).toBe('snapshot');
+  if (message?.type !== 'snapshot') throw new Error('Storm snapshot was rejected');
+  guest.receiveSnapshot(message.state);
+  expect(guest.player.nextGate).toBe(16);
+  const port = new NetworkRace(TRACKS[1], members.slice(0, 2), 1, false);
+  const before = port.snapshot();
+  port.receiveSnapshot(message.state);
+  expect(port.snapshot()).toEqual(before);
+});

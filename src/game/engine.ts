@@ -665,6 +665,7 @@ export class Engine {
         ['countdown', 'racing', 'paused', 'finished'].includes(this.state),
       bands.low,
       this.reducedMotion.matches,
+      p,
     );
     this.bloom.strength = 0.28 + bands.low * 0.05;
     this.world.ramps.visible = this.state !== 'menu';

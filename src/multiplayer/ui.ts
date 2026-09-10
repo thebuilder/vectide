@@ -222,10 +222,10 @@ export function setupMultiplayer(
       room.close('The host tab was hidden. Keep it visible and create a new room.');
   });
   window.addEventListener('pagehide', () => room.close());
-  engine.onRender = positionLabels;
   refresh();
   return {
     room,
+    render: positionLabels,
     update() {
       const online = !!engine.network && !engine.track.practiceRadius;
       document.getElementById('online-race-status')!.hidden = !online;

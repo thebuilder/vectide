@@ -83,3 +83,33 @@ it.each(TRACKS)('keeps the whole checkpoint opening clear of shore on $name', (t
     }
   }
 });
+
+it('floats each Storm buoy on its own wave and keeps its light above the water', () => {
+  const track = TRACKS[2],
+    world = createWorld(track),
+    player = createRacer(track, 0);
+  for (const time of [0, 3, 9, 20]) {
+    world.update(time, player);
+    for (const gate of world.gates) {
+      for (const buoy of gate.children.filter((child) => child.name === 'buoy')) {
+        const surface = waterHeight(
+          gate.position.x + buoy.position.x,
+          gate.position.z + buoy.position.z,
+          time,
+          track,
+        );
+        expect(gate.position.y + buoy.position.y).toBeCloseTo(surface);
+        expect(buoy.children[2].position.y).toBeGreaterThanOrEqual(6);
+      }
+    }
+  }
+  world.dispose();
+});
+
+it('keeps Storm’s signal platform offshore and clear of the driving view through the weave', () => {
+  const track = TRACKS[2],
+    platform = track.obstacles[0];
+  expect(platform.x - platform.radius).toBeGreaterThan(
+    Math.max(...track.points.map((point) => point.x)) + 75,
+  );
+});

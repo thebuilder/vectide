@@ -1,3 +1,4 @@
+import { setupCheckpoint } from './checkpoint';
 import { formatTime, setupResults } from './results';
 import { PickupHud } from './pickup-hud';
 import './pickups.css';
@@ -48,7 +49,7 @@ app.innerHTML = `
 </main>
 <section id="hud" hidden aria-label="Race information">
   <div class="race-top"><div><span class="label" id="position-label">POSITION</span><strong id="position">01<span>/ 06</span></strong></div><div class="lap-info"><span class="label">LAP <b id="lap">1 / 3</b></span><strong id="timer">00:00.000</strong></div></div>
-  <div id="checkpoint" class="checkpoint"><span id="direction">↑</span><div>NEXT GATE <b id="gate">01</b><small id="distance">0 M</small></div></div>
+  <div id="checkpoint" class="checkpoint"><span id="direction" aria-hidden="true">↑</span><div>NEXT GATE <b id="gate">01</b><small id="distance">0 M</small></div></div>
   <div id="item-hud" hidden><span id="item-icon" aria-hidden="true">◇</span><div><strong id="item-name" aria-hidden="true"></strong><span id="item-announcement" class="sr-only" role="status"></span><small id="item-description">Ride through a pickup</small><span id="item-use"><span class="item-use-label"><kbd data-keyboard="Q" data-gamepad="LB" data-touch="USE button">Q</kbd> USE ITEM</span></span></div></div>
   <div id="notice" class="notice" role="status"></div>
   <div class="race-bottom"><div class="map-wrap"><canvas id="map" width="220" height="190" aria-label="Course map"></canvas><span id="track-name">PALM CIRCUIT</span></div><div class="speed"><strong id="speed">0</strong><span>KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small id="water-state">ON THE WATER</small></div></div>
@@ -62,7 +63,7 @@ app.innerHTML = `
 <div id="lap-split" hidden role="status" aria-live="polite"></div>
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><button id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
-<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The next gate is marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="AUTOMATIC" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT / C" data-gamepad="STICK ↑ / ↓">SHIFT / C</dt><dd class="touch-hide">Shift weight back / forward</dd><dt data-keyboard="E / STEER + E" data-touch="HOLD JUMP" data-gamepad="RB / STICK + RB">E / STEER + E</dt><dd>Hold to load a flip<span class="touch-hide">; steer to load a spin</span>. Release at takeoff.</dd><dt data-keyboard="Q" data-touch="USE button" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose, or forward to press it down.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump. Hold E (gamepad RB) as you approach a jump, then release at takeoff. On touch, throttle is automatic. Hold BRAKE to slow down. Hold JUMP to prepare a flip, then release as a wave or ramp launches you. An unfinished trick can throw you off; you will swim back and remount.</p><button id="close-help" class="primary">GOT IT</button></dialog>
+<dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. Follow the amber checkpoint marker. When it reaches the edge of the screen, turn in the arrow’s direction. The next gate is also marked on your map.</p><dl><dt data-keyboard="W / ↑" data-touch="AUTOMATIC" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="◀ / ▶ buttons" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt class="touch-hide" data-keyboard="SHIFT / C" data-gamepad="STICK ↑ / ↓">SHIFT / C</dt><dd class="touch-hide">Shift weight back / forward</dd><dt data-keyboard="E / STEER + E" data-touch="HOLD JUMP" data-gamepad="RB / STICK + RB">E / STEER + E</dt><dd>Hold to load a flip<span class="touch-hide">; steer to load a spin</span>. Release at takeoff.</dd><dt data-keyboard="Q" data-touch="USE button" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose, or forward to press it down.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump. Hold E (gamepad RB) as you approach a jump, then release at takeoff. On touch, throttle is automatic. Hold BRAKE to slow down. Hold JUMP to prepare a flip, then release as a wave or ramp launches you. An unfinished trick can throw you off; you will swim back and remount.</p><button id="close-help" class="primary">GOT IT</button></dialog>
 <dialog id="results" aria-labelledby="result-title"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><ol id="race-results" aria-label="Race positions" hidden></ol><p id="result-ride-note">AUTOPILOT · ENJOY THE RIDE</p><button id="again" class="primary">RIDE AGAIN</button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
 `;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -323,15 +324,6 @@ engine.onUpdate = (s) => {
       ? 'AIRBORNE'
       : s.track.sea + ' WATER';
   $('track-name').textContent = s.track.name;
-  const gate = s.track.gates[s.player.nextGate];
-  const d = Math.hypot(gate.x - s.player.x, gate.z - s.player.z);
-  $('gate').textContent = String(s.player.nextGate + 1).padStart(2, '0');
-  $('distance').textContent = `${Math.round(d)} M`;
-  const turn = Math.atan2(
-    Math.sin(Math.atan2(gate.x - s.player.x, gate.z - s.player.z) - s.player.yaw),
-    Math.cos(Math.atan2(gate.x - s.player.x, gate.z - s.player.z) - s.player.yaw),
-  );
-  $('direction').style.transform = `rotate(${-turn}rad)`;
   const recovery = s.player.recovery.phase;
   $('notice').textContent =
     recovery !== 'riding'
@@ -353,7 +345,7 @@ engine.onUpdate = (s) => {
 };
 engine.onFinish = (s) => {
   const best = Math.min(...s.player.laps),
-    courseVersion = s.track.id === 'storm' ? 'v10' : s.track.id === 'palms' ? 'v8' : 'v9',
+    courseVersion = s.track.id === 'storm' ? 'v11' : s.track.id === 'palms' ? 'v8' : 'v9',
     key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;
@@ -404,6 +396,11 @@ const multiplayer = setupMultiplayer(
     document.body.classList.remove('playing');
   },
 );
+const updateCheckpoint = setupCheckpoint($('checkpoint'), engine);
+engine.onRender = () => {
+  multiplayer.render();
+  updateCheckpoint();
+};
 // Read-only diagnostics support reproducible browser verification without altering race state.
 Object.defineProperty(window, '__vectide', {
   get: () =>

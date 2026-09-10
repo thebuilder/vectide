@@ -63,3 +63,23 @@ it("puts Storm's opening gate before the turn and its first pickups beyond it", 
     firstRow.every((box) => nearestPoint(track, box) > nearestPoint(track, track.gates[2])),
   ).toBe(true);
 });
+
+it('keeps Storm checkpoints facing their approaches with an open line between gates', async () => {
+  const { gatePointClear } = await import('../src/game/course-layout');
+  const track = TRACKS[2];
+  for (const [index, gate] of track.gates.entries()) {
+    const previous = track.gates[(index + track.gates.length - 1) % track.gates.length];
+    const dx = gate.x - previous.x,
+      dz = gate.z - previous.z;
+    // Edge-on gates lose their visible opening. Keep at least 80% of it facing the approach.
+    expect((dx * gate.tx + dz * gate.tz) / Math.hypot(dx, dz), `gate ${index + 1}`).toBeGreaterThan(
+      0.8,
+    );
+    for (let step = 0; step <= 30; step++) {
+      expect(
+        gatePointClear(previous.x + (dx * step) / 30, previous.z + (dz * step) / 30, track.land),
+        `shore blocks gate ${index + 1}`,
+      ).toBe(true);
+    }
+  }
+});

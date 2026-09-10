@@ -25,16 +25,14 @@ test('Storm shows the first gate from the grid and admits a straight launch befo
     const project = (x: number, y: number, z: number) =>
       new Vector3(x, y, z).project(e.camera).toArray();
     return {
-      posts: [-1, 1].map((side) =>
-        project(
-          first.x - (first.tz * side * first.width) / 2,
-          y + 3,
-          first.z + (first.tx * side * first.width) / 2,
+      posts: e.world.gates[1].children
+        .filter((child: any) => child.name === 'buoy')
+        .map((buoy: any) =>
+          project(first.x + buoy.position.x, y + buoy.position.y + 3, first.z + buoy.position.z),
         ),
-      ),
-      crates: e.pickupVisuals.group.children[0].children.map((mesh: any) =>
-        project(mesh.position.x, mesh.position.y, mesh.position.z),
-      ),
+      crates: e.pickupVisuals.group.children[0].children
+        .filter((mesh: any) => mesh.visible)
+        .map((mesh: any) => project(mesh.position.x, mesh.position.y, mesh.position.z)),
     };
   });
   for (const [x, y, z] of opening.posts) {

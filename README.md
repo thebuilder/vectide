@@ -38,7 +38,7 @@ pnpm build
 | Enter / Space / gamepad A          | Select focused control                                  |
 | Gamepad B                          | Back or close dialog                                    |
 
-Pass between both buoys at each gate, in order and in the forward direction. The amber marker, HUD arrow, and minimap identify the next gate. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Manual reset does not advance a checkpoint, and reset runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
+Pass between both buoys at each gate, in order and in the forward direction. The amber checkpoint label follows the next gate in the driving view and points toward it at the screen edge when it is out of view. The minimap also marks the next gate. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Manual reset does not advance a checkpoint, and reset runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
 
 ## Multiplayer
 
@@ -119,7 +119,7 @@ input simulation and snapshot interpolation; no reference source was copied.
 ## Pickups
 
 Race setup and the host lobby have a Pickups toggle, enabled by default. Each course
-has five pickup rows. Palm uses five crates per row; Port and Storm use three, spaced between checkpoints with time to use each item. Rows stay clear of ramp approaches and landings. Collect
+has five pickup rows. Palm uses five crates per row; Port and Storm use three, spaced between checkpoints with time to use each item. Rows stay clear of ramp approaches and landings. Distant crates fade in between 100 and 65 meters so later rows do not distract from checkpoints. Collect
 one item at a time; a collected crate returns after seven seconds. Time trials and
 lobby free ride have no items. Best laps with pickups use a separate local record.
 
@@ -143,7 +143,7 @@ send only input and receive bounded item snapshots alongside the race state.
 - **Port Afterdark**: choppy water, narrow docks, cranes, and a container carrier.
 - **Storm Signal**: heavy swell, offshore turbines, angular mountains, and a signal platform.
 
-Each course has 16 gates. Palm has a pair of linked optional ramps plus a smaller opening ramp, and turns directly toward the finish after the jump straight. Port has no ramps: its dock passages and sheltered basins lead into a direct final approach. Storm runs counterclockwise, with a west wave train, an open-water weave, and broad sweeps through the east-channel swell instead of ramps. Palm's early bends have wider gates and shore clearance for weapon knockback; the eastern channel puts a sustained wave train across the racing line. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
+Palm and Port have 16 gates; Storm has 17, including an extra gate through its western bend. Palm has a pair of linked optional ramps plus a smaller opening ramp, and turns directly toward the finish after the jump straight. Port has no ramps: its dock passages and sheltered basins lead into a direct final approach. Storm runs counterclockwise, with a west wave train, an open-water weave, and broad sweeps through the east-channel swell instead of ramps. Its western reef and shore leave open checkpoint approaches, the weave checkpoint sits before the turn, and the signal platform sits farther offshore. Each buoy follows its own local wave height; Storm uses taller masts to keep the gate opening readable above the swell. Palm's early bends have wider gates and shore clearance for weapon knockback; the eastern channel puts a sustained wave train across the racing line. Normal AI laps are about one minute; a three-lap race takes around three minutes. Race traffic and waves change lap times. Easy, Normal, and Expert change opponent pace; player handling stays consistent. Normal uses full throttle on open water and firmer braking in tight turns, while Expert carries more pace on calm courses and manages rough-water turns more conservatively. Flat-water cruising speed is approximately 82 km/h.
 
 After finishing, AI keeps the craft riding while results appear with a brief headline scramble and panel sweep. Reduced motion uses a fade. The board lists every racer by position and adds their recorded time as they finish; disconnected racers appear last. Finishers cannot collide with racers still competing.
 
