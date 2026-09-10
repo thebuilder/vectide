@@ -113,3 +113,15 @@ it('keeps Storm’s signal platform offshore and clear of the driving view throu
     Math.max(...track.points.map((point) => point.x)) + 75,
   );
 });
+
+it('keeps all ten Storm grid positions clear of the island after rotating the start', () => {
+  const track = TRACKS[2];
+  for (let slot = 0; slot < 10; slot++) {
+    const racer = createRacer(track, slot);
+    for (const land of track.land)
+      expect(
+        polygonContact(hullPoints(racer), land.outline),
+        `slot ${slot} at ${land.name}`,
+      ).toBeNull();
+  }
+});

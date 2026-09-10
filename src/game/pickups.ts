@@ -47,7 +47,7 @@ export function pickupRows(track: Track): Pickup[] {
     lanes = betweenGates ? 3 : 5,
     rows =
       track.id === 'storm'
-        ? [0.1125, 0.2875, 0.475, 0.6625, 0.85]
+        ? [0.1125, 0.32, 0.53125, 0.71875, 0.90625]
         : betweenGates
           ? [0.09375, 0.28125, 0.46875, 0.65625, 0.84375]
           : [1, 4, 10, 12, 14],

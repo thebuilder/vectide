@@ -114,12 +114,12 @@ export const TRACKS: Track[] = definitions.map((d) => {
               : 32;
     return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
-  // Storm needs an extra gate through the western loop so its exit is not hidden around the bend.
+  // Storm starts toward the western loop and places its weave checkpoint before the turn.
   const gateFractions =
     d.id === 'storm'
       ? [
-          0, 0.02, 0.085, 0.14, 0.205, 0.25, 0.3125, 0.35, 0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75,
-          0.8125, 0.875, 0.9375,
+          0, 0.085, 0.14, 0.205, 0.25, 0.29, 0.35, 0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125,
+          0.875, 0.9375,
         ]
       : Array.from({ length: 16 }, (_, i) => i / 16);
   const gates = gateFractions.map((fraction) => fitGateToShore(at(fraction), layout.land));

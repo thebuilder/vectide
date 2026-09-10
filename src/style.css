@@ -414,41 +414,32 @@ kbd {
   margin-left: 9px;
 }
 .checkpoint {
-  position: fixed;
-  top: 0;
-  left: 0;
-  translate: 0 0;
-  transform: translate(-50%, -50%);
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border: 1px solid #ffbc5780;
-  background: #07151ee6;
-  color: #ffbc57;
-  pointer-events: none;
+  gap: 12px;
+  text-shadow: 0 1px 8px #05090a;
 }
 .checkpoint > span {
-  font-size: 30px;
-  line-height: 1;
-  rotate: 0deg;
+  font-size: 35px;
+  color: var(--phosphor);
 }
 .checkpoint > div {
   font-size: 9px;
   letter-spacing: 1px;
 }
 .checkpoint b {
-  font-weight: 700;
+  color: var(--phosphor);
+  font-weight: 400;
 }
 .checkpoint small {
   display: block;
-  color: #eafff7;
   font-size: 12px;
   letter-spacing: 0;
-  margin-top: 4px;
-}
-.checkpoint[data-offscreen='true'] {
-  border-color: #ffbc57;
+  margin-top: 6px;
 }
 .race-bottom {
   position: absolute;
@@ -683,6 +674,9 @@ dialog dd {
   }
   .race-top {
     gap: 28px;
+  }
+  .checkpoint {
+    top: 90px;
   }
   .notice {
     top: 145px;
@@ -1159,6 +1153,11 @@ dialog {
   #pause kbd {
     display: none;
   }
+  .checkpoint {
+    top: 76px;
+    left: 0;
+    right: auto;
+  }
   .notice {
     top: 135px;
     font-size: 10px;
@@ -1211,6 +1210,15 @@ dialog {
     left: max(20px, env(safe-area-inset-left));
     right: max(20px, env(safe-area-inset-right));
   }
+  .checkpoint {
+    left: 45%;
+    top: 0;
+    transform: none;
+    font-size: 10px;
+  }
+  .checkpoint #direction {
+    font-size: 28px;
+  }
   .notice {
     top: 60px;
     left: 35%;
@@ -1237,6 +1245,11 @@ dialog {
   }
   #touch-controls {
     padding-top: 0;
+  }
+}
+@media (max-width: 700px) {
+  .checkpoint {
+    transform: none;
   }
 }
 @media (max-width: 360px) {

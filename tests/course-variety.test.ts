@@ -48,19 +48,20 @@ it.each(TRACKS.slice(1))('aims the last checkpoint toward the finish on $name', 
   expect((dx * last.tx + dz * last.tz) / Math.hypot(dx, dz)).toBeGreaterThan(0.9);
 });
 
-it("puts Storm's opening gate before the turn and its first pickups beyond it", () => {
+it("aims Storm's grid toward a well-spaced first checkpoint", () => {
   const track = TRACKS[2],
     start = track.gates[0],
     first = track.gates[1];
   const dx = first.x - start.x,
     dz = first.z - start.z,
     distance = Math.hypot(dx, dz);
-  expect(distance).toBeGreaterThan(18);
-  expect(distance).toBeLessThan(30);
+  expect(distance).toBeGreaterThan(65);
+  expect(distance).toBeLessThan(100);
+  expect((dx * start.tx + dz * start.tz) / distance).toBeGreaterThan(0.95);
   expect((dx * first.tx + dz * first.tz) / distance).toBeGreaterThan(0.95);
   const firstRow = pickupRows(track).filter((box) => box.row === 0);
   expect(
-    firstRow.every((box) => nearestPoint(track, box) > nearestPoint(track, track.gates[2])),
+    firstRow.every((box) => nearestPoint(track, box) > nearestPoint(track, track.gates[1])),
   ).toBe(true);
 });
 
