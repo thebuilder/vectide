@@ -63,11 +63,12 @@ export const finite = (value: unknown, min: number, max: number): value is numbe
 const integer = (value: unknown, min: number, max: number): value is number =>
   finite(value, min, max) && Number.isInteger(value);
 export const validTrack = (value: unknown): value is number => integer(value, 0, TRACKS.length - 1);
-export const cleanName = (value: string) =>
+export const defaultRacerName = (slot: number) => `RACER ${slot + 1}`;
+export const cleanName = (value: string, fallback = '') =>
   value
     .replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
     .trim()
-    .slice(0, 20) || 'RACER';
+    .slice(0, 20) || fallback;
 export const validCode = (value: string) => /^[A-Z2-9]{8}$/.test(value);
 export function roomCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

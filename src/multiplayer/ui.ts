@@ -4,7 +4,7 @@ import { raceProgress } from '../game/physics';
 import { TRACKS } from '../game/tracks';
 import type { NetworkRace } from './race';
 import { Room } from './room';
-import { COLORS } from './protocol';
+import { cleanName, COLORS, defaultRacerName } from './protocol';
 
 export function setupMultiplayer(
   engine: Engine,
@@ -16,7 +16,7 @@ export function setupMultiplayer(
   dialog.id = 'online-dialog';
   dialog.setAttribute('aria-labelledby', 'online-title');
   dialog.innerHTML = `<span class="eyebrow">MULTIPLAYER</span><h2 id="online-title">Join your friends.</h2>
-    <form id="join-form"><div id="online-entry"><label>Racer name<input id="racer-name" maxlength="20" autocomplete="nickname" value="RACER"></label>
+    <form id="join-form"><div id="online-entry"><label>Racer name<input id="racer-name" maxlength="20" autocomplete="nickname" placeholder="RACER"></label>
     <label>Room code<input id="join-code" maxlength="8" minlength="8" pattern="[A-Za-z2-9]{8}" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button id="join-room" class="primary">JOIN ROOM <span aria-hidden="true">→</span></button></div></form>
     <p id="online-status" role="status"></p><button id="cancel-online" class="quiet">BACK</button>`;
   const lobby = document.createElement('section');
@@ -27,7 +27,7 @@ export function setupMultiplayer(
     <div id="lobby-labels" aria-hidden="true"></div>
     <div class="lobby-bottom"><section id="room-courses" aria-label="Room course"><div class="course-heading"><span id="room-course-heading">SELECT COURSE</span><span id="room-course-number">01 / 03</span></div><div class="courses">${courseCards('data-room-track')}</div></section>
     <div class="lobby-panel"><div class="lobby-crew"><span id="room-count" class="eyebrow"></span><ol id="room-racers" aria-label="Racers in room"></ol><button id="room-pickups" class="pickup-toggle" aria-pressed="true">PICKUPS ON</button><button id="leave-room" class="quiet" aria-label="Leave room" title="Leave room"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4h9v16h-9M14 12H3m4-4-4 4 4 4"/></svg><span>LEAVE ROOM</span></button></div>
-    <div class="lobby-settings"><label>Your name<input id="profile-name" maxlength="20" autocomplete="nickname" value="RACER"></label>
+    <div class="lobby-settings"><label>Your name<input id="profile-name" maxlength="20" autocomplete="nickname" placeholder="RACER"></label>
     <fieldset class="color-picker"><legend>Craft color</legend>${COLORS.map((color, i) => `<button type="button" data-color="${i}" style="--craft-color:${color}" aria-label="${['Mint', 'Pink', 'Gold', 'Violet', 'Blue', 'White', 'Lime', 'Rose', 'Aqua', 'Orange'][i]}" aria-pressed="false"></button>`).join('')}</fieldset>
     </div>
     <div class="lobby-launch"><p id="lobby-status" role="status"></p><div class="lobby-actions"><button id="enter-practice" class="secondary">FREE RIDE</button><button id="start-room" class="primary">START RACE <svg width="26" height="20" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button></div></div></div></div>`;
@@ -45,7 +45,7 @@ export function setupMultiplayer(
   mobileHeader.addEventListener('change', placePracticeBack);
   placePracticeBack();
   let entryAction = 'join-online';
-  let name = 'RACER';
+  let name = '';
   const show = () => {
     if (!dialog.open) dialog.showModal();
   };
@@ -105,7 +105,7 @@ export function setupMultiplayer(
       el('room-count').textContent =
         `${room.members.length} ${room.members.length === 1 ? 'RACER' : 'RACERS'}`;
       const member = room.members.find((m) => m.slot === room.slot)!;
-      name = member.name;
+      input('profile-name').placeholder = defaultRacerName(member.slot);
       if (document.activeElement !== input('profile-name')) input('profile-name').value = name;
       lobby
         .querySelectorAll<HTMLButtonElement>('[data-color]')
@@ -173,14 +173,12 @@ export function setupMultiplayer(
   el<HTMLFormElement>('join-form').onsubmit = (event) => {
     event.preventDefault();
     void engine.audio.start();
-    name = input('racer-name').value;
+    name = cleanName(input('racer-name').value);
     void room.open(false, name, input('join-code').value);
   };
   input('profile-name').onchange = () => {
-    room.setProfile(
-      input('profile-name').value,
-      room.members.find((m) => m.slot === room.slot)!.color,
-    );
+    name = cleanName(input('profile-name').value);
+    room.setProfile(name, room.members.find((m) => m.slot === room.slot)!.color);
   };
   input('profile-name').onkeydown = (event) => {
     if (event.key === 'Enter') input('profile-name').blur();

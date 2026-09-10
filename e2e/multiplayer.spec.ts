@@ -243,10 +243,21 @@ test('phone menu exposes host and join without scrolling and opens a water lobby
     await page.screenshot({ path: 'artifacts/multiplayer-menu-mobile.png' });
     await page.getByRole('button', { name: 'JOIN', exact: true }).tap();
     await expect(page.getByLabel('Room code', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Racer name', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Racer name', { exact: true })).toHaveAttribute(
+      'placeholder',
+      'RACER',
+    );
     await page.locator('#cancel-online').tap();
     await page.getByRole('button', { name: 'HOST', exact: true }).tap();
     await expect(page.locator('#online-lobby')).toBeVisible();
     await expect.poll(async () => (await state(page)).state).toBe('lobby');
+    await expect(page.getByLabel('Your name')).toHaveValue('');
+    await expect(page.getByLabel('Your name')).toHaveCSS('user-select', 'text');
+    await expect(page.getByLabel('Your name')).toHaveAttribute('placeholder', 'RACER 1');
+    await expect(page.locator('#room-racers')).toContainText('RACER 1');
+    await page.getByRole('button', { name: 'Gold', exact: true }).tap();
+    await expect(page.getByLabel('Your name')).toHaveValue('');
     for (const id of ['room-code', 'leave-room', 'profile-name', 'room-courses', 'start-room']) {
       const box = await page.locator(`#${id}`).boundingBox();
       expect(box!.y + box!.height).toBeLessThanOrEqual(667);
@@ -462,6 +473,18 @@ test('rider labels follow interpolated craft on every rendered frame', async ({ 
     await guest.getByLabel('Room code', { exact: true }).fill(code);
     await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
     await expect(guest.locator('#room-count')).toHaveText('2 RACERS');
+    await expect(guest.getByLabel('Your name')).toHaveValue('');
+    await expect(guest.getByLabel('Your name')).toHaveAttribute('placeholder', 'RACER 2');
+    await expect(guest.locator('#room-racers')).toContainText('RACER 1');
+    await expect(guest.locator('#room-racers')).toContainText('RACER 2');
+    await guest.getByLabel('Your name').fill('WAVE RUNNER');
+    await guest.getByLabel('Your name').press('Enter');
+    await expect(host.locator('#room-racers')).toContainText('WAVE RUNNER');
+    await guest.getByLabel('Your name').fill('');
+    await guest.getByLabel('Your name').press('Enter');
+    await expect(host.locator('#room-racers')).toContainText('RACER 2');
+    await expect(guest.getByLabel('Your name')).toHaveValue('');
+
     await host.getByRole('button', { name: 'FREE RIDE', exact: true }).click();
     await host.keyboard.down('w');
     await expect.poll(async () => (await state(host)).speed).toBeGreaterThan(15);

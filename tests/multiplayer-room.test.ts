@@ -315,3 +315,27 @@ it('only the host controls pickups and preparation freezes the shared setting', 
   host.setPickups(true);
   expect(host.pickups).toBe(false);
 });
+
+it('assigns numbered blank-name fallbacks and restores them when custom names are cleared', async () => {
+  const host = room(),
+    first = room(),
+    second = room();
+  await host.open(true, '  ');
+  await settle();
+  await first.open(false, '', host.code);
+  await settle();
+  await second.open(false, '\u0000\t', host.code);
+  await settle();
+  expect(host.members.map((m) => m.name)).toEqual(['RACER 1', 'RACER 2', 'RACER 3']);
+  expect(first.members).toEqual(host.members);
+  first.setProfile('  WAVE RUNNER  ', 2);
+  await settle();
+  expect(host.members[1].name).toBe('WAVE RUNNER');
+  first.setProfile('', 3);
+  host.setProfile('', 4);
+  await settle();
+  expect(host.members[0]).toMatchObject({ name: 'RACER 1', color: 4 });
+  expect(host.members[1]).toMatchObject({ name: 'RACER 2', color: 3 });
+  expect(second.members).toEqual(host.members);
+  expect(host.practice!.racers.map((r) => r.name)).toEqual(['RACER 1', 'RACER 2', 'RACER 3']);
+});

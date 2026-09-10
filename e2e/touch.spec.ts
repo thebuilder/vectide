@@ -19,6 +19,9 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
     return { x: r!.x + r!.width / 2, y: r!.y + r!.height / 2 };
   };
   const state = () => page.evaluate(() => (window as unknown as { __vectide: Snapshot }).__vectide);
+  await expect(page.getByRole('button', { name: 'JUMP', exact: true })).toBeVisible();
+  await expect(page.locator('body')).toHaveCSS('touch-action', 'none');
+  await expect(page.locator('[data-touch-key="flip"]')).toHaveCSS('user-select', 'none');
   await expect(page.locator('[data-touch-key="throttle"]')).toHaveCount(0);
   await expect.poll(async () => (await state()).speed).toBeGreaterThan(20);
   const brake = await center('brake'),
@@ -45,6 +48,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
     ],
   });
   await expect(page.locator('[data-touch-key="flip"]')).toHaveClass(/held/);
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('');
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect(page.locator('#touch-controls .held')).toHaveCount(0);
   await expect.poll(async () => (await state()).speed).toBeGreaterThan(12);
@@ -59,6 +63,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
   await page.screenshot({ path: 'artifacts/mobile-auto-throttle.png' });
   await page.locator('#pause').tap();
   await expect(page.locator('#pause-dialog')).toBeVisible();
+  await expect(page.locator('#resume')).toHaveCSS('user-select', 'none');
   await page.locator('#resume').tap();
   await page.setViewportSize({ width: 844, height: 390 });
   for (const key of ['left', 'right', 'flip', 'brake']) {

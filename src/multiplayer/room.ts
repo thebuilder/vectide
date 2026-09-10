@@ -6,6 +6,7 @@ import { peerOptions } from './config';
 import { NetworkRace } from './race';
 import {
   cleanName,
+  defaultRacerName,
   COLORS,
   encodeMessage,
   MAX_RACERS,
@@ -83,7 +84,9 @@ export class Room {
         }
         if (host) {
           this.slot = 0;
-          this.members = [{ slot: 0, name: cleanName(name), color: 0, connected: true }];
+          this.members = [
+            { slot: 0, name: cleanName(name, defaultRacerName(0)), color: 0, connected: true },
+          ];
           this.phase = 'lobby';
           this.publishLobby();
         } else {
@@ -233,7 +236,12 @@ export class Room {
           return;
         }
         connection.slot = slot;
-        this.members.push({ slot, name: cleanName(message.name), color: slot, connected: true });
+        this.members.push({
+          slot,
+          name: cleanName(message.name, defaultRacerName(slot)),
+          color: slot,
+          connected: true,
+        });
         this.publishLobby();
       }
       if (connection.slot === undefined) return;
@@ -246,7 +254,10 @@ export class Room {
         !this.riding.includes(connection.slot)
       ) {
         const member = this.members.find((m) => m.slot === connection.slot)!;
-        Object.assign(member, { name: cleanName(message.name), color: message.color });
+        Object.assign(member, {
+          name: cleanName(message.name, defaultRacerName(member.slot)),
+          color: message.color,
+        });
         this.publishLobby();
       }
       if (message.type === 'ready' && message.race === this.raceId && this.phase === 'loading') {
@@ -344,7 +355,7 @@ export class Room {
       color >= COLORS.length
     )
       return;
-    const profile = { name: cleanName(name), color };
+    const profile = { name: cleanName(name, defaultRacerName(this.slot)), color };
     if (this.host) {
       Object.assign(this.members[0], profile);
       this.publishLobby();
