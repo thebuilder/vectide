@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { poseDolphin } from './dolphin-pose';
 import { createDolphinModel } from './dolphin-model';
 import { waterHeight } from './water';
 import type { Track } from './tracks';
@@ -29,11 +30,10 @@ export function createDolphins(track: Track) {
         lastLap = player.lap;
       }
       animals.forEach((animal, i) => {
-        animal.getObjectByName('tail-flukes')!.rotation.x =
-          Math.PI / 2 + Math.sin(t * 9 + i) * 0.18;
         const age = t - started - i * 0.45;
         animal.visible = age >= 0 && age < 8;
         if (!animal.visible) return;
+        poseDolphin(animal, age);
         // Swim alongside the outside of the bend, without drifting into the racing line.
         const forward = 20 + age * 14,
           side = -(14 + i * 3);

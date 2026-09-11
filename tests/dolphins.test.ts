@@ -53,3 +53,37 @@ it.each(TRACKS.filter((track) => track.id !== 'storm'))(
     }
   },
 );
+
+it('arches the spine through the jump without sharing pose state or moving fins off the body', async () => {
+  const { Mesh, Vector3 } = await import('three');
+  const { createDolphinModel } = await import('../src/game/dolphin-model');
+  const { poseDolphin } = await import('../src/game/dolphin-pose');
+  const rising = createDolphinModel();
+  const diving = rising.clone();
+  poseDolphin(rising, 0.2);
+  poseDolphin(diving, 1.8);
+  const body = rising.children[0] as InstanceType<typeof Mesh>;
+  const other = diving.children[0] as InstanceType<typeof Mesh>;
+  const center = (mesh: InstanceType<typeof Mesh>, row: number) => {
+    const average = new Vector3();
+    for (let i = 0; i < 20; i++) average.add(mesh.getVertexPosition(row * 20 + i, new Vector3()));
+    return average.divideScalar(20);
+  };
+  expect(center(body, 0).y).toBeGreaterThan(0.15);
+  expect(center(other, 0).y).toBeLessThan(-0.3);
+  expect(center(other, 9).y).toBeLessThan(-0.35);
+  expect(body.geometry).toBe(other.geometry);
+  expect(body.morphTargetInfluences).not.toBe(other.morphTargetInfluences);
+  // Every visible part uses the same bend, including the cloned mouth lines.
+  for (const part of diving.children)
+    expect((part as InstanceType<typeof Mesh>).morphTargetInfluences).toEqual(
+      other.morphTargetInfluences,
+    );
+  const before = center(body, 0);
+  poseDolphin(rising, 0.2);
+  expect(center(body, 0).distanceTo(before)).toBe(0);
+  poseDolphin(rising, 2.5 - 0.0001);
+  const reentry = center(body, 0);
+  poseDolphin(rising, 2.5 + 0.0001);
+  expect(center(body, 0).distanceTo(reentry)).toBeLessThan(0.001);
+});

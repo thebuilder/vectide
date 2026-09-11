@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { loft } from './modeling';
+import { addDolphinBend, poseDolphin } from './dolphin-pose';
 
 /** Shared geometry keeps the three-animal pod inexpensive on phones. Faces +Z. */
 export function createDolphinModel() {
@@ -102,5 +103,7 @@ export function createDolphinModel() {
   tail.rotation.x = Math.PI / 2;
   tail.position.z = -1.35;
   dolphin.add(tail);
+  addDolphinBend(dolphin);
+  poseDolphin(dolphin, 1.25);
   return dolphin;
 }

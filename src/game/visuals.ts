@@ -353,7 +353,7 @@ export function createWorld(track: Track): World {
       const geometries = new Set<T.BufferGeometry>(),
         materials = new Set<T.Material>();
       group.traverse((o) => {
-        if (o instanceof T.Mesh || o instanceof T.LineSegments || o instanceof T.Points) {
+        if (o instanceof T.Mesh || o instanceof T.Line || o instanceof T.Points) {
           geometries.add(o.geometry);
           (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
             if (m !== dark) materials.add(m);
