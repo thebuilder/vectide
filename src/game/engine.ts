@@ -32,6 +32,7 @@ import { createJet, animateJet, inspectJet } from './jets';
 import { dark } from './geometry';
 import { waterHeight } from './water';
 import { RaceAudio } from './audio';
+import { ItemSoundEvents } from './item-sound-events';
 export type Mode = 'race' | 'trial';
 export type State = 'menu' | 'lobby' | 'freeride' | 'countdown' | 'racing' | 'paused' | 'finished';
 export interface Snapshot {
@@ -59,6 +60,7 @@ export class Engine {
   private pickupVisuals = new PickupVisuals();
   private cameraAnchor = new T.Vector3();
   readonly audio = new RaceAudio();
+  private itemSounds = new ItemSoundEvents(this.audio);
   track = TRACKS[0];
   mode: Mode = 'race';
   difficulty: Difficulty = 'normal';
@@ -654,7 +656,9 @@ export class Engine {
     }
     const rendered = this.racers.map((r) => this.network?.renderRacer(r, dt) ?? r);
     const p = rendered[this.racers.indexOf(this.player)];
+    const control = this.input();
     this.audio.transport(this.state === 'paused', dt);
+    this.itemSounds.update(this.network?.items ?? this.items, this.player, this.state === 'racing');
     const bands = this.reducedMotion.matches
       ? { low: 0, mid: 0, high: 0 }
       : this.audio.spectrum.bands;
@@ -687,7 +691,14 @@ export class Engine {
       jet.rotation.set(0, r.yaw + r.air.yaw, 0);
       jet.rotateX(-r.pitch - r.air.pitch);
       jet.rotateZ(r.roll);
-      animateJet(jet, r, this.state === 'paused' ? 0 : dt);
+      const throttle = ['menu', 'countdown'].includes(this.state)
+        ? 0
+        : r.finished
+          ? 0.65
+          : r.id === p.id
+            ? control.throttle * (1 - control.brake)
+            : undefined;
+      animateJet(jet, r, this.state === 'paused' ? 0 : dt, throttle);
     });
     if (this.state === 'menu') {
       // Look across the islands toward the sunset instead of the empty outer sea.
@@ -738,12 +749,12 @@ export class Engine {
     this.camera.lookAt(this.camTarget);
     if (this.state === 'racing' || this.state === 'finished' || this.lobby)
       this.spray.update(dt, this.racers, this.track, this.visualTime, itemSurface);
-    const control = this.input();
     this.audio.update(
       Math.hypot(p.vx, p.vz),
-      p.finished ? 0.65 : control.throttle,
-      this.state === 'racing' || this.state === 'finished' || this.state === 'freeride',
-      p.onRamp ? 1 : p.wet,
+      p.finished ? 0.65 : control.throttle * (1 - control.brake),
+      ['racing', 'finished', 'freeride'].includes(this.state) && p.recovery.phase === 'riding',
+      p.onRamp ? 0 : p.wet,
+      p.boost > 0 ? p.boostPower - 1 : 0,
     );
     this.intro?.update(dt);
     this.renderer.info.reset();

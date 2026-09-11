@@ -415,6 +415,23 @@ test('real WebRTC item commands are owned by the host and effects reach the gues
     await expect.poll(() => host.evaluate(() => room.members.length)).toBe(2);
     await host.evaluate(() => room.start());
     await expect.poll(() => guest.evaluate(() => room.race?.countdown)).toBe(0);
+    await guest.evaluate(async () => {
+      const path = '/src/game/item-sound-events.ts';
+      const { ItemSoundEvents } = await import(path);
+      const cues: (string | number)[] = [];
+      (window as any).__itemSoundCues = cues;
+      const events = new ItemSoundEvents({
+        pickup: () => cues.push('pickup'),
+        useItem: (item: number) => cues.push(item),
+      });
+      const observe = () => {
+        const race = room.race!;
+        events.update(race.items, race.player, race.countdown <= 0);
+        requestAnimationFrame(observe);
+      };
+      observe();
+    });
+    const expectedCues: (string | number)[] = [];
     for (const item of [1, 2, 3, 4, 5, 6]) {
       await guest.evaluate(() => Object.assign(drive, { use: false }));
       await expect.poll(() => host.evaluate(() => room.race!.racers[1].itemPressed)).toBe(false);
@@ -435,9 +452,17 @@ test('real WebRTC item commands are owned by the host and effects reach the gues
         race.racers[1].item = item;
       }, item);
       await expect.poll(() => guest.evaluate(() => room.race!.player.item)).toBe(item);
+      expectedCues.push('pickup');
+      await expect
+        .poll(() => guest.evaluate(() => (window as any).__itemSoundCues))
+        .toEqual(expectedCues);
       await guest.evaluate(() => Object.assign(drive, { use: true }));
       await expect.poll(() => host.evaluate(() => room.race!.racers[1].item)).toBe(0);
       await expect.poll(() => guest.evaluate(() => room.race!.player.item)).toBe(0);
+      expectedCues.push(item);
+      await expect
+        .poll(() => guest.evaluate(() => (window as any).__itemSoundCues))
+        .toEqual(expectedCues);
       if (item === 4 || item === 5) {
         expect(await guest.evaluate(() => room.race!.player.boost)).toBeGreaterThan(0);
       } else {

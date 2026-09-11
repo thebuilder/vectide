@@ -1,3 +1,5 @@
+import { EngineAudio } from './engine-audio';
+import { SoundEffects } from './sound-effects';
 import { MusicSpectrum } from './spectrum';
 const TITLE_SONG = { name: 'Before the First Credit', url: '/music/before-the-first-credit.mp3' };
 const FREE_RIDE_SONG = { name: 'Horizon Lane', url: '/music/horizon-lane.mp3' };
@@ -8,12 +10,11 @@ const COURSE_SONGS = [
 ];
 export class RaceAudio {
   private context?: AudioContext;
-  private oscillator?: OscillatorNode;
-  private gain?: GainNode;
+  private engine?: EngineAudio;
+  private effects?: SoundEffects;
   private soundsGain?: GainNode;
   private musicGain?: GainNode;
   private levels = { sounds: 1, music: 0.32 };
-  private filter?: BiquadFilterNode;
   enabled = false;
   readonly spectrum = new MusicSpectrum();
   readonly music = new Audio();
@@ -21,8 +22,6 @@ export class RaceAudio {
   private bins = new Uint8Array(1024);
   private suspended = false;
   private starting?: Promise<void>;
-  private explosionNoise?: AudioBuffer;
-  private effects = new Set<GainNode>();
   private song = 0;
   private scene: 'title' | 'freeride' | 'race' = 'title';
   error = '';
@@ -59,13 +58,14 @@ export class RaceAudio {
   private syncVolumes() {
     if (!this.context) return;
     const active = this.enabled && !this.suspended;
+    // A curved slider gives useful quiet levels instead of scaling amplitude linearly.
     this.soundsGain?.gain.setTargetAtTime(
-      active ? this.levels.sounds : 0,
+      active ? this.levels.sounds ** 2 : 0,
       this.context.currentTime,
       0.01,
     );
     this.musicGain?.gain.setTargetAtTime(
-      active ? this.levels.music : 0,
+      active ? this.levels.music ** 2 : 0,
       this.context.currentTime,
       0.01,
     );
@@ -169,123 +169,31 @@ export class RaceAudio {
         .connect(this.analyser)
         .connect(this.context.destination);
     }
-    if (!this.oscillator) {
-      this.oscillator = this.context.createOscillator();
-      this.oscillator.type = 'sawtooth';
-      this.gain = this.context.createGain();
-      this.filter = this.context.createBiquadFilter();
-      this.filter.type = 'lowpass';
-      this.filter.frequency.value = 1100;
-      this.gain.gain.value = 0;
-      this.oscillator.connect(this.filter).connect(this.gain).connect(this.soundsGain);
-      this.oscillator.start();
+    if (!this.engine) {
+      this.effects = new SoundEffects(this.context, this.soundsGain);
+      this.engine = new EngineAudio(this.context, this.soundsGain, this.effects.noise);
     }
     this.enabled = true;
     this.suspended = false;
     this.syncVolumes();
     await this.play();
   }
-  update(speed: number, throttle: number, active: boolean, contact = 1) {
-    if (!this.context || !this.oscillator || !this.gain) return;
-    const t = this.context.currentTime;
-    this.oscillator.frequency.setTargetAtTime(
-      42 + speed * 4 + throttle * (20 + (1 - contact) * 35),
-      t,
-      0.08,
-    );
-    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.12 + contact * 0.035 : 0, t, 0.1);
+  update(speed: number, throttle: number, active: boolean, contact = 1, boost = 0) {
+    this.engine?.update(speed, throttle, this.enabled && !this.suspended && active, contact, boost);
   }
   explosion(distance = 0) {
-    if (
-      !this.enabled ||
-      !this.context ||
-      !this.soundsGain ||
-      distance >= 140 ||
-      this.effects.size >= 8
-    )
-      return;
-    const context = this.context,
-      t = context.currentTime;
-    if (!this.explosionNoise) {
-      this.explosionNoise = context.createBuffer(
-        1,
-        Math.ceil(context.sampleRate * 0.65),
-        context.sampleRate,
-      );
-      const samples = this.explosionNoise.getChannelData(0);
-      for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
-    }
-    const output = context.createGain();
-    output.gain.value = Math.pow(1 - distance / 140, 2) * 0.65;
-    output.connect(this.soundsGain);
-    this.effects.add(output);
-    const noise = context.createBufferSource(),
-      filter = context.createBiquadFilter(),
-      splash = context.createGain();
-    noise.buffer = this.explosionNoise;
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2200, t);
-    filter.frequency.exponentialRampToValueAtTime(220, t + 0.6);
-    splash.gain.setValueAtTime(0.001, t);
-    splash.gain.exponentialRampToValueAtTime(0.9, t + 0.008);
-    splash.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
-    noise.connect(filter).connect(splash).connect(output);
-    const boom = context.createOscillator(),
-      envelope = context.createGain();
-    boom.type = 'sine';
-    boom.frequency.setValueAtTime(135, t);
-    boom.frequency.exponentialRampToValueAtTime(38, t + 0.4);
-    envelope.gain.setValueAtTime(0.7, t);
-    envelope.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    boom.connect(envelope).connect(output);
-    noise.start(t);
-    boom.start(t);
-    boom.stop(t + 0.55);
-    noise.onended = () => {
-      noise.disconnect();
-      filter.disconnect();
-      splash.disconnect();
-      boom.disconnect();
-      envelope.disconnect();
-      output.disconnect();
-      this.effects.delete(output);
-    };
+    if (this.enabled && !this.suspended) this.effects?.explosion(distance);
   }
   countdownCue(go = false) {
-    if (!go) {
-      this.tone(520, 0.16);
-      return;
-    }
-    if (!this.enabled || !this.context || !this.soundsGain) return;
-    const t = this.context.currentTime;
-    for (const [index, frequency] of [660, 880, 1320].entries()) {
-      const oscillator = this.context.createOscillator(),
-        gain = this.context.createGain();
-      oscillator.type = 'triangle';
-      oscillator.frequency.setValueAtTime(frequency, t);
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.16, t + 0.015 + index * 0.025);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
-      oscillator.connect(gain).connect(this.soundsGain);
-      oscillator.start(t);
-      oscillator.stop(t + 0.7);
-      oscillator.onended = () => {
-        oscillator.disconnect();
-        gain.disconnect();
-      };
-    }
+    if (this.enabled && !this.suspended) this.effects?.countdownCue(go);
   }
   tone(frequency: number, duration = 0.14) {
-    if (!this.enabled || !this.context || !this.soundsGain) return;
-    const o = this.context.createOscillator(),
-      g = this.context.createGain(),
-      t = this.context.currentTime;
-    o.type = 'sine';
-    o.frequency.value = frequency;
-    g.gain.setValueAtTime(0.2, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + duration);
-    o.connect(g).connect(this.soundsGain);
-    o.start();
-    o.stop(t + duration);
+    if (this.enabled && !this.suspended) this.effects?.tone(frequency, duration);
+  }
+  pickup() {
+    if (this.enabled && !this.suspended) this.effects?.pickup();
+  }
+  useItem(item: number) {
+    if (this.enabled && !this.suspended) this.effects?.useItem(item);
   }
 }
