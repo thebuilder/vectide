@@ -684,6 +684,13 @@ test('copied room links join directly and failed clipboard writes expose the ful
     await guest.getByLabel('Your name').press('Enter');
     await expect(host.locator('#room-racers')).toContainText('INVITED');
     await guest.getByRole('button', { name: 'Leave room' }).click();
+    // Letter casing in shared room codes must not change the host we connect to.
+    invitation.searchParams.set('join', code.toLowerCase());
+    await guest.goto(`${baseURL}${invitation.pathname}${invitation.search}`);
+    await expect(guest.locator('#online-lobby')).toBeVisible();
+    await expect(guest.locator('#room-code')).toHaveValue(code);
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    await guest.getByRole('button', { name: 'Leave room' }).click();
     await guest.reload();
     await expect(guest.locator('#menu-home')).toBeVisible();
     await expect(guest.locator('#online-dialog')).not.toBeVisible();
@@ -719,3 +726,53 @@ test('invalid invitation codes show a recoverable join form', async ({ page }) =
   await page.locator('#cancel-online').click();
   await expect(page.locator('#menu-home')).toBeVisible();
 });
+
+for (const updated of ['host', 'guest', 'legacy host'] as const) {
+  test(`protocol mismatch asks racers to reload with a different ${updated} version`, async ({
+    browser,
+    baseURL,
+  }) => {
+    const hostContext = await browser.newContext({ reducedMotion: 'reduce' });
+    const guestContext = await browser.newContext({ reducedMotion: 'reduce' });
+    try {
+      // Run a different protocol in one browser, including the old address for v12 hosts.
+      await (updated === 'guest' ? guestContext : hostContext).route(
+        '**/src/multiplayer/protocol.ts',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.text();
+          expect(body).toMatch(/const VERSION = \d+;/);
+          await route.fulfill({
+            response,
+            body:
+              updated === 'legacy host'
+                ? body
+                    .replace(/const VERSION = \d+;/, 'const VERSION = 12;')
+                    .replace('vectide-v13-', 'vectide-v12-')
+                : body.replace(
+                    /const VERSION = (\d+);/,
+                    (_, version) => `const VERSION = ${Number(version) + 1};`,
+                  ),
+          });
+        },
+      );
+      const host = await hostContext.newPage();
+      const guest = await guestContext.newPage();
+      await openOnline(host);
+      await expect(host.locator('#online-lobby')).toBeVisible();
+      const code = await host.locator('#room-code').inputValue();
+      await guest.goto(`${baseURL}/?join=${code}`);
+      await expect(guest.locator('#online-status')).toHaveText(
+        'Game versions differ. Reload both browsers.',
+        // Legacy lookup starts after PeerServer's five-second missing-peer expiry.
+        { timeout: 12000 },
+      );
+      await expect(guest.locator('#join-room')).toBeVisible();
+      await expect(host.locator('#room-count')).toHaveText('1 RACER');
+      await expect(host.locator('#start-room')).toBeDisabled();
+    } finally {
+      await hostContext.close();
+      await guestContext.close();
+    }
+  });
+}

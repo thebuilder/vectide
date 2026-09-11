@@ -79,6 +79,12 @@ joining a room. PeerServer Cloud supplies signaling by default; the race simulat
 runs in the host browser. A room with twelve racers needs eleven host data connections,
 so upload bandwidth, latency and host performance affect play.
 
+Room discovery uses a fixed address prefix so different protocol versions can
+reach the join handshake and show a reload message. Bump `VERSION` for incompatible
+game changes, but keep `ROOM_PREFIX` unchanged. Updated guests also check the legacy
+version-12 address to report its mismatch. A guest still running version 12 must
+reload first; its old lookup cannot discover newer hosts.
+
 Deploy over HTTPS. No application backend is required for default signaling.
 Networks that cannot establish direct WebRTC connections need a working TURN
 relay. Configure these optional Vite environment variables before building:

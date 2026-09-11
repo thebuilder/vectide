@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Room } from '../src/multiplayer/room';
-import { NEUTRAL, VERSION } from '../src/multiplayer/protocol';
+import { NEUTRAL, ROOM_PREFIX, VERSION } from '../src/multiplayer/protocol';
 
 const mock = vi.hoisted(() => {
   class Emitter {
@@ -52,6 +52,12 @@ const mock = vi.hoisted(() => {
       queueMicrotask(() => this.emit('open', id));
     }
     connect(id: string) {
+      if (!peers.has(id)) {
+        const channel = new Channel(id);
+        channel.open = false;
+        queueMicrotask(() => this.emit('error', { type: 'peer-unavailable' }));
+        return channel;
+      }
       const local = new Channel(id),
         remote = new Channel(this.id);
       local.pair = remote;
@@ -104,6 +110,31 @@ afterEach(() => {
 });
 
 describe('room ownership and lifecycle', () => {
+  it('finds a legacy v12 host and reports its version rejection', async () => {
+    const legacy = new mock.FakePeer('vectide-v12-ABCDEFGH');
+    legacy.on('connection', (value) => {
+      const channel = value as (typeof legacy.channels)[number];
+      channel.on('data', (message) => {
+        expect(message).toMatchObject({ type: 'join', version: VERSION });
+        channel.send({ type: 'reject', reason: 'Game versions differ. Reload both browsers.' });
+      });
+    });
+    const guest = room();
+    guest.onEnd = vi.fn();
+    await guest.open(false, 'GUEST', 'abcdefgh');
+    await settle();
+    expect(guest.phase).toBe('idle');
+    expect(guest.onEnd).toHaveBeenCalledWith('Game versions differ. Reload both browsers.');
+  });
+  it('ends a missing-room lookup after checking both discovery addresses', async () => {
+    const guest = room();
+    guest.onEnd = vi.fn();
+    await guest.open(false, 'GUEST', 'ABCDEFGH');
+    await settle();
+    expect(guest.phase).toBe('idle');
+    expect(guest.onEnd).toHaveBeenCalledWith(expect.stringContaining('Room not found.'));
+    expect(mock.peers.size).toBe(0);
+  });
   it('returns everyone to the same lobby and starts another race with fresh state', async () => {
     const { host, guest } = await pair();
     guest.setProfile('WAVE RIDER', 4);
@@ -222,7 +253,7 @@ describe('room ownership and lifecycle', () => {
     await settle();
     expect(host.phase).toBe('racing');
     expect(guest.phase).toBe('racing');
-    const channel = [...mock.peers.values()].find((p) => !p.id.includes(`vectide-v${VERSION}-`))!
+    const channel = [...mock.peers.values()].find((p) => !p.id.startsWith(ROOM_PREFIX))!
       .channels[0];
     channel.send({ type: 'prepare', race: 2, members: host.members, track: 2 });
     channel.send({
@@ -246,7 +277,7 @@ describe('room ownership and lifecycle', () => {
     host.setProfile('CAPTAIN', 4);
     await settle();
     expect(guest.members[0]).toMatchObject({ name: 'CAPTAIN', color: 4 });
-    const channel = [...mock.peers.values()].find((p) => !p.id.includes(`vectide-v${VERSION}-`))!
+    const channel = [...mock.peers.values()].find((p) => !p.id.startsWith(ROOM_PREFIX))!
       .channels[0];
     channel.send({ type: 'profile', name: 'FORGED', color: 3, slot: 0 });
     channel.send({ type: 'profile', name: 'INVALID', color: 99 });
@@ -299,7 +330,7 @@ describe('room ownership and lifecycle', () => {
   );
   it('does not start the countdown until all racers finish loading', async () => {
     const { host } = await pair();
-    const channel = [...mock.peers.values()].find((p) => !p.id.includes(`vectide-v${VERSION}-`))!
+    const channel = [...mock.peers.values()].find((p) => !p.id.startsWith(ROOM_PREFIX))!
       .channels[0];
     const send = channel.send.bind(channel);
     channel.send = (value) => {
