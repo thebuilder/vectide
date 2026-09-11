@@ -83,7 +83,7 @@ try {
   await page.setContent(`<!doctype html><html><head><style>@font-face{font-family:Roboto;src:url(data:font/woff2;base64,${titleFont}) format('woff2');font-weight:900;font-style:italic;}</style></head><body style="margin:0;background:#071b20;color:#eefbf5;font-family:Arial,sans-serif">
     <img src="${scene}" style="position:absolute;width:1200px;height:630px">
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,12,20,.93),rgba(3,12,20,.45) 38%,transparent 62%),linear-gradient(0deg,rgba(3,12,20,.94),transparent 24%)"></div>
-    <img src="data:image/svg+xml;base64,${logo}" alt="Vectide" width="300" style="position:absolute;left:54px;top:44px">
+    <img src="data:image/svg+xml;base64,${logo}" alt="Vectide" width="272" style="position:absolute;left:54px;top:44px">
     <div style="position:absolute;left:56px;top:210px;font-family:Roboto,Arial,sans-serif;font-synthesis:none;font-size:68px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-3px">RIDE THE<br><span style="color:#86fadd">WAVEFORM.</span></div>
     <div style="position:absolute;left:58px;bottom:153px;font:16px monospace;letter-spacing:2px;color:#bce0d5">NEON JET SKI RACING</div>
     <div style="position:absolute;left:58px;bottom:47px;font:700 26px monospace;letter-spacing:.5px;color:#eefbf5">vectide.thebuilder.dk</div>
