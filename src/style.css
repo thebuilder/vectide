@@ -101,7 +101,7 @@ button:hover {
 }
 .wordmark img {
   display: block;
-  width: 136px;
+  width: auto;
   height: 28px;
 }
 .version {
