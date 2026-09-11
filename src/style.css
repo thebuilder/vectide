@@ -99,15 +99,10 @@ button:hover {
   letter-spacing: 3px;
   font-size: 19px;
 }
-.wordmark svg {
-  width: 29px;
+.wordmark img {
+  display: block;
+  width: 142px;
   height: 28px;
-  fill: var(--phosphor);
-  overflow: hidden;
-}
-.wordmark .cut {
-  stroke: #05090a;
-  stroke-width: 3;
 }
 .version {
   font-size: 10px;
