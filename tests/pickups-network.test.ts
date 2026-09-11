@@ -9,7 +9,7 @@ import {
   validCommands,
   validSnapshot,
 } from '../src/multiplayer/protocol';
-const members = Array.from({ length: 10 }, (_, slot) => ({
+const members = Array.from({ length: 12 }, (_, slot) => ({
   slot,
   name: `RACER ${slot}`,
   color: slot,
@@ -113,5 +113,25 @@ it('preserves mine and wake launches on the wire and rejects invalid flight data
   expect(validSnapshot(state)).toBe(false);
   state.items.effects[0].launch!.vx = 5;
   state.items.effects[0].kind = 4;
+  expect(validSnapshot(state)).toBe(false);
+});
+
+it('round trips items owned by the last racer and hits on all twelve slots', () => {
+  const host = new NetworkRace(TRACKS[0], members, 0, true, true);
+  const last = host.racers[11];
+  last.item = 3;
+  host.items.use(last, true);
+  const state = host.snapshot();
+  state.items.effects[0].hit = (1 << 12) - 1;
+  const decoded = parseMessage(encodeMessage({ type: 'snapshot', race: 1, state }));
+  expect(decoded?.type).toBe('snapshot');
+  if (decoded?.type === 'snapshot') {
+    expect(decoded.state.items.effects[0].owner).toBe(11);
+    expect(decoded.state.items.effects[0].hit).toBe(4095);
+  }
+  state.items.effects[0].hit = 1 << 12;
+  expect(validSnapshot(state)).toBe(false);
+  state.items.effects[0].hit = 0;
+  state.items.effects[0].owner = 12;
   expect(validSnapshot(state)).toBe(false);
 });

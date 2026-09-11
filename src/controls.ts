@@ -38,7 +38,9 @@ export class Controls {
   }
   private targets() {
     const root = document.querySelector('dialog[open]') ?? document;
-    return Array.from(root.querySelectorAll<HTMLElement>('button,summary,a[href]')).filter(
+    return Array.from(
+      root.querySelectorAll<HTMLElement>('button,summary,a[href],input[type=range]'),
+    ).filter(
       (element) =>
         !element.closest('[hidden],[inert]') &&
         !element.matches(':disabled') &&
@@ -52,6 +54,12 @@ export class Controls {
     const current = document.activeElement as HTMLElement;
     if (!targets.includes(current)) {
       (targets.find((e) => e.matches('#open-setup,.course.selected')) ?? targets[0])?.focus();
+      return;
+    }
+    if (dx && current instanceof HTMLInputElement && current.type === 'range') {
+      if (dx > 0) current.stepUp(5);
+      else current.stepDown(5);
+      current.dispatchEvent(new Event('input', { bubbles: true }));
       return;
     }
     const from = current.getBoundingClientRect();
@@ -79,12 +87,6 @@ export class Controls {
     target?.click();
   }
   private back() {
-    const picker = document.querySelector<HTMLDetailsElement>('.song-picker[open]');
-    if (picker) {
-      picker.open = false;
-      picker.querySelector('summary')?.focus();
-      return;
-    }
     const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
     if (dialog?.id === 'pause-dialog') this.engine.pause();
     else if (dialog?.id === 'results') document.getElementById('result-exit')?.click();
@@ -92,7 +94,7 @@ export class Controls {
     else if (dialog?.id === 'online-dialog') document.getElementById('cancel-online')?.click();
     else if (!dialog && this.engine.state === 'menu') {
       const back = document.getElementById('setup-back');
-      if (back && !back.closest('[inert]')) back.click();
+      if (back && !back.hidden && !back.closest('[inert]')) back.click();
     } else if (dialog) {
       dialog.close();
       document.getElementById('help')?.focus();

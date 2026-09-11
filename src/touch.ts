@@ -1,9 +1,12 @@
 import { cancelTrickSetup } from './game/aerial';
 import type { Engine, Snapshot } from './game/engine';
-/** Each finger owns one virtual key until release, cancellation, or a state change. */
+/** Pointer capture keeps the stick and action buttons independent during a drag. */
 export class TouchControls {
   private stuck = false;
   private stuckSince: number | null = null;
+  private stick?: { pointer: number; x: number; y: number; radius: number };
+  private steer = 0;
+  private lean = 0;
   private held = new Map<number, string>();
   constructor(
     private engine: Engine,
@@ -11,10 +14,27 @@ export class TouchControls {
   ) {
     root.addEventListener('pointerdown', (event) => {
       const target = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-touch-key]');
-      if (!target || !['racing', 'freeride', 'countdown'].includes(engine.state)) return;
+      if (
+        !target ||
+        target.disabled ||
+        root.inert ||
+        !['racing', 'freeride', 'countdown'].includes(engine.state)
+      )
+        return;
+      const key = target.dataset.touchKey!;
+      if (key === 'stick' && this.stick) return;
       event.preventDefault();
       target.setPointerCapture(event.pointerId);
-      const key = target.dataset.touchKey!;
+      if (key === 'stick') {
+        const bounds = target.getBoundingClientRect();
+        this.stick = {
+          pointer: event.pointerId,
+          x: bounds.x + bounds.width / 2,
+          y: bounds.y + bounds.height / 2,
+          radius: bounds.width * 0.32,
+        };
+        this.moveStick(event);
+      }
       if (key === 'reset') {
         engine.reset();
         this.stuckSince = null;
@@ -26,9 +46,16 @@ export class TouchControls {
       this.held.set(event.pointerId, key);
       this.apply();
     });
+    root.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== this.stick?.pointer) return;
+      event.preventDefault();
+      this.moveStick(event);
+      this.apply();
+    });
     const release = (event: PointerEvent) => {
       if (this.held.get(event.pointerId) === 'flip' && event.type !== 'pointerup')
         cancelTrickSetup(engine.player);
+      if (event.pointerId === this.stick?.pointer) this.resetStick();
       this.held.delete(event.pointerId);
       this.apply();
     };
@@ -36,6 +63,7 @@ export class TouchControls {
     root.addEventListener('pointercancel', release);
     root.addEventListener('lostpointercapture', release);
     root.addEventListener('contextmenu', (event) => event.preventDefault());
+    root.addEventListener('selectstart', (event) => event.preventDefault());
     window.addEventListener('blur', () => this.clear());
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.clear();
@@ -77,9 +105,32 @@ export class TouchControls {
     if (!driving) this.clear();
     this.root.inert = !driving;
   }
+  private moveStick(event: PointerEvent) {
+    if (!this.stick) return;
+    const x = (event.clientX - this.stick.x) / this.stick.radius;
+    const y = (event.clientY - this.stick.y) / this.stick.radius;
+    const distance = Math.hypot(x, y);
+    const magnitude = Math.max(0, Math.min(1, (distance - 0.1) / 0.9));
+    this.steer = distance ? (-x / distance) * magnitude : 0;
+    this.lean = distance ? (y / distance) * magnitude : 0;
+    this.root.style.setProperty('--stick-x', `${-this.steer * this.stick.radius}px`);
+    this.root.style.setProperty('--stick-y', `${this.lean * this.stick.radius}px`);
+  }
+  private resetStick() {
+    this.stick = undefined;
+    this.steer = this.lean = 0;
+    this.root.style.setProperty('--stick-x', '0px');
+    this.root.style.setProperty('--stick-y', '0px');
+  }
   private clear() {
     if (this.held.size) cancelTrickSetup(this.engine.player);
+    const pointers = [...this.held.keys()];
     this.held.clear();
+    this.resetStick();
+    this.root.querySelectorAll<HTMLElement>('[data-touch-key]').forEach((button) => {
+      for (const pointer of pointers)
+        if (button.hasPointerCapture(pointer)) button.releasePointerCapture(pointer);
+    });
     this.apply();
   }
   private apply() {
@@ -87,8 +138,8 @@ export class TouchControls {
     Object.assign(this.engine.touchInput, {
       throttle: 0,
       brake: Number(pressed.has('brake')),
-      steer: Number(pressed.has('left')) - Number(pressed.has('right')),
-      lean: 0,
+      steer: this.steer,
+      lean: this.lean,
       trick: Number(pressed.has('flip')),
       use: pressed.has('item'),
     });

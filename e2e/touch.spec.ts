@@ -26,7 +26,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
   await expect.poll(async () => (await state()).speed).toBeGreaterThan(20);
   const brake = await center('brake'),
     flip = await center('flip'),
-    left = await center('left');
+    left = await center('stick');
   await cdp.send('Input.dispatchTouchEvent', {
     type: 'touchStart',
     touchPoints: [
@@ -35,7 +35,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
       { ...left, id: 3 },
     ],
   });
-  for (const key of ['brake', 'flip', 'left'])
+  for (const key of ['brake', 'flip', 'stick'])
     await expect(page.locator(`[data-touch-key="${key}"]`)).toHaveClass(/held/);
   await expect.poll(async () => (await state()).speed).toBeLessThan(3);
   await expect.poll(async () => (await state()).player.air.charge).toBeGreaterThan(0.12);
@@ -66,7 +66,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
   await expect(page.locator('#resume')).toHaveCSS('user-select', 'none');
   await page.locator('#resume').tap();
   await page.setViewportSize({ width: 844, height: 390 });
-  for (const key of ['left', 'right', 'flip', 'brake']) {
+  for (const key of ['stick', 'flip', 'brake']) {
     const box = await page.locator(`[data-touch-key="${key}"]`).boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.y + box!.height).toBeLessThanOrEqual(390);
@@ -160,4 +160,71 @@ test('touch reset is contextual and ordinary stops do not reveal it', async ({ p
     practiceStuck: true,
     practiceMoving: false,
   });
+});
+
+test('thumbstick slides continuously in both axes and clears on interruption', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('**/src/main.ts*', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()) + '\nwindow.__testEngine = engine;',
+    });
+  });
+  await page.goto('/');
+  await page.locator('#open-setup').tap();
+  const back = await page.locator('#setup-back').boundingBox();
+  expect(back!.x).toBeLessThan(24);
+  expect(back!.y).toBeLessThan(24);
+  await page.locator('#start').tap();
+  await page.waitForFunction(() => (window as any).__vectide.state === 'racing');
+  const stick = page.locator('[data-touch-key="stick"]');
+  const bounds = (await stick.boundingBox())!;
+  const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  const cdp = await page.context().newCDPSession(page);
+  const input = () => page.evaluate(() => ({ ...(window as any).__testEngine.touchInput }));
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ ...center, id: 1 }],
+  });
+  await expect.poll(async () => (await input()).steer).toBe(0);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: center.x - 24, y: center.y - 24, id: 1 }],
+  });
+  await expect.poll(async () => (await input()).steer).toBeGreaterThan(0.3);
+  await expect.poll(async () => (await input()).lean).toBeLessThan(-0.3);
+  // Cross the center without lifting; pulling back now lifts the nose.
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: center.x + 24, y: center.y + 24, id: 1 }],
+  });
+  await expect.poll(async () => (await input()).steer).toBeLessThan(-0.3);
+  await expect.poll(async () => (await input()).lean).toBeGreaterThan(0.3);
+  // Capture keeps steering alive well beyond the circular hit target.
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: center.x + 160, y: center.y, id: 1 }],
+  });
+  await expect.poll(async () => (await input()).steer).toBeCloseTo(-1);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+  await expect.poll(async () => (await input()).steer).toBe(0);
+  await expect.poll(async () => (await input()).lean).toBe(0);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: center.x - 24, y: center.y, id: 1 }],
+  });
+  await expect.poll(async () => (await input()).steer).toBeGreaterThan(0.3);
+  await page.locator('#pause').dispatchEvent('click');
+  await expect(page.locator('#pause-dialog')).toBeVisible();
+  await expect.poll(async () => (await input()).steer).toBe(0);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.locator('#resume').tap();
+  const timer = (await page.locator('#timer').boundingBox())!;
+  const sound = (await page.locator('#sound').boundingBox())!;
+  expect(timer.x).toBeLessThan(24);
+  expect(timer.y).toBeLessThan(100);
+  expect(timer.x + timer.width).toBeLessThan(sound.x);
+  await expect(page.locator('.speaker-icon')).toBeVisible();
+  await page.screenshot({ path: 'artifacts/mobile-thumbstick.png' });
 });

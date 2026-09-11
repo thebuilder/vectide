@@ -120,7 +120,7 @@ test('two rendered racers join, sync course and countdown, drive, open menu and 
   }
 });
 
-test('ten real WebRTC clients race, reject an eleventh and late joins, and detect host loss', async ({
+test('twelve real WebRTC clients race, reject a thirteenth and late joins, and detect host loss', async ({
   browser,
 }) => {
   const context = await browser.newContext({ reducedMotion: 'reduce' });
@@ -132,7 +132,7 @@ test('ten real WebRTC clients race, reject an eleventh and late joins, and detec
     await openOnline(host);
     await expect(host.locator('#online-lobby')).toBeVisible();
     const code = await host.locator('#room-code').inputValue();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       const page = await context.newPage();
       page.on('pageerror', (error) => errors.push(error.message));
       await page.goto('/e2e/fixtures/multiplayer.html');
@@ -140,47 +140,47 @@ test('ten real WebRTC clients race, reject an eleventh and late joins, and detec
       clients.push(page);
     }
     await Promise.all(
-      clients.slice(0, 9).map((page, index) =>
+      clients.slice(0, 11).map((page, index) =>
         page.evaluate(({ code, index }) => room.open(false, `RACER ${index}`, code), {
           code,
           index,
         }),
       ),
     );
-    await expect(host.locator('#room-count')).toHaveText('10 RACERS');
-    await clients[9].evaluate((code) => room.open(false, 'ELEVEN', code), code);
-    await expect.poll(() => clients[9].evaluate(() => window.error)).toContain('full');
+    await expect(host.locator('#room-count')).toHaveText('12 RACERS');
+    await clients[11].evaluate((code) => room.open(false, 'THIRTEEN', code), code);
+    await expect.poll(() => clients[11].evaluate(() => window.error)).toContain('full');
     await host.bringToFront();
-    await host.screenshot({ path: 'artifacts/multiplayer-ten-lobby.png' });
+    await host.screenshot({ path: 'artifacts/multiplayer-twelve-lobby.png' });
     await host.setViewportSize({ width: 375, height: 667 });
     for (const id of ['room-code', 'leave-room', 'profile-name', 'room-courses', 'start-room']) {
       const box = await host.locator(`#${id}`).boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.y + box!.height).toBeLessThanOrEqual(667);
     }
-    await host.screenshot({ path: 'artifacts/multiplayer-ten-mobile.png' });
+    await host.screenshot({ path: 'artifacts/multiplayer-twelve-mobile.png' });
     await host.setViewportSize({ width: 1280, height: 800 });
     await host.getByRole('button', { name: 'START RACE', exact: true }).click();
     await expect
-      .poll(() => Promise.all(clients.slice(0, 9).map((p) => p.evaluate(() => room.phase))))
-      .toEqual(Array(9).fill('racing'));
+      .poll(() => Promise.all(clients.slice(0, 11).map((p) => p.evaluate(() => room.phase))))
+      .toEqual(Array(11).fill('racing'));
     await expect.poll(async () => (await state(host)).state).toBe('racing');
     const slots = await Promise.all(
-      clients.slice(0, 9).map((p) => p.evaluate(() => room.race!.player.id)),
+      clients.slice(0, 11).map((p) => p.evaluate(() => room.race!.player.id)),
     );
-    expect(new Set([0, ...slots]).size).toBe(10);
-    expect((await state(host)).racers).toHaveLength(10);
+    expect(new Set([0, ...slots]).size).toBe(12);
+    expect((await state(host)).racers).toHaveLength(12);
     // Disconnect only PeerJS signaling; keep the actual WebRTC data channel alive.
     await clients[0].evaluate(() => {
       (room as unknown as { peer: { disconnect(): void } }).peer.disconnect();
     });
     await expect.poll(() => clients[0].evaluate(() => room.signalingConnected)).toBe(true);
     expect(await clients[0].evaluate(() => room.phase)).toBe('racing');
-    expect(await clients[0].evaluate(() => room.members.length)).toBe(10);
+    expect(await clients[0].evaluate(() => room.members.length)).toBe(12);
 
-    await expect(host.locator('#position')).toContainText('/ 10');
+    await expect(host.locator('#position')).toContainText('/ 12');
     await Promise.all(
-      clients.slice(0, 9).map((p) =>
+      clients.slice(0, 11).map((p) =>
         p.evaluate(() => {
           window.drive = { throttle: 1, brake: 0, steer: 0, lean: 0 };
         }),
@@ -189,16 +189,16 @@ test('ten real WebRTC clients race, reject an eleventh and late joins, and detec
     await host.keyboard.down('w');
     await expect
       .poll(async () => (await state(host)).racers.filter((r) => Math.hypot(r.vx, r.vz) > 3).length)
-      .toBe(10);
+      .toBe(12);
     await host.keyboard.up('w');
-    await host.screenshot({ path: 'artifacts/multiplayer-ten-race.png' });
+    await host.screenshot({ path: 'artifacts/multiplayer-twelve-race.png' });
     const pending = await Promise.all(
-      clients.slice(0, 9).map((p) => p.evaluate(() => room.race!.pendingCount)),
+      clients.slice(0, 11).map((p) => p.evaluate(() => room.race!.pendingCount)),
     );
     expect(Math.max(...pending)).toBeLessThan(120);
-    await clients[9].evaluate((code) => room.open(false, 'LATE', code), code);
-    await expect.poll(() => clients[9].evaluate(() => window.error)).toContain('already started');
-    await clients[8].evaluate(() => room.close());
+    await clients[11].evaluate((code) => room.open(false, 'LATE', code), code);
+    await expect.poll(() => clients[11].evaluate(() => window.error)).toContain('already started');
+    await clients[10].evaluate(() => room.close());
     await expect(host.locator('#online-race-status')).toContainText('1 DISCONNECTED');
     await host.close();
     await expect
@@ -354,9 +354,11 @@ test('lobby free ride synchronizes riders and moves everyone to a fresh race', a
     await expect(guest.locator('#room-code')).toBeVisible();
     await expect(guest.locator('#room-code')).toHaveValue(code);
     await guestContext.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await guest.getByRole('button', { name: 'COPY', exact: true }).click();
+    await guest.getByRole('button', { name: 'Copy room join link', exact: true }).click();
     await expect(guest.locator('#copy-room')).toHaveText('COPIED');
-    expect(await guest.evaluate(() => navigator.clipboard.readText())).toBe(code);
+    expect(await guest.evaluate(() => navigator.clipboard.readText())).toBe(
+      `https://vectide.thebuilder.dk/?join=${code}`,
+    );
     await expect(guest.locator('#checkpoint')).toBeHidden();
     await expect(guest.locator('.race-top')).toBeHidden();
     await guest.bringToFront();
@@ -384,7 +386,7 @@ test('lobby free ride synchronizes riders and moves everyone to a fresh race', a
     expect((await music()).song).toBe('Horizon Lane');
     await host.getByRole('button', { name: 'START RACE', exact: true }).click();
     await expect(guest.locator('#countdown')).toBeVisible();
-    expect((await music()).song).toBe('Sapphire Wake');
+    expect((await music()).song).toBe('Neon Slipway');
     expect((await state(guest)).track.id).toBe('harbor');
     expect((await state(guest)).player.passed).toBe(0);
     await expect(guest.locator('#practice-controls')).toBeHidden();
@@ -413,6 +415,23 @@ test('real WebRTC item commands are owned by the host and effects reach the gues
     await expect.poll(() => host.evaluate(() => room.members.length)).toBe(2);
     await host.evaluate(() => room.start());
     await expect.poll(() => guest.evaluate(() => room.race?.countdown)).toBe(0);
+    await guest.evaluate(async () => {
+      const path = '/src/game/item-sound-events.ts';
+      const { ItemSoundEvents } = await import(path);
+      const cues: (string | number)[] = [];
+      (window as any).__itemSoundCues = cues;
+      const events = new ItemSoundEvents({
+        pickup: () => cues.push('pickup'),
+        useItem: (item: number) => cues.push(item),
+      });
+      const observe = () => {
+        const race = room.race!;
+        events.update(race.items, race.player, race.countdown <= 0);
+        requestAnimationFrame(observe);
+      };
+      observe();
+    });
+    const expectedCues: (string | number)[] = [];
     for (const item of [1, 2, 3, 4, 5, 6]) {
       await guest.evaluate(() => Object.assign(drive, { use: false }));
       await expect.poll(() => host.evaluate(() => room.race!.racers[1].itemPressed)).toBe(false);
@@ -433,9 +452,17 @@ test('real WebRTC item commands are owned by the host and effects reach the gues
         race.racers[1].item = item;
       }, item);
       await expect.poll(() => guest.evaluate(() => room.race!.player.item)).toBe(item);
+      expectedCues.push('pickup');
+      await expect
+        .poll(() => guest.evaluate(() => (window as any).__itemSoundCues))
+        .toEqual(expectedCues);
       await guest.evaluate(() => Object.assign(drive, { use: true }));
       await expect.poll(() => host.evaluate(() => room.race!.racers[1].item)).toBe(0);
       await expect.poll(() => guest.evaluate(() => room.race!.player.item)).toBe(0);
+      expectedCues.push(item);
+      await expect
+        .poll(() => guest.evaluate(() => (window as any).__itemSoundCues))
+        .toEqual(expectedCues);
       if (item === 4 || item === 5) {
         expect(await guest.evaluate(() => room.race!.player.boost)).toBeGreaterThan(0);
       } else {
@@ -618,4 +645,77 @@ test('finishers keep riding, live results fill in, and the host returns everyone
   } finally {
     await context.close();
   }
+});
+
+test('copied room links join directly and failed clipboard writes expose the full link', async ({
+  browser,
+  baseURL,
+}) => {
+  const hostContext = await browser.newContext({
+    reducedMotion: 'reduce',
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
+  const guestContext = await browser.newContext({ reducedMotion: 'reduce' });
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+  const errors: string[] = [];
+  for (const page of [host, guest]) page.on('pageerror', (error) => errors.push(error.message));
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    await expect(host.locator('.room-address')).toHaveText('vectide.thebuilder.dk');
+    const codeBox = (await host.locator('#room-code').boundingBox())!;
+    const address = (await host.locator('.room-address').boundingBox())!;
+    expect(address.y).toBeGreaterThanOrEqual(codeBox.y + codeBox.height);
+    await host.getByRole('button', { name: 'Copy room join link' }).click();
+    await expect(host.locator('#copy-room')).toHaveText('COPIED');
+    const link = await host.evaluate(() => navigator.clipboard.readText());
+    expect(link).toBe(`https://vectide.thebuilder.dk/?join=${code}`);
+    // Serve the invitation from the local build and its local signaling server.
+    const invitation = new URL(link);
+    await guest.goto(`${baseURL}${invitation.pathname}${invitation.search}`);
+    await expect(guest.locator('#online-lobby')).toBeVisible();
+    await expect(guest.locator('#online-dialog')).not.toBeVisible();
+    await expect(guest.locator('#room-code')).toHaveValue(code);
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    expect(new URL(guest.url()).searchParams.has('join')).toBe(false);
+    await guest.getByLabel('Your name').fill('INVITED');
+    await guest.getByLabel('Your name').press('Enter');
+    await expect(host.locator('#room-racers')).toContainText('INVITED');
+    await guest.getByRole('button', { name: 'Leave room' }).click();
+    await guest.reload();
+    await expect(guest.locator('#menu-home')).toBeVisible();
+    await expect(guest.locator('#online-dialog')).not.toBeVisible();
+    await host.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        value: async () => {
+          throw new Error('Clipboard denied');
+        },
+      });
+    });
+    await host.getByRole('button', { name: 'Copy room join link' }).click();
+    await expect(host.getByLabel('Room join link', { exact: true })).toBeVisible();
+    await expect(host.getByLabel('Room join link', { exact: true })).toHaveValue(link);
+    expect(
+      await host
+        .getByLabel('Room join link', { exact: true })
+        .evaluate((el: HTMLInputElement) => el.value.slice(el.selectionStart!, el.selectionEnd!)),
+    ).toBe(link);
+    await expect(host.locator('#lobby-status')).toContainText('copy the join link');
+    expect(errors).toEqual([]);
+  } finally {
+    await hostContext.close();
+    await guestContext.close();
+  }
+});
+
+test('invalid invitation codes show a recoverable join form', async ({ page }) => {
+  await page.goto('/?join=INVALID');
+  await expect(page.locator('#online-dialog')).toBeVisible();
+  await expect(page.locator('#online-status')).toHaveText('Enter the eight-character room code.');
+  await expect(page.locator('#join-code')).toHaveValue('INVALID');
+  await expect(page.locator('#join-room')).toBeVisible();
+  await page.locator('#cancel-online').click();
+  await expect(page.locator('#menu-home')).toBeVisible();
 });

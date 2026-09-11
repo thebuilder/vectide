@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { chromium } from '@playwright/test';
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
+  args: process.env.PLAYWRIGHT_GPU ? [`--use-angle=${process.env.PLAYWRIGHT_GPU}`] : [],
+});
 try {
   const page = await browser.newPage({
     viewport: { width: 1200, height: 630 },
@@ -18,6 +22,7 @@ try {
     const track = { ...TRACKS[0], wave: 0.75 };
     const world = createWorld(track);
     // Keep the sky, striped sun, near ocean and horizon. Set pieces stay out of the portrait.
+    world.group.remove(world.ramps);
     for (const child of [...world.group.children].slice(4)) world.group.remove(child);
     const scene = new T.Scene();
     scene.add(world.group, new T.HemisphereLight(0xbcefff, 0x294247, 3));
@@ -74,18 +79,18 @@ try {
       ),
     )
   ).toString('base64');
+  const logo = (await readFile(new URL('../public/logo.svg', import.meta.url))).toString('base64');
   await page.setContent(`<!doctype html><html><head><style>@font-face{font-family:Roboto;src:url(data:font/woff2;base64,${titleFont}) format('woff2');font-weight:900;font-style:italic;}</style></head><body style="margin:0;background:#071b20;color:#eefbf5;font-family:Arial,sans-serif">
     <img src="${scene}" style="position:absolute;width:1200px;height:630px">
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,12,20,.93),rgba(3,12,20,.45) 38%,transparent 62%),linear-gradient(0deg,rgba(3,12,20,.94),transparent 24%)"></div>
-    <div style="position:absolute;left:54px;top:44px;display:flex;align-items:center;gap:16px;color:#86fadd">
-      <svg width="58" height="58" viewBox="0 0 64 64"><path d="M8 12h12l12 29 12-29h12L32 58z" fill="currentColor"/><path d="M5 25h54M5 33h54" stroke="#07131b" stroke-width="4"/></svg>
-      <span style="font:700 32px monospace;letter-spacing:7px">VECTIDE</span>
-    </div>
+    <img src="data:image/svg+xml;base64,${logo}" alt="Vectide" height="56" style="position:absolute;left:54px;top:44px">
     <div style="position:absolute;left:56px;top:210px;font-family:Roboto,Arial,sans-serif;font-synthesis:none;font-size:68px;line-height:1;font-weight:900;font-style:italic;letter-spacing:-3px">RIDE THE<br><span style="color:#86fadd">WAVEFORM.</span></div>
     <div style="position:absolute;left:58px;bottom:153px;font:16px monospace;letter-spacing:2px;color:#bce0d5">NEON JET SKI RACING</div>
     <div style="position:absolute;left:58px;bottom:47px;font:700 26px monospace;letter-spacing:.5px;color:#eefbf5">vectide.thebuilder.dk</div>
   </body></html>`);
-  await page.locator('img').evaluate((image) => image.decode());
+  await page
+    .locator('img')
+    .evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: 'public/og.png' });
 } finally {

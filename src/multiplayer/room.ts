@@ -122,7 +122,7 @@ export class Room {
                 ? 'Connect through the room host.'
                 : this.phase !== 'lobby'
                   ? 'This race has already started.'
-                  : 'This room is full (10 racers).',
+                  : `This room is full (${MAX_RACERS} racers).`,
             });
             clearTimeout(timer);
             setTimeout(() => channel.close(), 300);

@@ -3,10 +3,12 @@ import { loft, panel, rod } from './modeling';
 import { createRider, type RiderRig } from './rider';
 import { batchStatic } from './batch';
 import type { Racer } from './physics';
+import { JetExhaust } from './jet-exhaust';
 
 interface JetRig {
   rider: RiderRig;
   handlebars: T.Group;
+  exhaust: JetExhaust;
 }
 const rigs = new WeakMap<T.Group, JetRig>();
 function paint(color: T.ColorRepresentation, metalness = 0.15, roughness = 0.38) {
@@ -154,14 +156,17 @@ export function createJet(color: string, number = 1): T.Group {
   rod(jet, new T.Vector3(0, 0.61, 0.88 * 0.87), new T.Vector3(0, 1.24, 0.28), 0.045, metal);
 
   batchStatic(jet, [handlebars]);
+  const exhaust = new JetExhaust();
+  jet.add(exhaust.group);
   const rider = createRider(color, number);
   jet.add(rider.root);
-  rigs.set(jet, { rider, handlebars });
+  rigs.set(jet, { rider, handlebars, exhaust });
   return jet;
 }
-export function animateJet(jet: T.Group, r: Racer, dt: number): void {
+export function animateJet(jet: T.Group, r: Racer, dt: number, throttle?: number): void {
   const rig = rigs.get(jet);
   if (!rig) return;
+  rig.exhaust.update(r, dt, throttle);
   rig.handlebars.rotation.y = r.steer * 0.24;
   rig.handlebars.updateMatrix();
   const root = rig.rider.root,

@@ -99,15 +99,10 @@ button:hover {
   letter-spacing: 3px;
   font-size: 19px;
 }
-.wordmark svg {
-  width: 29px;
+.wordmark img {
+  display: block;
+  width: auto;
   height: 28px;
-  fill: var(--phosphor);
-  overflow: hidden;
-}
-.wordmark .cut {
-  stroke: #05090a;
-  stroke-width: 3;
 }
 .version {
   font-size: 10px;
@@ -127,9 +122,6 @@ button:hover {
 .header-right #sound {
   margin-left: 20px;
 }
-#pause kbd {
-  margin-left: 9px;
-}
 .quiet {
   background: transparent;
   color: #b4c7c1;
@@ -148,6 +140,17 @@ button:hover {
   background: #071a21a6;
   color: #e2f1eb;
   backdrop-filter: blur(8px);
+}
+#pause {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+}
+#pause svg {
+  width: 22px;
+  height: 22px;
 }
 #sound:hover,
 #pause:hover {
@@ -586,6 +589,31 @@ dialog p {
   line-height: 1.8;
   color: #b0c1b9;
 }
+.pause-volume {
+  display: grid;
+  margin-top: 20px;
+}
+.pause-volume label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.pause-volume output {
+  color: #b0c1b9;
+  font-variant-numeric: tabular-nums;
+}
+.pause-volume input {
+  width: 100%;
+  height: 44px;
+  margin: 0 0 10px;
+  accent-color: var(--phosphor);
+  cursor: pointer;
+}
+.pause-volume input:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+}
 dialog dl {
   display: grid;
   grid-template-columns: 120px 1fr;
@@ -809,59 +837,6 @@ dialog dd {
   letter-spacing: 0.08em;
   color: #afb9c3;
 }
-.song-picker {
-  position: relative;
-  min-width: 190px;
-}
-.song-picker summary {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 38px;
-  cursor: pointer;
-  list-style: none;
-  border: 1px solid #39424b;
-  background: #101921;
-  padding: 10px 32px 10px 12px;
-  color: #edf4ef;
-}
-.song-picker summary::-webkit-details-marker {
-  display: none;
-}
-.song-picker summary::after {
-  content: '⌄';
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-.song-options {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 0;
-  width: 100%;
-  background: #101921;
-  border: 1px solid #53616a;
-  z-index: 20;
-  padding: 4px;
-}
-.song-options button {
-  display: block;
-  text-align: left;
-  width: 100%;
-  padding: 10px;
-  border: 0;
-  background: transparent;
-  color: #edf4ef;
-  font: inherit;
-}
-.song-options button[aria-pressed='true'] {
-  background: #203d38;
-  color: #86fadd;
-}
-.song-options button:hover {
-  background: #26313a;
-}
 .difficulty-toggle {
   display: flex;
   border: 1px solid #39424b;
@@ -881,8 +856,6 @@ dialog dd {
   background: #86fadd;
   color: #071b19;
 }
-.song-picker summary:focus-visible,
-.song-options button:focus-visible,
 .difficulty-toggle button:focus-visible {
   outline: 2px solid #eefbf5;
   outline-offset: 3px;
@@ -967,14 +940,52 @@ body[data-input='gamepad'] :is(button, summary, a):focus {
 .touch-navigation {
   position: relative;
 }
-.touch-steer {
-  display: flex;
-  gap: 8px;
+#touch-controls .touch-stick {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: #0b202580;
+  overflow: hidden;
 }
-#touch-controls .touch-steer button {
-  font-size: 24px;
-  width: 64px;
-  height: 70px;
+.stick-axis,
+.stick-axis::after {
+  position: absolute;
+  inset: 50% 12px auto;
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+.stick-axis::after {
+  content: '';
+  inset: -54px auto auto 50%;
+  width: 1px;
+  height: 108px;
+}
+.stick-thumb {
+  position: absolute;
+  inset: calc(50% - 23px) auto auto calc(50% - 23px);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--phosphor);
+  background: #86fadd55;
+  transform: translate(var(--stick-x, 0px), var(--stick-y, 0px));
+  pointer-events: none;
+}
+#touch-controls .touch-stick.held {
+  background: #0b2025b3;
+}
+.touch-stick.held .stick-thumb {
+  background: var(--phosphor);
+}
+#stick-help {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+  color: var(--phosphor);
+  font-size: 0.5625rem;
+  letter-spacing: 0.1em;
 }
 .touch-actions {
   position: relative;
@@ -1088,10 +1099,6 @@ dialog {
     gap: 8px;
     font-size: 11px;
   }
-  .song-picker {
-    min-width: 0;
-  }
-  .song-picker summary,
   .difficulty-toggle button {
     min-height: 44px;
   }
@@ -1147,11 +1154,8 @@ dialog {
   }
   #pause {
     margin-left: auto;
-    min-width: 64px;
+    min-width: 44px;
     min-height: 44px;
-  }
-  #pause kbd {
-    display: none;
   }
   .checkpoint {
     top: 76px;
@@ -1411,4 +1415,89 @@ body[data-input='touch'] .touch-hide {
 }
 #results .result-time {
   margin-bottom: 12px;
+}
+
+/* Form controls can override inherited selection rules on mobile browsers. */
+button,
+button *,
+#touch-controls * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.speaker-icon {
+  display: none;
+  width: 22px;
+  height: 22px;
+}
+#sound[aria-pressed='true'] .speaker-muted,
+#sound[aria-pressed='false'] .speaker-waves {
+  display: none;
+}
+@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
+  #sound {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    padding: 10px;
+  }
+  .speaker-icon {
+    display: block;
+  }
+  #sound-label {
+    display: none;
+  }
+  .playing .masthead {
+    display: flex;
+  }
+  .playing:not(.in-free-ride) #hud {
+    top: max(12px, env(safe-area-inset-top));
+  }
+  .playing:not(.in-free-ride) .race-top {
+    flex-direction: column;
+    gap: 8px;
+    width: max-content;
+  }
+  .playing:not(.in-free-ride) .checkpoint {
+    top: 126px;
+  }
+  .playing:not(.in-free-ride) .notice {
+    top: 180px;
+  }
+  .masthead #setup-back,
+  .masthead #leave-room {
+    margin: 0;
+    min-height: 44px;
+    padding: 12px;
+    font-size: 0.625rem;
+  }
+  body.playing #setup-back,
+  body.in-lobby #setup-back,
+  body:not(.in-lobby) .masthead #leave-room {
+    display: none;
+  }
+  .masthead #leave-room {
+    width: auto;
+  }
+  .masthead #leave-room span {
+    display: inline;
+  }
+  #touch-controls .touch-stick {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (max-height: 500px) and (pointer: coarse) and (orientation: landscape) {
+  .playing:not(.in-free-ride) .race-top {
+    flex-direction: row;
+    gap: 16px;
+  }
+  .playing:not(.in-free-ride) .checkpoint {
+    top: 0;
+    left: 45%;
+  }
+  .playing:not(.in-free-ride) .notice {
+    top: 60px;
+  }
 }

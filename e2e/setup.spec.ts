@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-test('metadata, soundtrack menu, difficulty toggle, and GO countdown', async ({ page }) => {
+test('metadata, fixed soundtrack, difficulty toggle, and GO countdown', async ({ page }) => {
   await page.goto('/');
   await page.locator('#open-setup').click();
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
@@ -20,9 +20,7 @@ test('metadata, soundtrack menu, difficulty toggle, and GO countdown', async ({ 
     'aria-pressed',
     'true',
   );
-  await page.locator('#soundtrack-label').click();
-  await page.getByRole('button', { name: 'Neon Slipway', exact: true }).click();
-  await expect(page.locator('#soundtrack-label')).toHaveText('Neon Slipway');
+  await expect(page.locator('.song-picker')).toHaveCount(0);
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toHaveText('3');
   await expect(page.locator('#countdown')).toHaveText('2');
@@ -112,18 +110,22 @@ test('logo keeps its desktop size and only appears on the mobile title', async (
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   const logo = page.locator('.wordmark');
-  const size = await logo.evaluate((el) => getComputedStyle(el).fontSize);
+  const artwork = logo.locator('img');
+  await artwork.evaluate((image: HTMLImageElement) => image.decode());
+  const size = await artwork.evaluate((image) => getComputedStyle(image).width);
+  await expect(artwork).toHaveCSS('width', size);
+  await expect(artwork).toHaveCSS('height', '28px');
   await page.locator('#open-setup').click();
-  await expect(logo).toHaveCSS('font-size', size);
+  await expect(artwork).toHaveCSS('width', size);
   await page.locator('#start').click();
-  await expect(logo).toHaveCSS('font-size', size);
+  await expect(artwork).toHaveCSS('width', size);
   await page.keyboard.press('Escape');
   await page.locator('#exit').click();
   await page.setViewportSize({ width: 375, height: 667 });
   await expect(logo).toBeHidden();
   await page.locator('#setup-back').click();
   await expect(logo).toBeVisible();
-  await expect(logo).toHaveCSS('font-size', size);
+  await expect(artwork).toHaveCSS('width', size);
   await page.locator('#open-setup').click();
   await expect(logo).toBeHidden();
   await page.locator('#start').click();

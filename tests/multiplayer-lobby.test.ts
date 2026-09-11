@@ -3,8 +3,8 @@ import { PerspectiveCamera, Vector3 } from 'three';
 import { TRACKS } from '../src/game/tracks';
 import { createLobbyRacers, lobbyCamera } from '../src/multiplayer/lobby';
 
-it('keeps ten named craft separated and visible on a phone for every course', () => {
-  const members = Array.from({ length: 10 }, (_, slot) => ({
+it('keeps twelve named craft separated and visible on a phone for every course', () => {
+  const members = Array.from({ length: 12 }, (_, slot) => ({
     slot,
     name: `RACER ${slot}`,
     color: slot,

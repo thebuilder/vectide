@@ -5,8 +5,17 @@ export function setupMenuScreens() {
   const setup = document.getElementById('race-setup')!;
   const enter = document.getElementById('open-setup')!;
   const back = document.getElementById('setup-back')!;
+  const mobileHeader = matchMedia('(max-width: 700px), (max-height: 500px) and (pointer: coarse)');
+  const placeBack = () => {
+    if (mobileHeader.matches) document.querySelector('.masthead')!.prepend(back);
+    else setup.querySelector('.setup-heading')!.prepend(back);
+  };
+  mobileHeader.addEventListener('change', placeBack);
+  placeBack();
+  back.hidden = true;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const show = (screen: 'home' | 'setup', animate = true) => {
+    back.hidden = screen !== 'setup';
     root.dataset.instant = String(!animate || reducedMotion.matches);
     home.classList.toggle('is-active', screen === 'home');
     setup.classList.toggle('is-active', screen === 'setup');

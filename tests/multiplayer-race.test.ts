@@ -13,7 +13,7 @@ import {
   type RaceSnapshot,
 } from '../src/multiplayer/protocol';
 
-const members = Array.from({ length: 10 }, (_, slot) => ({
+const members = Array.from({ length: 12 }, (_, slot) => ({
   slot,
   name: `RACER ${slot + 1}`,
   color: slot,
@@ -61,10 +61,10 @@ describe('authoritative multiplayer simulation', () => {
     expect(Math.hypot(guest.player.x - racer.x, guest.player.z - racer.z)).toBeLessThan(1);
     expect(host.player.finished).toBe(false);
   });
-  it('finishes a full ten-racer race with bounded wire snapshots', () => {
+  it('finishes a full twelve-racer race with bounded wire snapshots', () => {
     const host = new NetworkRace(TRACKS[0], members, 0, true);
     host.running = true;
-    const sequences = Array(10).fill(0);
+    const sequences = Array(12).fill(0);
     let largest = 0;
     host.onSnapshot = (snapshot) => {
       largest = Math.max(
@@ -99,7 +99,7 @@ describe('authoritative multiplayer simulation', () => {
     expect(largest).toBeLessThan(8000);
   }, 30000);
 
-  it('starts ten unique racers on one grid and holds them for the shared countdown', () => {
+  it('starts twelve unique racers on one grid and holds them for the shared countdown', () => {
     const host = new NetworkRace(TRACKS[0], members, 0, true);
     const start = host.racers.map((r) => [r.x, r.z]);
     expect(new Set(host.racers.map((r) => r.color)).size).toBe(MAX_RACERS);
