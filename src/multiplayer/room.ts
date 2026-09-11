@@ -12,6 +12,7 @@ import {
   MAX_RACERS,
   parseMessage,
   roomCode,
+  ROOM_PREFIX,
   validCode,
   validTrack,
   VERSION,
@@ -70,10 +71,21 @@ export class Room {
       const [{ default: Peer }, options] = await Promise.all([import('peerjs'), peerOptions()]);
       if (generation !== this.generation) return;
       const peer = new Peer(
-        host ? `vectide-v${VERSION}-${this.code}` : `vectide-guest-${crypto.randomUUID()}`,
+        host ? `${ROOM_PREFIX}${this.code}` : `vectide-guest-${crypto.randomUUID()}`,
         options,
       );
       this.peer = peer;
+      // v12 used a different discovery address. Probe it only if the current room is absent,
+      // allowing its existing handshake to report the mismatch to an updated guest.
+      const addresses = [`${ROOM_PREFIX}${this.code}`, `vectide-v12-${this.code}`];
+      const connect = () => {
+        const channel = peer.connect(addresses.shift()!, {
+          reliable: true,
+          serialization: 'json',
+          label: 'vectide-v1',
+        });
+        this.attach(channel, cleanName(name));
+      };
       peer.on('open', () => {
         if (this.peer !== peer) return;
         this.signalingConnected = true;
@@ -90,12 +102,7 @@ export class Room {
           this.phase = 'lobby';
           this.publishLobby();
         } else {
-          const channel = peer.connect(`vectide-v${VERSION}-${this.code}`, {
-            reliable: true,
-            serialization: 'json',
-            label: 'vectide-v1',
-          });
-          this.attach(channel, cleanName(name));
+          connect();
         }
       });
       peer.on('connection', (channel) => {
@@ -133,6 +140,18 @@ export class Room {
       });
       peer.on('error', (error) => {
         if (this.peer !== peer) return;
+        if (
+          !host &&
+          this.phase === 'connecting' &&
+          error.type === 'peer-unavailable' &&
+          addresses.length
+        ) {
+          const failed = [...this.connections.values()];
+          this.connections.clear();
+          for (const connection of failed) connection.channel.close();
+          connect();
+          return;
+        }
         // Signaling can fail while established WebRTC data channels remain healthy.
         if (
           this.phase !== 'connecting' &&
@@ -143,7 +162,7 @@ export class Room {
           return;
         const reasons: Record<string, string> = {
           'peer-unavailable':
-            'Room not found. Check the code and ask the host to keep the room open.',
+            'Room not found. Check the code. If it is correct, reload both browsers and have the host create a new room.',
           'unavailable-id': 'That room code is in use. Create a new room.',
           'browser-incompatible': 'This browser does not support WebRTC multiplayer.',
         };
