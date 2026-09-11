@@ -18,7 +18,7 @@ test('pause sliders independently control audio and remember the mix', async ({ 
   const sounds = page.getByRole('slider', { name: 'SOUNDS' });
   const music = page.getByRole('slider', { name: 'MUSIC' });
   await expect(sounds).toHaveValue('100');
-  await expect(music).toHaveValue('50');
+  await expect(music).toHaveValue('60');
   await sounds.focus();
   await page.keyboard.press('Home');
   await music.focus();
@@ -98,7 +98,7 @@ test('mobile pause controls fit and allow pointer adjustment', async ({ browser 
   await page.touchscreen.tap(bounds.x + bounds.width * 0.4, bounds.y + bounds.height / 2);
   expect(Number(await sounds.inputValue())).toBeGreaterThan(30);
   expect(Number(await sounds.inputValue())).toBeLessThan(50);
-  await expect(page.getByRole('slider', { name: 'MUSIC' })).toHaveValue('50');
+  await expect(page.getByRole('slider', { name: 'MUSIC' })).toHaveValue('60');
   const dialog = (await page.locator('#pause-dialog').boundingBox())!;
   expect(dialog.x).toBeGreaterThanOrEqual(0);
   expect(dialog.y).toBeGreaterThanOrEqual(0);

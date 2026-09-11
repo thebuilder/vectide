@@ -14,7 +14,7 @@ export class RaceAudio {
   private effects?: SoundEffects;
   private soundsGain?: GainNode;
   private musicGain?: GainNode;
-  private levels = { sounds: 1, music: 0.5 };
+  private levels = { sounds: 1, music: 0.6 };
   enabled = false;
   readonly spectrum = new MusicSpectrum();
   readonly music = new Audio();

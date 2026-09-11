@@ -68,7 +68,7 @@ test('gamepad navigates menus, starts and pauses once per press, and resets', as
   await tap(12);
   await expect(page.getByRole('slider', { name: 'MUSIC' })).toBeFocused();
   await tap(14);
-  await expect(page.getByRole('slider', { name: 'MUSIC' })).toHaveValue('45');
+  await expect(page.getByRole('slider', { name: 'MUSIC' })).toHaveValue('55');
   await tap(12);
   await expect(page.getByRole('slider', { name: 'SOUNDS' })).toBeFocused();
   await tap(14);

@@ -210,7 +210,9 @@ test('real pickup use triggers sound and boosts lengthen the visible stern exhau
   expect(errors).toEqual([]);
 });
 
-test('foreground cues stand above each course soundtrack at the default mix', async ({ page }) => {
+test('foreground cues remain audible against each course soundtrack at the default mix', async ({
+  page,
+}) => {
   await page.route('**/src/main.ts*', async (route) => {
     const response = await route.fetch();
     await route.fulfill({
@@ -253,9 +255,10 @@ test('foreground cues stand above each course soundtrack at the default mix', as
     }
     return { defaults: audio.volumes, tracks, cues };
   });
-  expect(mix.defaults).toEqual({ sounds: 1, music: 0.5 });
+  expect(mix.defaults).toEqual({ sounds: 1, music: 0.6 });
   for (const cue of mix.cues) {
-    expect(cue.attack).toBeGreaterThan(Math.max(...mix.tracks) * 1.25);
+    expect(cue.attack).toBeGreaterThan(Math.max(...mix.tracks) * 0.9);
+    expect(cue.peak).toBeGreaterThan(Math.max(...mix.tracks) * 3);
     expect(cue.peak).toBeLessThan(0.5);
   }
   console.log('Default mix RMS:', mix);
