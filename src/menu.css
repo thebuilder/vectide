@@ -259,3 +259,9 @@
     font-size: clamp(26px, 7.5vw, 34px);
   }
 }
+
+@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
+  .setup-heading {
+    display: block;
+  }
+}

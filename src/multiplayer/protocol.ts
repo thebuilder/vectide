@@ -2,9 +2,9 @@ import { ITEM_REVEAL_SECONDS, MAX_EFFECTS, type PickupState } from '../game/pick
 import { createRacer, type Input, type Racer } from '../game/physics';
 import { TRACKS } from '../game/tracks';
 
-export const MAX_RACERS = 10;
+export const MAX_RACERS = 12;
 // Course geometry and handling must match on host and predicting clients.
-export const VERSION = 12;
+export const VERSION = 13;
 export const STEP = 1 / 120;
 export const SEND_EVERY = 6;
 export const NEUTRAL: Input = { throttle: 0, steer: 0, brake: 1, lean: 0, trick: 0 };
@@ -19,6 +19,8 @@ export const COLORS = [
   '#fa92da',
   '#50c7ed',
   '#ffa078',
+  '#49c99a',
+  '#e3bcf5',
 ];
 export interface Member {
   slot: number;
@@ -135,7 +137,7 @@ function matches(value: unknown, template: unknown): boolean {
 const racerTemplate = createRacer(TRACKS[0], 0);
 const maxGateIndex = Math.max(...TRACKS.map((track) => track.gates.length)) - 1;
 // Fixed field order removes repeated property names. Four decimals preserve sub-mm
-// positions while keeping ten racers comfortably below PeerJS's JSON message limit.
+// positions while keeping twelve racers comfortably below PeerJS's JSON message limit.
 function pack(value: unknown, template: unknown): unknown {
   if (typeof template === 'number') return Math.round((value as number) * 10000) / 10000;
   if (Array.isArray(template)) return (value as number[]).map((n) => Math.round(n * 10000) / 10000);
@@ -185,12 +187,12 @@ export function validItems(value: unknown): value is PickupState {
             finite(e.launch.vz, -200, 200))) &&
         integer(e.id, 1, 1e9) &&
         integer(e.kind, 1, 5) &&
-        integer(e.owner, 0, 9) &&
+        integer(e.owner, 0, MAX_RACERS - 1) &&
         finite(e.x, -1e6, 1e6) &&
         finite(e.z, -1e6, 1e6) &&
         finite(e.yaw, -1e6, 1e6) &&
         finite(e.age, 0, 18) &&
-        integer(e.hit, 0, 1023),
+        integer(e.hit, 0, (1 << MAX_RACERS) - 1),
     ) &&
     new Set(value.effects.map((e) => e.id)).size === value.effects.length
   );

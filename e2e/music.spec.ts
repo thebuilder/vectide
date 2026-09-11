@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
-test('plays all soundtrack files, analyses their spectrum, and mutes cleanly', async ({ page }) => {
+test('plays each fixed course soundtrack, analyses their spectrum, and mutes cleanly', async ({
+  page,
+}) => {
   test.setTimeout(60000);
   await page.goto('/');
   await page.locator('#open-setup').click();
@@ -23,9 +25,8 @@ test('plays all soundtrack files, analyses their spectrum, and mutes cleanly', a
     );
   await expect.poll(async () => (await audio()).playing).toBe(true);
   expect((await audio()).song).toBe('Before the First Credit');
-  for (let i = 0; i < 5; i++) {
-    await page.locator('#soundtrack-label').click();
-    await page.locator(`[data-song="${i}"]`).click();
+  for (let i = 0; i < 3; i++) {
+    await page.locator(`[data-track="${i}"]`).click();
     expect((await audio()).song).toBe('Before the First Credit');
     await page.locator('#start').click();
     await expect
@@ -38,9 +39,7 @@ test('plays all soundtrack files, analyses their spectrum, and mutes cleanly', a
       )
       .toBe(true);
     expect((await audio()).error).toBe('');
-    expect((await audio()).song).toBe(
-      ['Sapphire Wake', 'Crimson Slipstream', 'Neon Slipway', 'Horizon Lane', 'Chrome Horizon'][i],
-    );
+    expect((await audio()).song).toBe(['Sapphire Wake', 'Neon Slipway', 'Chrome Horizon'][i]);
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'BACK TO COURSES' }).click();
     await expect.poll(async () => (await audio()).song).toBe('Before the First Credit');

@@ -258,6 +258,7 @@ export class Engine {
     this.cameraAnchor.set(p.x, p.y, p.z);
   }
   selectTrack(index: number) {
+    this.audio.selectCourse(index);
     this.loadTrack(TRACKS[index]);
   }
   private loadTrack(track: Track) {
@@ -351,6 +352,7 @@ export class Engine {
   start(mode: Mode) {
     this.camera.clearViewOffset();
     this.intro?.finish();
+    this.audio.selectCourse(TRACKS.indexOf(this.track));
     this.audio.setScene('race');
     this.mode = mode;
     this.time = 0;

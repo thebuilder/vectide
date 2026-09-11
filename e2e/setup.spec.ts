@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-test('metadata, soundtrack menu, difficulty toggle, and GO countdown', async ({ page }) => {
+test('metadata, fixed soundtrack, difficulty toggle, and GO countdown', async ({ page }) => {
   await page.goto('/');
   await page.locator('#open-setup').click();
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
@@ -20,9 +20,7 @@ test('metadata, soundtrack menu, difficulty toggle, and GO countdown', async ({ 
     'aria-pressed',
     'true',
   );
-  await page.locator('#soundtrack-label').click();
-  await page.getByRole('button', { name: 'Neon Slipway', exact: true }).click();
-  await expect(page.locator('#soundtrack-label')).toHaveText('Neon Slipway');
+  await expect(page.locator('.song-picker')).toHaveCount(0);
   await page.locator('#start').click();
   await expect(page.locator('#countdown')).toHaveText('3');
   await expect(page.locator('#countdown')).toHaveText('2');

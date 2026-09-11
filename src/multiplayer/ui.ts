@@ -28,7 +28,7 @@ export function setupMultiplayer(
     <div class="lobby-bottom"><section id="room-courses" aria-label="Room course"><div class="course-heading"><span id="room-course-heading">SELECT COURSE</span><span id="room-course-number">01 / 03</span></div><div class="courses">${courseCards('data-room-track')}</div></section>
     <div class="lobby-panel"><div class="lobby-crew"><span id="room-count" class="eyebrow"></span><ol id="room-racers" aria-label="Racers in room"></ol><button id="room-pickups" class="pickup-toggle" aria-pressed="true">PICKUPS ON</button><button id="leave-room" class="quiet" aria-label="Leave room" title="Leave room"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4h9v16h-9M14 12H3m4-4-4 4 4 4"/></svg><span>LEAVE ROOM</span></button></div>
     <div class="lobby-settings"><label>Your name<input id="profile-name" maxlength="20" autocomplete="nickname" placeholder="RACER"></label>
-    <fieldset class="color-picker"><legend>Craft color</legend>${COLORS.map((color, i) => `<button type="button" data-color="${i}" style="--craft-color:${color}" aria-label="${['Mint', 'Pink', 'Gold', 'Violet', 'Blue', 'White', 'Lime', 'Rose', 'Aqua', 'Orange'][i]}" aria-pressed="false"></button>`).join('')}</fieldset>
+    <fieldset class="color-picker"><legend>Craft color</legend>${COLORS.map((color, i) => `<button type="button" data-color="${i}" style="--craft-color:${color}" aria-label="${['Mint', 'Pink', 'Gold', 'Violet', 'Blue', 'White', 'Lime', 'Rose', 'Aqua', 'Orange', 'Jade', 'Lilac'][i]}" aria-pressed="false"></button>`).join('')}</fieldset>
     </div>
     <div class="lobby-launch"><p id="lobby-status" role="status"></p><div class="lobby-actions"><button id="enter-practice" class="secondary">FREE RIDE</button><button id="start-room" class="primary">START RACE <svg width="26" height="20" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button></div></div></div></div>`;
   document.body.append(dialog, lobby);
@@ -37,13 +37,17 @@ export function setupMultiplayer(
   const button = (id: string) => el<HTMLButtonElement>(id);
   const status = el('online-status');
   const mobileHeader = matchMedia('(max-width: 700px), (max-height: 500px) and (pointer: coarse)');
-  const placePracticeBack = () => {
+  const placeHeaderActions = () => {
+    const leave = button('leave-room');
+    if (mobileHeader.matches) document.querySelector('.masthead')!.prepend(leave);
+    else lobby.querySelector('.lobby-crew')!.append(leave);
     const back = button('leave-practice');
     if (mobileHeader.matches) document.querySelector('.masthead')!.prepend(back);
     else el('practice-controls').append(back);
   };
-  mobileHeader.addEventListener('change', placePracticeBack);
-  placePracticeBack();
+  mobileHeader.addEventListener('change', placeHeaderActions);
+  placeHeaderActions();
+  button('leave-room').hidden = true;
   let entryAction = 'join-online';
   let name = '';
   const show = () => {
@@ -54,6 +58,7 @@ export function setupMultiplayer(
     document.body.classList.remove('in-lobby', 'in-free-ride');
     el('practice-controls').hidden = true;
     button('leave-practice').hidden = true;
+    button('leave-room').hidden = true;
   };
   const positionLabels = () => {
     if (room.phase === 'lobby') {
@@ -74,6 +79,7 @@ export function setupMultiplayer(
     document.body.classList.toggle('in-free-ride', practicing);
     el('practice-controls').hidden = !practicing;
     button('leave-practice').hidden = !practicing;
+    button('leave-room').hidden = !inLobby || practicing;
     el('online-entry').hidden = room.phase !== 'idle';
     if (inLobby) {
       if (engine.state !== 'lobby' && engine.state !== 'freeride') backToLobby();

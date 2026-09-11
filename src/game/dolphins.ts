@@ -1,48 +1,14 @@
 import * as T from 'three';
-import { loft } from './modeling';
+import { createDolphinModel } from './dolphin-model';
 import { waterHeight } from './water';
 import type { Track } from './tracks';
 import type { Racer } from './physics';
 export function createDolphins(track: Track) {
   const group = new T.Group();
   group.name = 'dolphin-pod';
-  const material = new T.MeshStandardMaterial({
-    color: 0x6cbfc6,
-    metalness: 0.25,
-    roughness: 0.38,
-    flatShading: true,
-  });
+  const model = createDolphinModel();
   const animals = Array.from({ length: 3 }, () => {
-    const animal = new T.Group();
-    animal.add(
-      new T.Mesh(
-        loft(
-          [
-            { at: -1.5, width: 0.06, depth: 0.07 },
-            { at: -0.7, width: 0.25, depth: 0.3 },
-            { at: 0.25, width: 0.33, depth: 0.34 },
-            { at: 0.9, width: 0.21, depth: 0.22 },
-            { at: 1.35, width: 0.085, depth: 0.065 },
-          ],
-          10,
-          'z',
-        ),
-        material,
-      ),
-    );
-    for (const side of [-1, 1]) {
-      const fin = new T.Mesh(new T.ConeGeometry(0.35, 0.8, 3), material);
-      fin.rotation.z = side * 1.2;
-      fin.position.set(side * 0.42, -0.12, 0.05);
-      animal.add(fin);
-      const tail = new T.Mesh(new T.ConeGeometry(0.3, 0.7, 3), material);
-      tail.rotation.z = (side * Math.PI) / 2;
-      tail.position.set(side * 0.25, 0, -1.35);
-      animal.add(tail);
-    }
-    const dorsal = new T.Mesh(new T.ConeGeometry(0.22, 0.65, 3), material);
-    dorsal.position.set(0, 0.45, -0.15);
-    animal.add(dorsal);
+    const animal = model.clone();
     group.add(animal);
     return animal;
   });
@@ -63,6 +29,8 @@ export function createDolphins(track: Track) {
         lastLap = player.lap;
       }
       animals.forEach((animal, i) => {
+        animal.getObjectByName('tail-flukes')!.rotation.x =
+          Math.PI / 2 + Math.sin(t * 9 + i) * 0.18;
         const age = t - started - i * 0.45;
         animal.visible = age >= 0 && age < 8;
         if (!animal.visible) return;

@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Open the local address printed by Vite. Enable hardware acceleration in your browser. Keyboard, standard gamepad, and multitouch driving are supported. On phones, throttle is automatic. Use the virtual arrows to steer and hold BRAKE to cut throttle and slow down. Hold JUMP / FLIP to prepare a flip, then release as a wave or ramp launches you. RESET appears after a missed gate, when far off course, or after getting stuck for two seconds. Pause is at the top right. Hit the Water opens course, mode, difficulty and soundtrack selection in the same screen. Back returns to the title while retaining selections. Compact screens allow the setup menu to scroll; landscape keeps the driving view clear.
+Open the local address printed by Vite. Enable hardware acceleration in your browser. Keyboard, standard gamepad, and multitouch driving are supported. On phones, throttle is automatic. Slide the virtual stick left/right to steer and up/down to lean forward/back. Hold BRAKE to cut throttle and slow down. Hold JUMP / FLIP to prepare a flip, then release as a wave or ramp launches you. RESET appears after a missed gate, when far off course, or after getting stuck for two seconds. Pause is at the top right. Hit the Water opens course, mode and difficulty selection in the same screen. Back returns to the title while retaining selections. Compact screens allow the setup menu to scroll; landscape keeps the driving view clear.
 
 ```sh
 pnpm check
@@ -43,7 +43,7 @@ Pass between both buoys at each gate, in order and in the forward direction. The
 ## Multiplayer
 
 Choose **Host** or **Join** on the title screen. Share the eight-character room
-code and let 1–9 friends join. The lobby shows the racers lined up on the water;
+code and let 1–11 friends join. The lobby shows the racers lined up on the water;
 everyone can change their name and craft color before starting. The host chooses the course and starts the three-lap
 race. Everyone loads before the countdown. Rooms close to new racers once loading
 starts. Online best laps are stored separately from solo races.
@@ -76,7 +76,7 @@ friends, not a cheat-proof competitive service.
 
 [PeerJS](https://peerjs.com/client/getting-started) loads only when creating or
 joining a room. PeerServer Cloud supplies signaling by default; the race simulation
-runs in the host browser. A room with ten racers needs nine host data connections,
+runs in the host browser. A room with twelve racers needs eleven host data connections,
 so upload bandwidth, latency and host performance affect play.
 
 Deploy over HTTPS. No application backend is required for default signaling.
@@ -99,7 +99,7 @@ relay before relying on multiplayer across restrictive networks.
 
 Run the independent WebRTC browser suite with `pnpm test:multiplayer`. It starts
 Vite on port 5184 and a local PeerServer on port 9001. It checks two fully rendered
-racers and a full host with nine lightweight browser clients using the production transport and
+racers and a full host with eleven lightweight browser clients using the production transport and
 simulation, including room capacity, profile updates, countdown, driving and disconnects.
 Phone checks cover visible Host/Join actions and room controls. The
 regular browser suite still expects a running dev server; set `PLAYWRIGHT_BASE_URL`
@@ -108,8 +108,8 @@ to use a different port. For native GPU testing on macOS, use
 `PLAYWRIGHT_CHANNEL=chromium` and `PLAYWRIGHT_GPU=metal`.
 
 Unit tests cover delayed and quantized snapshots, input replay, room authority,
-timeouts and a complete ten-racer race. These local tests do not verify public
-PeerServer availability, TURN credentials, WAN performance, ten physical devices,
+timeouts and a complete twelve-racer race. These local tests do not verify public
+PeerServer availability, TURN credentials, WAN performance, twelve physical devices,
 or browsers beyond Chromium.
 
 The [web-racing reference](https://github.com/MankyDanky/web-racing/blob/master/frontend/src/modules/multiplayer.js)
@@ -179,7 +179,7 @@ The browser smoke suite uses the running local server:
 pnpm test:browser
 ```
 
-Browser captures are in `artifacts/`. Hardware gamepad feel and browsers beyond Chromium still need hands-on verification. Before the First Credit loops on the title screen when sound is enabled. Starting a race switches to the selected race song; returning to the title screen restores its theme. The racing soundtrack includes Sapphire Wake, Crimson Slipstream, Neon Slipway, Horizon Lane, and Chrome Horizon. Choose the starting song in the menu; songs advance in a looping playlist. Start Race enables audio when starting a race, and SOUND toggles music plus engine effects. Pause freezes playback. A dedicated music analyser extracts bass, mid, and treble energy with adaptive peaks and smooth decay: nearby course lights, sun scale, bloom, wave-crest highlights and reflections respond without changing collision geometry or wave physics. Reduced-motion preferences disable the additional visual modulation. Music files load on demand.
+Browser captures are in `artifacts/`. Hardware gamepad feel and browsers beyond Chromium still need hands-on verification. Before the First Credit loops on the title screen when sound is enabled. Starting a race switches to its fixed course song; returning to the title screen restores its theme. Sapphire Wake loops on Palm Circuit, Neon Slipway on Port Afterdark, and Chrome Horizon on Storm Signal. Start Race enables audio when starting a race, and SOUND toggles music plus engine effects, with a speaker icon on mobile. Pause freezes playback. A dedicated music analyser extracts bass, mid, and treble energy with adaptive peaks and smooth decay: nearby course lights, sun scale, bloom, wave-crest highlights and reflections respond without changing collision geometry or wave physics. Reduced-motion preferences disable the additional visual modulation. Music files load on demand.
 
 Visual references: [Afterglow](https://afterglow.thebuilder.dk/), [Vector Wars](https://github.com/thebuilder/vector-wars), [thebuilder.dk](https://github.com/thebuilder/thebuilder-dk). Gameplay reference: [MoeGamer's Wave Race 64 review](https://moegamer.net/2018/02/09/n64-essentials-wave-race-64/).
 

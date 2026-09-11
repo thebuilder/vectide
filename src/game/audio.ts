@@ -1,11 +1,9 @@
 import { MusicSpectrum } from './spectrum';
 const TITLE_SONG = { name: 'Before the First Credit', url: '/music/before-the-first-credit.mp3' };
 const FREE_RIDE_SONG = { name: 'Horizon Lane', url: '/music/horizon-lane.mp3' };
-export const SONGS = [
+const COURSE_SONGS = [
   { name: 'Sapphire Wake', url: '/music/sapphire-wake.mp3' },
-  { name: 'Crimson Slipstream', url: '/music/crimson-slipstream.mp3' },
   { name: 'Neon Slipway', url: '/music/apex-runner.mp3' },
-  FREE_RIDE_SONG,
   { name: 'Chrome Horizon', url: '/music/chrome-horizon.mp3' },
 ];
 export class RaceAudio {
@@ -22,25 +20,23 @@ export class RaceAudio {
   private starting?: Promise<void>;
   private explosionNoise?: AudioBuffer;
   private effects = new Set<GainNode>();
-  song = 0;
+  private song = 0;
   private scene: 'title' | 'freeride' | 'race' = 'title';
   error = '';
   constructor() {
     this.music.preload = 'none';
-    this.music.volume = 0.5;
+    this.music.volume = 0.32;
     this.music.src = TITLE_SONG.url;
     this.music.loop = true;
-    this.music.addEventListener('ended', () => {
-      if (this.scene === 'race') this.select((this.song + 1) % SONGS.length);
-    });
     this.music.addEventListener('error', () => {
       this.error = 'Music unavailable';
     });
   }
-  select(index: number) {
+  selectCourse(index: number) {
+    if (this.song === index) return;
     this.song = index;
     if (this.scene !== 'race') return;
-    this.music.src = SONGS[index].url;
+    this.music.src = COURSE_SONGS[index].url;
     this.error = '';
     if (this.enabled && !this.suspended) void this.play();
   }
@@ -49,12 +45,12 @@ export class RaceAudio {
       ? TITLE_SONG
       : this.scene === 'freeride'
         ? FREE_RIDE_SONG
-        : SONGS[this.song];
+        : COURSE_SONGS[this.song];
   }
   setScene(scene: 'title' | 'freeride' | 'race') {
     if (this.scene === scene) return;
     this.scene = scene;
-    this.music.loop = scene !== 'race';
+    this.music.loop = true;
     this.music.src = this.currentSong.url;
     this.error = '';
     if (this.enabled && !this.suspended) void this.play();
@@ -132,7 +128,7 @@ export class RaceAudio {
       this.gain = this.context.createGain();
       this.filter = this.context.createBiquadFilter();
       this.filter.type = 'lowpass';
-      this.filter.frequency.value = 250;
+      this.filter.frequency.value = 1100;
       this.gain.gain.value = 0;
       this.oscillator.connect(this.filter).connect(this.gain).connect(this.context.destination);
       this.oscillator.start();
@@ -149,7 +145,7 @@ export class RaceAudio {
       t,
       0.08,
     );
-    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.035 + contact * 0.01 : 0, t, 0.1);
+    this.gain.gain.setTargetAtTime(this.enabled && active ? 0.12 + contact * 0.035 : 0, t, 0.1);
   }
   explosion(distance = 0) {
     if (!this.enabled || !this.context || distance >= 140 || this.effects.size >= 8) return;
@@ -213,7 +209,7 @@ export class RaceAudio {
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(frequency, t);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.09, t + 0.015 + index * 0.025);
+      gain.gain.linearRampToValueAtTime(0.16, t + 0.015 + index * 0.025);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
       oscillator.connect(gain).connect(this.context.destination);
       oscillator.start(t);
@@ -231,7 +227,7 @@ export class RaceAudio {
       t = this.context.currentTime;
     o.type = 'sine';
     o.frequency.value = frequency;
-    g.gain.setValueAtTime(0.1, t);
+    g.gain.setValueAtTime(0.2, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + duration);
     o.connect(g).connect(this.context.destination);
     o.start();
