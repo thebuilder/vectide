@@ -22,7 +22,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
 <canvas id="ocean" aria-label="Vectide 3D jet ski racing game"></canvas>
 <div class="screen-grain" aria-hidden="true"></div>
-<header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><svg viewBox="0 0 40 32" aria-hidden="true"><path d="M1 2h9l10 21L30 2h9L20 39Z"/><path d="M0 13h40M0 19h40" class="cut"/></svg>VECTIDE<span class="version">/ 01</span></a><div class="header-right"><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound"><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5Z"/><path class="speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="speaker-muted" d="m15 9 6 6m0-6-6 6"/></svg><span id="sound-label">SOUND OFF</span></button><button id="pause" class="quiet" hidden>PAUSE <kbd data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</kbd></button></div></header>
+<header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><svg viewBox="0 0 40 32" aria-hidden="true"><path d="M1 2h9l10 21L30 2h9L20 39Z"/><path d="M0 13h40M0 19h40" class="cut"/></svg>VECTIDE<span class="version">/ 01</span></a><div class="header-right"><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound"><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5Z"/><path class="speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="speaker-muted" d="m15 9 6 6m0-6-6 6"/></svg><span id="sound-label">SOUND OFF</span></button><button id="pause" class="quiet" aria-label="Pause" title="Pause (Esc)" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button></div></header>
 <main id="menu">
   <div id="menu-panels">
   <section id="menu-home" class="menu-screen is-active" aria-label="Main menu">
@@ -59,7 +59,7 @@ app.innerHTML = `
 </div>
 <div id="lap-split" hidden role="status" aria-live="polite"></div>
 <div id="countdown" hidden aria-live="polite"></div>
-<dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><button id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
+<dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><div class="pause-volume"><label for="sounds-volume"><span>SOUNDS</span><output id="sounds-volume-value" for="sounds-volume"></output></label><input id="sounds-volume" type="range" min="0" max="100" step="1" /><label for="music-volume"><span>MUSIC</span><output id="music-volume-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1" /></div><button autofocus id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button></dialog>
 <dialog id="help-dialog"><span class="eyebrow">THE QUICK BRIEFING</span><h2>Ride the water.</h2><p>Pass between each pair of glowing buoys, in order. The HUD arrow and minimap point toward the next gate.</p><dl><dt data-keyboard="W / ↑" data-touch="AUTOMATIC" data-gamepad="RT">W / ↑</dt><dd>Throttle</dd><dt data-keyboard="A D / ← →" data-touch="STICK ← / →" data-gamepad="LEFT STICK">A D / ← →</dt><dd>Steer and carve</dd><dt data-keyboard="S / SPACE" data-touch="BRAKE button" data-gamepad="LT">S / SPACE</dt><dd>Brake for tight turns</dd><dt data-keyboard="SHIFT / C" data-touch="STICK ↓ / ↑" data-gamepad="STICK ↑ / ↓">SHIFT / C</dt><dd>Shift weight back / forward</dd><dt data-keyboard="E / STEER + E" data-touch="HOLD JUMP" data-gamepad="RB / STICK + RB">E / STEER + E</dt><dd>Hold to load a flip<span class="touch-hide">; steer to load a spin</span>. Release at takeoff.</dd><dt data-keyboard="Q" data-touch="USE button" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd><dt data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</dt><dd>Reset to the last checkpoint</dd><dt data-keyboard="ESC" data-touch="PAUSE" data-gamepad="START">ESC</dt><dd>Pause</dd></dl><p>Gamepad: left stick to steer, right trigger for throttle, left trigger to brake. Pull the stick back to lift the nose, or forward to press it down.</p><p>Ease into a turn. Keep the hull planted for grip. Use wave crests and amber ramps to jump. Hold E (gamepad RB) as you approach a jump, then release at takeoff. On touch, throttle is automatic. Slide the stick left or right to steer, up to lean forward, or down to lean back. Hold BRAKE to slow down. Hold JUMP to prepare a flip, then release as a wave or ramp launches you. An unfinished trick can throw you off; you will swim back and remount.</p><button id="close-help" class="primary">GOT IT</button></dialog>
 <dialog id="results" aria-labelledby="result-title"><span class="eyebrow" id="result-label">FINISH LINE</span><h2 id="result-title">Made some waves.</h2><div class="result-time" id="result-time"></div><div id="lap-results"></div><p id="best-result"></p><ol id="race-results" aria-label="Race positions" hidden></ol><p id="result-ride-note">AUTOPILOT · ENJOY THE RIDE</p><button id="again" class="primary">RIDE AGAIN</button><button id="result-exit" class="quiet">BACK TO COURSES</button></dialog>
 `;
@@ -91,6 +91,20 @@ try {
   $('menu').innerHTML =
     '<div class="hero"><h1>Ocean offline.</h1><p>Your browser could not start WebGL. Enable hardware acceleration and reload to ride.</p></div>';
   throw error;
+}
+for (const channel of ['sounds', 'music'] as const) {
+  const slider = $<HTMLInputElement>(`${channel}-volume`);
+  const output = $<HTMLOutputElement>(`${channel}-volume-value`);
+  slider.value = String(Math.round(engine.audio.volumes[channel] * 100));
+  const syncVolume = () => {
+    output.value = `${slider.value}%`;
+    slider.setAttribute('aria-valuetext', output.value);
+  };
+  syncVolume();
+  slider.oninput = () => {
+    engine.audio.setVolume(channel, slider.valueAsNumber / 100);
+    syncVolume();
+  };
 }
 const touch = new TouchControls(engine, $('touch-controls'));
 const controls = new Controls(engine);

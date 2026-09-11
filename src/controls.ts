@@ -38,7 +38,9 @@ export class Controls {
   }
   private targets() {
     const root = document.querySelector('dialog[open]') ?? document;
-    return Array.from(root.querySelectorAll<HTMLElement>('button,summary,a[href]')).filter(
+    return Array.from(
+      root.querySelectorAll<HTMLElement>('button,summary,a[href],input[type=range]'),
+    ).filter(
       (element) =>
         !element.closest('[hidden],[inert]') &&
         !element.matches(':disabled') &&
@@ -52,6 +54,12 @@ export class Controls {
     const current = document.activeElement as HTMLElement;
     if (!targets.includes(current)) {
       (targets.find((e) => e.matches('#open-setup,.course.selected')) ?? targets[0])?.focus();
+      return;
+    }
+    if (dx && current instanceof HTMLInputElement && current.type === 'range') {
+      if (dx > 0) current.stepUp(5);
+      else current.stepDown(5);
+      current.dispatchEvent(new Event('input', { bubbles: true }));
       return;
     }
     const from = current.getBoundingClientRect();
