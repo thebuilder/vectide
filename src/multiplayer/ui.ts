@@ -23,7 +23,7 @@ export function setupMultiplayer(
   lobby.id = 'online-lobby';
   lobby.hidden = true;
   lobby.setAttribute('aria-label', 'Multiplayer lobby');
-  lobby.innerHTML = `<div class="lobby-heading"><section class="room-code-panel" aria-label="Share room"><span class="eyebrow">ROOM CODE</span><div class="room-code-row"><input id="room-code" readonly aria-label="Share this room code"><button id="copy-room" class="quiet" aria-live="polite">COPY</button></div></section><div id="practice-controls" hidden><div><span class="eyebrow">FREE RIDE</span><p>Practice while the host gets ready.</p></div><button id="leave-practice" class="quiet">BACK TO LOBBY</button></div></div>
+  lobby.innerHTML = `<div class="lobby-heading"><section class="room-code-panel" aria-label="Share room"><span class="eyebrow">ROOM CODE</span><div class="room-code-row"><input id="room-code" readonly aria-label="Share this room code"><button id="copy-room" class="quiet" aria-label="Copy room join link" aria-live="polite">COPY</button></div><span class="room-address">vectide.thebuilder.dk</span><input id="room-link" readonly hidden aria-label="Room join link"></section><div id="practice-controls" hidden><div><span class="eyebrow">FREE RIDE</span><p>Practice while the host gets ready.</p></div><button id="leave-practice" class="quiet">BACK TO LOBBY</button></div></div>
     <div id="lobby-labels" aria-hidden="true"></div>
     <div class="lobby-bottom"><section id="room-courses" aria-label="Room course"><div class="course-heading"><span id="room-course-heading">SELECT COURSE</span><span id="room-course-number">01 / 03</span></div><div class="courses">${courseCards('data-room-track')}</div></section>
     <div class="lobby-panel"><div class="lobby-crew"><span id="room-count" class="eyebrow"></span><ol id="room-racers" aria-label="Racers in room"></ol><button id="room-pickups" class="pickup-toggle" aria-pressed="true">PICKUPS ON</button><button id="leave-room" class="quiet" aria-label="Leave room" title="Leave room"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4h9v16h-9M14 12H3m4-4-4 4 4 4"/></svg><span>LEAVE ROOM</span></button></div>
@@ -35,6 +35,11 @@ export function setupMultiplayer(
   const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const input = (id: string) => el<HTMLInputElement>(id);
   const button = (id: string) => el<HTMLButtonElement>(id);
+  const joinLink = () => {
+    const url = new URL('https://vectide.thebuilder.dk/');
+    url.searchParams.set('join', room.code);
+    return url.href;
+  };
   const status = el('online-status');
   const mobileHeader = matchMedia('(max-width: 700px), (max-height: 500px) and (pointer: coarse)');
   const placeHeaderActions = () => {
@@ -98,6 +103,7 @@ export function setupMultiplayer(
       button('room-pickups').textContent = room.pickups ? 'PICKUPS ON' : 'PICKUPS OFF';
       button('room-pickups').setAttribute('aria-pressed', String(room.pickups));
       input('room-code').value = room.code;
+      input('room-link').value = joinLink();
       button('copy-room').textContent = 'COPY';
       lobby.querySelectorAll<HTMLButtonElement>('[data-room-track]').forEach((card) => {
         const selected = Number(card.dataset.roomTrack) === room.track;
@@ -143,7 +149,7 @@ export function setupMultiplayer(
         ? 'Reconnecting the room. Joined racers can still race.'
         : room.host
           ? room.members.length < 2
-            ? 'Share the code to bring your friends in.'
+            ? 'Copy the join link to bring your friends in.'
             : 'Everyone here? Start when you’re ready.'
           : 'Waiting for the host to start.';
     }
@@ -195,12 +201,16 @@ export function setupMultiplayer(
   });
   button('copy-room').onclick = async () => {
     try {
-      await navigator.clipboard.writeText(room.code);
+      await navigator.clipboard.writeText(joinLink());
+      input('room-link').hidden = true;
       button('copy-room').textContent = 'COPIED';
       button('copy-room').blur();
     } catch {
-      input('room-code').select();
-      el('lobby-status').textContent = 'Select and copy the room code.';
+      const link = input('room-link');
+      link.hidden = false;
+      link.focus();
+      link.select();
+      el('lobby-status').textContent = 'Select and copy the join link below the room code.';
     }
   };
   lobby.querySelectorAll<HTMLButtonElement>('[data-room-track]').forEach((card) => {
@@ -231,6 +241,18 @@ export function setupMultiplayer(
   refresh();
   return {
     room,
+    joinFromLink() {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('join');
+      if (code === null) return;
+      // Consume the invitation once so leaving or reloading cannot rejoin by surprise.
+      url.searchParams.delete('join');
+      window.history.replaceState(window.history.state, '', url);
+      button('join-online').click();
+      input('join-code').value = code.trim().toUpperCase();
+      // No audio until a gesture; the name remains editable after joining the lobby.
+      void room.open(false, name, code);
+    },
     render: positionLabels,
     update() {
       const online = !!engine.network && !engine.track.practiceRadius;

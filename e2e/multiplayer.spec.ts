@@ -354,9 +354,11 @@ test('lobby free ride synchronizes riders and moves everyone to a fresh race', a
     await expect(guest.locator('#room-code')).toBeVisible();
     await expect(guest.locator('#room-code')).toHaveValue(code);
     await guestContext.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await guest.getByRole('button', { name: 'COPY', exact: true }).click();
+    await guest.getByRole('button', { name: 'Copy room join link', exact: true }).click();
     await expect(guest.locator('#copy-room')).toHaveText('COPIED');
-    expect(await guest.evaluate(() => navigator.clipboard.readText())).toBe(code);
+    expect(await guest.evaluate(() => navigator.clipboard.readText())).toBe(
+      `https://vectide.thebuilder.dk/?join=${code}`,
+    );
     await expect(guest.locator('#checkpoint')).toBeHidden();
     await expect(guest.locator('.race-top')).toBeHidden();
     await guest.bringToFront();
@@ -618,4 +620,77 @@ test('finishers keep riding, live results fill in, and the host returns everyone
   } finally {
     await context.close();
   }
+});
+
+test('copied room links join directly and failed clipboard writes expose the full link', async ({
+  browser,
+  baseURL,
+}) => {
+  const hostContext = await browser.newContext({
+    reducedMotion: 'reduce',
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
+  const guestContext = await browser.newContext({ reducedMotion: 'reduce' });
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+  const errors: string[] = [];
+  for (const page of [host, guest]) page.on('pageerror', (error) => errors.push(error.message));
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    await expect(host.locator('.room-address')).toHaveText('vectide.thebuilder.dk');
+    const codeBox = (await host.locator('#room-code').boundingBox())!;
+    const address = (await host.locator('.room-address').boundingBox())!;
+    expect(address.y).toBeGreaterThanOrEqual(codeBox.y + codeBox.height);
+    await host.getByRole('button', { name: 'Copy room join link' }).click();
+    await expect(host.locator('#copy-room')).toHaveText('COPIED');
+    const link = await host.evaluate(() => navigator.clipboard.readText());
+    expect(link).toBe(`https://vectide.thebuilder.dk/?join=${code}`);
+    // Serve the invitation from the local build and its local signaling server.
+    const invitation = new URL(link);
+    await guest.goto(`${baseURL}${invitation.pathname}${invitation.search}`);
+    await expect(guest.locator('#online-lobby')).toBeVisible();
+    await expect(guest.locator('#online-dialog')).not.toBeVisible();
+    await expect(guest.locator('#room-code')).toHaveValue(code);
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    expect(new URL(guest.url()).searchParams.has('join')).toBe(false);
+    await guest.getByLabel('Your name').fill('INVITED');
+    await guest.getByLabel('Your name').press('Enter');
+    await expect(host.locator('#room-racers')).toContainText('INVITED');
+    await guest.getByRole('button', { name: 'Leave room' }).click();
+    await guest.reload();
+    await expect(guest.locator('#menu-home')).toBeVisible();
+    await expect(guest.locator('#online-dialog')).not.toBeVisible();
+    await host.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        value: async () => {
+          throw new Error('Clipboard denied');
+        },
+      });
+    });
+    await host.getByRole('button', { name: 'Copy room join link' }).click();
+    await expect(host.getByLabel('Room join link', { exact: true })).toBeVisible();
+    await expect(host.getByLabel('Room join link', { exact: true })).toHaveValue(link);
+    expect(
+      await host
+        .getByLabel('Room join link', { exact: true })
+        .evaluate((el: HTMLInputElement) => el.value.slice(el.selectionStart!, el.selectionEnd!)),
+    ).toBe(link);
+    await expect(host.locator('#lobby-status')).toContainText('copy the join link');
+    expect(errors).toEqual([]);
+  } finally {
+    await hostContext.close();
+    await guestContext.close();
+  }
+});
+
+test('invalid invitation codes show a recoverable join form', async ({ page }) => {
+  await page.goto('/?join=INVALID');
+  await expect(page.locator('#online-dialog')).toBeVisible();
+  await expect(page.locator('#online-status')).toHaveText('Enter the eight-character room code.');
+  await expect(page.locator('#join-code')).toHaveValue('INVALID');
+  await expect(page.locator('#join-room')).toBeVisible();
+  await page.locator('#cancel-online').click();
+  await expect(page.locator('#menu-home')).toBeVisible();
 });

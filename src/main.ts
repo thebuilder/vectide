@@ -404,3 +404,5 @@ Object.defineProperty(window, '__vectide', {
       renderer: engine.renderer.info.render,
     }),
 });
+
+multiplayer.joinFromLink();

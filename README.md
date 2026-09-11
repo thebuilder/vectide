@@ -43,7 +43,7 @@ Pass between both buoys at each gate, in order and in the forward direction. The
 ## Multiplayer
 
 Choose **Host** or **Join** on the title screen. Share the eight-character room
-code and let 1–11 friends join. The lobby shows the racers lined up on the water;
+code and let 1–11 friends join. Copy shares a `https://vectide.thebuilder.dk/?join=CODE` invitation that joins the room automatically. Guests can set their name in the lobby. The lobby shows the racers lined up on the water;
 everyone can change their name and craft color before starting. The host chooses the course and starts the three-lap
 race. Everyone loads before the countdown. Rooms close to new racers once loading
 starts. Online best laps are stored separately from solo races.
