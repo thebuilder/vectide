@@ -1,3 +1,5 @@
+const CUE_GAIN = 2.5;
+
 /** Short synthesized cues share one noise buffer and the sounds volume bus. */
 export class SoundEffects {
   readonly noise: AudioBuffer;
@@ -57,7 +59,7 @@ export class SoundEffects {
     source.frequency.setValueAtTime(from, t);
     source.frequency.exponentialRampToValueAtTime(to, t + duration);
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(volume, t + 0.012);
+    gain.gain.linearRampToValueAtTime(volume * CUE_GAIN, t + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
     source.connect(gain).connect(this.destination);
     source.start(t);
@@ -81,7 +83,7 @@ export class SoundEffects {
     filter.frequency.setValueAtTime(from, t);
     filter.frequency.exponentialRampToValueAtTime(to, t + duration);
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(volume, t + 0.03);
+    gain.gain.linearRampToValueAtTime(volume * CUE_GAIN, t + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
     source.connect(filter).connect(gain).connect(this.destination);
     source.start(t);

@@ -14,7 +14,7 @@ export class RaceAudio {
   private effects?: SoundEffects;
   private soundsGain?: GainNode;
   private musicGain?: GainNode;
-  private levels = { sounds: 1, music: 0.32 };
+  private levels = { sounds: 1, music: 0.5 };
   enabled = false;
   readonly spectrum = new MusicSpectrum();
   readonly music = new Audio();
@@ -64,8 +64,9 @@ export class RaceAudio {
       this.context.currentTime,
       0.01,
     );
+    // Reserve mix headroom for foreground cues instead of matching a mastered track at full gain.
     this.musicGain?.gain.setTargetAtTime(
-      active ? this.levels.music ** 2 : 0,
+      active ? this.levels.music ** 2 * 0.5 : 0,
       this.context.currentTime,
       0.01,
     );

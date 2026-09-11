@@ -34,7 +34,8 @@ test('33 percent is a quiet music level in the actual playback graph', async ({ 
     input.disconnect();
     return results;
   });
-  expect(levels[0]).toBeGreaterThan(0.06);
+  expect(levels[0]).toBeGreaterThan(0.03);
+  expect(levels[0]).toBeLessThan(0.04);
   expect(levels[1] / levels[0]).toBeCloseTo(0.4356, 2);
   expect(levels[2] / levels[0]).toBeCloseTo(0.1089, 2);
   expect(levels[3]).toBeLessThan(0.00001);
@@ -207,4 +208,55 @@ test('real pickup use triggers sound and boosts lengthen the visible stern exhau
   await page.locator('#restart').click();
   expect(await page.evaluate(() => (window as any).__audioCalls)).toEqual(['pickup', item]);
   expect(errors).toEqual([]);
+});
+
+test('foreground cues stand above each course soundtrack at the default mix', async ({ page }) => {
+  await page.route('**/src/main.ts*', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()) + '\nwindow.__testAudio = engine.audio;',
+    });
+  });
+  await page.goto('/');
+  await page.locator('#sound').click();
+  const mix = await page.evaluate(async () => {
+    const audio = (window as any).__testAudio;
+    audio.music.pause();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const effectsPath = '/src/game/sound-effects.ts';
+    const { SoundEffects } = await import(effectsPath);
+    const rms = (samples: Float32Array) =>
+      Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
+    const tracks = [];
+    for (const song of ['sapphire-wake', 'apex-runner', 'chrome-horizon']) {
+      const file = await (await fetch(`/music/${song}.mp3`)).arrayBuffer();
+      const buffer = await audio.context.decodeAudioData(file);
+      const samples = buffer
+        .getChannelData(0)
+        .slice(buffer.sampleRate * 10, buffer.sampleRate * 20);
+      tracks.push(rms(samples) * audio.musicGain.gain.value);
+    }
+    const cues = [];
+    for (let item = 0; item <= 6; item++) {
+      const context = new OfflineAudioContext(1, 48000, 48000);
+      const effects = new SoundEffects(context, context.destination);
+      if (item === 0) effects.pickup();
+      else effects.useItem(item);
+      const samples = (await context.startRendering()).getChannelData(0);
+      cues.push({
+        attack: rms(samples.slice(1200, 7200)) * audio.soundsGain.gain.value,
+        peak:
+          samples.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0) *
+          audio.soundsGain.gain.value,
+      });
+    }
+    return { defaults: audio.volumes, tracks, cues };
+  });
+  expect(mix.defaults).toEqual({ sounds: 1, music: 0.5 });
+  for (const cue of mix.cues) {
+    expect(cue.attack).toBeGreaterThan(Math.max(...mix.tracks) * 1.25);
+    expect(cue.peak).toBeLessThan(0.5);
+  }
+  console.log('Default mix RMS:', mix);
 });
