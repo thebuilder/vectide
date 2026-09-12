@@ -73,6 +73,7 @@ export function createWorld(track: Track): World {
   waterGeo.rotateX(-Math.PI / 2);
   const water = new T.Mesh(waterGeo, waterMaterial);
   water.frustumCulled = false;
+  water.renderOrder = -1;
   group.add(water);
   const farWater = new T.Mesh(
     new T.PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2),

@@ -4,7 +4,7 @@ import { createDolphins } from '../src/game/dolphins';
 import { TRACKS } from '../src/game/tracks';
 import { polygonContact } from '../src/game/hull-contact';
 import { waterHeight } from '../src/game/water';
-import { aiInput, createRacer, stepRacer } from '../src/game/physics';
+import { aiInput, createRacer, stepRacer, updateProgress } from '../src/game/physics';
 it('breaches on approach, departs, and resets for another lap or race', () => {
   const track = TRACKS[0],
     pod = createDolphins(track),
@@ -16,12 +16,12 @@ it('breaches on approach, departs, and resets for another lap or race', () => {
   pod.update(10, r);
   pod.update(11, r);
   expect(pod.group.children.every((a) => a.visible)).toBe(true);
-  pod.update(20, r);
+  pod.update(30, r);
   expect(pod.group.children.every((a) => !a.visible)).toBe(true);
-  pod.update(21, r);
+  pod.update(31, r);
   expect(pod.group.children.every((a) => !a.visible)).toBe(true);
   r.lap = 2;
-  pod.update(22, r);
+  pod.update(32, r);
   expect(pod.group.children[0].visible).toBe(true);
   pod.update(0, r);
   expect(pod.group.children[0].visible).toBe(true);
@@ -32,36 +32,36 @@ it.each(TRACKS.filter((track) => track.id !== 'storm'))(
   (track) => {
     const pod = createDolphins(track),
       r = createRacer(track, 0);
-    Object.assign(r, track.dolphin, { vx: track.dolphin.tx * 20, vz: track.dolphin.tz * 20 });
-    r.yaw = Math.atan2(track.dolphin.tx, track.dolphin.tz);
-    r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
-    r.nextGate =
-      (track.gates.reduce(
-        (closest, g, i) =>
-          Math.hypot(g.x - r.x, g.z - r.z) <
-          Math.hypot(track.gates[closest].x - r.x, track.gates[closest].z - r.z)
-            ? i
-            : closest,
-        0,
-      ) +
-        1) %
-      track.gates.length;
     pod.update(0, r);
-    const initial = pod.group.children.map((animal) => animal.position.clone());
+    const initial = pod.group.children.map(() => null as null | { x: number; z: number });
+    const previousPositions = pod.group.children.map(() => null as null | { x: number; z: number });
     const firstBreach = [-1, -1, -1];
     const airFrames = [0, 0, 0];
     const longestBreach = [0, 0, 0];
-    for (let frame = 0; frame < 6 * 60; frame++) {
+    for (let frame = 0; frame < 30 * 60; frame++) {
       const t = frame / 60;
+      const previous = { x: r.x, z: r.z };
       stepRacer(r, aiInput(r, track, [r]), track, t, 1 / 60);
+      updateProgress(r, previous, track, t, 1);
       pod.update(t, r);
       for (const [i, animal] of pod.group.children.entries()) {
         const { x, y, z } = animal.position;
+        if (animal.visible && previousPositions[i]) {
+          expect(Math.hypot(x - previousPositions[i]!.x, z - previousPositions[i]!.z)).toBeLessThan(
+            0.51,
+          );
+        }
+        if (animal.visible) previousPositions[i] = { x, z };
+        if (animal.visible && !initial[i]) {
+          initial[i] = { x, z };
+          expect(y).toBeLessThan(waterHeight(x, z, t, track) - 2);
+          expect(Math.hypot(x - r.x, z - r.z)).toBeGreaterThan(30);
+        }
         if (animal.visible && y > waterHeight(x, z, t, track)) {
           if (firstBreach[i] < 0) firstBreach[i] = frame;
           longestBreach[i] = Math.max(longestBreach[i], ++airFrames[i]);
         } else airFrames[i] = 0;
-        if (!animal.visible || y < waterHeight(x, z, t, track) - 1) continue;
+        if (!animal.visible || y < waterHeight(x, z, t, track) - 0.5) continue;
         const clearance = Math.hypot(x - r.x, z - r.z);
         expect(clearance).toBeGreaterThan(6);
         expect(clearance).toBeLessThan(40);
@@ -79,7 +79,10 @@ it.each(TRACKS.filter((track) => track.id !== 'storm'))(
     expect(Math.max(...firstBreach) - Math.min(...firstBreach)).toBeGreaterThan(24);
     expect(longestBreach.every((frames) => frames > 5 && frames < 72)).toBe(true);
     pod.group.children.forEach((animal, i) => {
-      expect(animal.position.distanceTo(initial[i])).toBeGreaterThan(50);
+      expect(initial[i]).not.toBeNull();
+      expect(
+        Math.hypot(animal.position.x - initial[i]!.x, animal.position.z - initial[i]!.z),
+      ).toBeGreaterThan(50);
     });
   },
 );
@@ -131,6 +134,9 @@ it('leaves swimming foam and splashes at actual takeoff and re-entry', () => {
       pod = createDolphins(track),
       r = createRacer(track, 0);
     Object.assign(r, track.dolphin, { vx: track.dolphin.tx * 20, vz: track.dolphin.tz * 20 });
+    pod.update(0, r);
+    expect(foam).not.toHaveBeenCalled();
+    expect(burst).not.toHaveBeenCalled();
     for (let frame = 0; frame < 180; frame++) {
       r.x += r.vx / 60;
       r.z += r.vz / 60;
@@ -141,9 +147,23 @@ it('leaves swimming foam and splashes at actual takeoff and re-entry', () => {
     expect(burst.mock.calls.some((call) => call[3] === 0.15)).toBe(true);
     expect(pod.waterEffects.instanceMatrix.count).toBe(384);
     const count = burst.mock.calls.length;
-    for (let frame = 600; frame < 780; frame++) pod.update(frame / 60, r);
+    for (let frame = 1800; frame < 1980; frame++) pod.update(frame / 60, r);
     expect(burst.mock.calls.length).toBe(count);
   } finally {
     vi.restoreAllMocks();
   }
+});
+
+it('drives swimming with the tail while keeping the head steady', async () => {
+  const { Mesh, Vector3 } = await import('three');
+  const { createDolphinModel } = await import('../src/game/dolphin-model');
+  const { poseDolphin } = await import('../src/game/dolphin-pose');
+  const model = createDolphinModel(),
+    body = model.children[0] as InstanceType<typeof Mesh>;
+  poseDolphin(model, 4, 1, 0);
+  const nose = body.getVertexPosition(9 * 20, new Vector3());
+  const tail = body.getVertexPosition(0, new Vector3());
+  poseDolphin(model, 4, 1, Math.PI / 2);
+  expect(body.getVertexPosition(9 * 20, new Vector3()).distanceTo(nose)).toBeLessThan(0.001);
+  expect(body.getVertexPosition(0, new Vector3()).distanceTo(tail)).toBeGreaterThan(0.1);
 });

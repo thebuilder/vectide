@@ -16,6 +16,7 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
   );
   shore.needsUpdate = true;
   const material = new T.ShaderMaterial({
+    transparent: true,
     uniforms: {
       ...music.uniforms,
       uShore: { value: shore },
@@ -148,7 +149,9 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
           vec3 wire=mix(vec3(.003,.009,.017),vec3(.09,.56,.44),grid*distanceFade*sheet*.65);
           color=mix(wire,color,fill);
         }
-        gl_FragColor=vec4(color,1.);
+        // A faint view of nearby submerged hulls and wildlife keeps the waterline readable.
+        float opacity=mix(.86+fresnel*.1,1.,smoothstep(20.,85.,distanceToCamera));
+        gl_FragColor=vec4(color,uIntro<.99 ? 1. : opacity);
       }`,
   });
   material.addEventListener('dispose', () => shore.dispose());

@@ -6,6 +6,8 @@ export interface DolphinAgent {
   vx: number;
   vz: number;
   yaw: number;
+  turnRate: number;
+  mode: 'approach' | 'escort';
   side: number;
   lead: number;
   targetId: number | null;
@@ -29,7 +31,11 @@ export function steerDolphin(
   if (t < animal.interestUntil && animal.departAt === Infinity) {
     for (const racer of racers) {
       const distance = Math.hypot(racer.x - animal.x, racer.z - animal.z);
-      if (distance > 55 || Math.hypot(racer.vx, racer.vz) < 4 || racer.recovery.phase !== 'riding')
+      if (
+        distance > (animal.mode === 'approach' ? 140 : 65) ||
+        Math.hypot(racer.vx, racer.vz) < 4 ||
+        racer.recovery.phase !== 'riding'
+      )
         continue;
       // Keep an existing companion unless another rider is substantially nearer.
       const score = distance - (racer.id === animal.targetId ? 12 : 0);
@@ -38,6 +44,14 @@ export function steerDolphin(
         best = score;
       }
     }
+  }
+  if (
+    target &&
+    animal.mode === 'approach' &&
+    Math.hypot(target.x - animal.x, target.z - animal.z) < 32
+  ) {
+    animal.mode = 'escort';
+    animal.interestUntil = t + 5.8 + Math.abs(animal.side) * 0.1;
   }
   animal.targetId = target?.id ?? null;
   if (!target && animal.departAt === Infinity) animal.departAt = t;
@@ -51,10 +65,10 @@ export function steerDolphin(
     const pace = Math.hypot(target.vx, target.vz),
       fx = target.vx / pace,
       fz = target.vz / pace;
-    const side = animal.side + Math.sin(t * 0.7 + animal.lead) * 1.2;
-    const lead = animal.lead + Math.sin(t * 0.43 + animal.side) * 2;
-    desiredX = target.vx + (target.x + fx * lead + fz * side - animal.x) * 2;
-    desiredZ = target.vz + (target.z + fz * lead - fx * side - animal.z) * 2;
+    const side = animal.side;
+    const lead = animal.lead;
+    desiredX = target.vx + (target.x + fx * lead + fz * side - animal.x) * 1.15;
+    desiredZ = target.vz + (target.z + fz * lead - fx * side - animal.z) * 1.15;
   } else {
     const heading = Math.atan2(animal.vx, animal.vz) + Math.sign(animal.side) * 0.35;
     desiredX = Math.sin(heading) * 15;
@@ -73,10 +87,10 @@ export function steerDolphin(
     desiredX += dx * push;
     desiredZ += dz * push;
   };
-  for (const racer of racers) avoid(racer.x + racer.vx * 0.3, racer.z + racer.vz * 0.3, 9, 28);
+  for (const racer of racers) avoid(racer.x + racer.vx * 0.3, racer.z + racer.vz * 0.3, 12, 36);
   for (const other of pod) if (other !== animal) avoid(other.x, other.z, 5, 14);
 
-  let desiredSpeed = Math.min(32, Math.hypot(desiredX, desiredZ));
+  let desiredSpeed = Math.min(29, Math.hypot(desiredX, desiredZ));
   const desiredHeading = Math.atan2(desiredX, desiredZ);
   let safeHeading: number | undefined;
   for (const turn of [0, 0.4, -0.4, 0.85, -0.85, 1.4, -1.4, Math.PI]) {
@@ -96,9 +110,11 @@ export function steerDolphin(
     Math.sin((safeHeading ?? currentHeading) - currentHeading),
     Math.cos((safeHeading ?? currentHeading) - currentHeading),
   );
-  const heading = currentHeading + Math.max(-dt * 2.6, Math.min(dt * 2.6, delta));
+  const desiredTurn = Math.max(-1.5, Math.min(1.5, delta * 2.5));
+  animal.turnRate += (desiredTurn - animal.turnRate) * (1 - Math.exp(-dt * 5));
+  const heading = currentHeading + animal.turnRate * dt;
   if (Math.abs(delta) > 1) desiredSpeed *= 0.65;
-  const nextSpeed = speed + Math.max(-dt * 20, Math.min(dt * 12, desiredSpeed - speed));
+  const nextSpeed = speed + Math.max(-dt * 14, Math.min(dt * 6, desiredSpeed - speed));
   animal.yaw = heading;
   animal.vx = Math.sin(heading) * nextSpeed;
   animal.vz = Math.cos(heading) * nextSpeed;

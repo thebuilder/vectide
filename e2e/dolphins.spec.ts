@@ -5,12 +5,16 @@ for (const { name, track, viewport } of [
   { name: 'Harbor desktop', track: 1, viewport: { width: 1280, height: 800 } },
   { name: 'Palm phone', track: 0, viewport: { width: 844, height: 390 } },
 ])
-  test(`${name} dolphins make staggered close breaches while following the rider`, async ({
+  test(`${name} dolphins approach and make readable breaches beside the rider`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error' && /THREE|WebGL|shader/i.test(message.text()))
+        errors.push(message.text());
+    });
     await page.route('**/src/main.ts*', async (route) => {
       const response = await route.fetch();
       await route.fulfill({
@@ -37,21 +41,24 @@ for (const { name, track, viewport } of [
       engine.input = () => aiInput(engine.player, engine.track, engine.racers);
       const check = {
         frames: [0, 0, 0],
-        clipped: [0, 0, 0],
+        readable: [0, 0, 0],
         seenPod: false,
         done: false,
         foam: false,
         splash: false,
       };
       (window as any).__dolphinCheck = check;
+      const visibleSince: (number | null)[] = [null, null, null];
       const matrix = new T.Matrix4();
       const onRender = engine.onRender;
       engine.onRender = () => {
         onRender();
         engine.scene.getObjectByName('dolphin-pod').children.forEach((animal: any, i: number) => {
           const { x, y, z } = animal.position;
-          if (!animal.visible || y - waterHeight(x, z, engine.visualTime, engine.track) < 0.0)
+          if (!animal.visible || y - waterHeight(x, z, engine.visualTime, engine.track) < 0.0) {
+            visibleSince[i] = null;
             return;
+          }
           check.frames[i]++;
           // Test the whole animal's bounds, not just its center, against the real chase camera.
           const box = new T.Box3().setFromObject(animal);
@@ -63,7 +70,11 @@ for (const { name, track, viewport } of [
                 if (Math.abs(screen.x) >= 1 || Math.abs(screen.y) >= 1 || Math.abs(screen.z) >= 1)
                   clipped = true;
               }
-          if (clipped) check.clipped[i]++;
+          if (clipped) visibleSince[i] = null;
+          else {
+            visibleSince[i] ??= engine.visualTime;
+            check.readable[i] = Math.max(check.readable[i], engine.visualTime - visibleSince[i]!);
+          }
         });
         const effects = engine.scene.getObjectByName('dolphin-water');
         for (let i = 0; i < effects.count; i++) {
@@ -95,7 +106,8 @@ for (const { name, track, viewport } of [
     await page.waitForFunction(() => (window as any).__dolphinCheck.done);
     const check = await page.evaluate(() => (window as any).__dolphinCheck);
     expect(check.frames.every((frames: number) => frames > 15)).toBe(true);
-    expect(check.clipped).toEqual([0, 0, 0]);
+    // Free-swimming companions can leave the camera in a turn, but each must offer a clear breach.
+    expect(check.readable.every((seconds: number) => seconds >= 0.3)).toBe(true);
     expect(check.foam).toBe(true);
     expect(check.splash).toBe(true);
     expect(errors).toEqual([]);

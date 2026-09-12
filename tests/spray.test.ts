@@ -76,6 +76,6 @@ it('keeps small swimmer trails in a bounded pool and expires them without hull i
   spray.update(1 / 60, [], track, 0);
   expect(spray.activeCount).toBe(32);
   expect(spray.object.instanceMatrix.count).toBe(32);
-  for (let i = 0; i < 120; i++) spray.update(1 / 60, [], track, i / 60);
+  for (let i = 0; i < 30; i++) spray.update(1 / 60, [], track, i / 60);
   expect(spray.activeCount).toBe(0);
 });

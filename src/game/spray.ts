@@ -22,7 +22,10 @@ export class VoxelSpray {
   private blue = new T.Color('#87dfcf');
   activeCount = 0;
 
-  constructor(private readonly capacity = 4200) {
+  constructor(
+    private readonly capacity = 4200,
+    private readonly style: 'hull' | 'swimmer' = 'hull',
+  ) {
     this.positions = new Float32Array(capacity * 3);
     this.velocities = new Float32Array(capacity * 3);
     this.life = new Float32Array(capacity);
@@ -30,19 +33,62 @@ export class VoxelSpray {
     this.sizes = new Float32Array(capacity);
     this.foam = new Uint8Array(capacity);
     this.object = new T.InstancedMesh(
-      new T.TetrahedronGeometry(0.85),
-      new T.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.65,
-        flatShading: true,
-        metalness: 0.08,
-        emissive: 0x3c8d7c,
-        emissiveIntensity: 0.2,
-      }),
+      style === 'swimmer' ? new T.PlaneGeometry(1, 1) : new T.TetrahedronGeometry(0.85),
+      style === 'swimmer'
+        ? new T.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            vertexShader: `
+              attribute float aFoam;
+              attribute float aLife;
+              varying vec2 vUv;
+              varying float vOpacity;
+              void main() {
+                vUv=uv;
+                vOpacity=clamp(aLife/.14,0.,1.);
+                vec3 center=instanceMatrix[3].xyz;
+                vec3 offset;
+                if(aFoam>.5) {
+                  offset=instanceMatrix[0].xyz*position.x-instanceMatrix[2].xyz*position.y;
+                } else {
+                  float size=length(instanceMatrix[0].xyz);
+                  vec3 right=vec3(viewMatrix[0][0],viewMatrix[1][0],viewMatrix[2][0]);
+                  vec3 up=vec3(viewMatrix[0][1],viewMatrix[1][1],viewMatrix[2][1]);
+                  offset=(right*position.x+up*position.y)*size;
+                }
+                gl_Position=projectionMatrix*viewMatrix*modelMatrix*vec4(center+offset,1.);
+              }`,
+            fragmentShader: `
+              varying vec2 vUv;
+              varying float vOpacity;
+              void main() {
+                float softness=1.-smoothstep(.1,1.,length(vUv*2.-1.));
+                gl_FragColor=vec4(.63,.88,.84,softness*vOpacity*.58);
+              }`,
+          })
+        : new T.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.65,
+            flatShading: true,
+            metalness: 0.08,
+            emissive: 0x3c8d7c,
+            emissiveIntensity: 0.2,
+          }),
       this.capacity,
     );
     this.object.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.object.frustumCulled = false;
+    if (style === 'swimmer') {
+      this.object.renderOrder = 1;
+      this.object.geometry.setAttribute(
+        'aFoam',
+        new T.InstancedBufferAttribute(this.foam, 1).setUsage(T.DynamicDrawUsage),
+      );
+      this.object.geometry.setAttribute(
+        'aLife',
+        new T.InstancedBufferAttribute(this.life, 1).setUsage(T.DynamicDrawUsage),
+      );
+    }
     this.clear();
   }
   clear() {
@@ -65,7 +111,8 @@ export class VoxelSpray {
       const theta = Math.random() * Math.PI * 2;
       const speed = (5 + Math.random() * 14) * Math.sqrt(strength);
       this.foam[i] = 0;
-      this.duration[i] = this.life[i] = 0.9 + Math.random() * 0.8;
+      this.duration[i] = this.life[i] =
+        this.style === 'swimmer' ? 0.4 + Math.random() * 0.35 : 0.9 + Math.random() * 0.8;
       this.sizes[i] = (0.12 + Math.random() * 0.35) * (0.5 + strength * 0.5);
       this.positions[j] = x + Math.sin(theta) * 0.7;
       this.positions[j + 1] = y + 0.4;
@@ -79,14 +126,15 @@ export class VoxelSpray {
   /** A small surface trail for swimmers, without a hull's powered spray. */
   foamTrail(x: number, z: number, vx: number, vz: number) {
     const speed = Math.max(1, Math.hypot(vx, vz));
-    for (const side of [-1, 1]) {
+    for (let n = 0; n < 2; n++) {
+      const side = Math.random() * 2 - 1;
       const i = this.cursor++ % this.capacity,
         j = i * 3;
       this.foam[i] = 1;
-      this.duration[i] = this.life[i] = 0.7 + Math.random() * 0.35;
-      this.sizes[i] = 0.24 + Math.random() * 0.16;
-      this.positions[j] = x - (vx / speed) * 1.2 + (vz / speed) * side * 0.3;
-      this.positions[j + 2] = z - (vz / speed) * 1.2 - (vx / speed) * side * 0.3;
+      this.duration[i] = this.life[i] = 0.18 + Math.random() * 0.18;
+      this.sizes[i] = 0.2 + Math.random() * 0.14;
+      this.positions[j] = x - (vx / speed) * 1.2 + (vz / speed) * side * 0.5;
+      this.positions[j + 2] = z - (vz / speed) * 1.2 - (vx / speed) * side * 0.5;
       this.velocities[j] = vx * 0.06 + (vz / speed) * side * 0.7;
       this.velocities[j + 1] = 0;
       this.velocities[j + 2] = vz * 0.06 - (vx / speed) * side * 0.7;
@@ -196,5 +244,9 @@ export class VoxelSpray {
     }
     this.object.instanceMatrix.needsUpdate = true;
     if (this.object.instanceColor) this.object.instanceColor.needsUpdate = true;
+    if (this.style === 'swimmer') {
+      this.object.geometry.attributes.aFoam.needsUpdate = true;
+      this.object.geometry.attributes.aLife.needsUpdate = true;
+    }
   }
 }

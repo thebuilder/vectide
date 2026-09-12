@@ -9,6 +9,8 @@ const swimmer = (x = 0): DolphinAgent => ({
   vx: 0,
   vz: 20,
   yaw: 0,
+  turnRate: 0,
+  mode: 'escort',
   side: 5,
   lead: 16,
   targetId: null,
@@ -51,7 +53,7 @@ it('steers away from a blocked water path and separates from nearby swimmers', (
   const a = swimmer(),
     neighbor = swimmer(-2),
     r = rider(0, 0);
-  for (let frame = 0; frame < 120; frame++) {
+  for (let frame = 0; frame < 240; frame++) {
     steerDolphin(a, [a, neighbor], [r], (x, z) => z < 25 || x > 5, frame / 60, 1 / 60);
     a.x += a.vx / 60;
     a.z += a.vz / 60;
