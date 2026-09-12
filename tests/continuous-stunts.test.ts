@@ -37,19 +37,51 @@ it.each(['pitch', 'yaw'] as const)(
     expect(r.air.armed).toBe(true);
   },
 );
-it('neutral damps momentum and opposite input brakes faster before reversing', () => {
+it.each([60, 120, 144, 240])('countersteering brakes momentum before reversing at %i Hz', (hz) => {
+  for (const axis of ['pitch', 'yaw'] as const) {
+    for (const direction of [-1, 1]) {
+      const r = prepared();
+      hold(r, axis === 'pitch' ? direction : 0, axis === 'yaw' ? direction : 0, 0.5);
+      const start = r.air[axis];
+      const velocity = axis === 'pitch' ? 'pitchVelocity' : 'yawVelocity';
+      const input = {
+        ...neutral,
+        lean: axis === 'pitch' ? -direction : 0,
+        steer: axis === 'yaw' ? -direction : 0,
+      };
+      let stoppedAt = 0;
+      for (let frame = 1; frame <= hz; frame++) {
+        stepAerial(r, input, 4, 1 / hz);
+        if (frame / hz <= 0.2) {
+          expect(r.air[velocity] * direction).toBeGreaterThan(0);
+          expect((r.air[axis] - start) * direction).toBeGreaterThan(0);
+        }
+        if (!stoppedAt && r.air[velocity] * direction <= 0) stoppedAt = frame / hz;
+      }
+      expect(stoppedAt).toBeGreaterThan(0.28);
+      expect(stoppedAt).toBeLessThan(0.35);
+      expect(r.air[velocity] * direction).toBeLessThan(-6);
+    }
+  }
+});
+it('combined flip and spin share the same braking budget', () => {
+  const r = prepared();
+  hold(r, 1, 1, 0.5);
+  expect(Math.hypot(r.air.pitchVelocity, r.air.yawVelocity)).toBeCloseTo(6.8);
+  hold(r, -1, -1, 0.25);
+  expect(r.air.pitchVelocity).toBeGreaterThan(0);
+  expect(r.air.yawVelocity).toBeGreaterThan(0);
+  hold(r, -1, -1, 0.1);
+  expect(r.air.pitchVelocity).toBeLessThan(0);
+  expect(r.air.yawVelocity).toBeLessThan(0);
+});
+it('releasing retains forgiving damping for landing alignment', () => {
   const r = prepared();
   hold(r, 1, 0, 0.5);
-  const opposed = structuredClone(r),
-    released = structuredClone(r);
-  hold(opposed, -1, 0, 0.05);
-  hold(released, 0, 0, 0.05);
-  expect(Math.abs(opposed.air.pitchVelocity)).toBeLessThan(Math.abs(released.air.pitchVelocity));
-  expect(released.air.pitch).toBeGreaterThan(r.air.pitch);
-  hold(released, 0, 0, 0.4);
-  expect(Math.abs(released.air.pitchVelocity)).toBeLessThan(0.3);
-  hold(opposed, -1, 0, 0.3);
-  expect(opposed.air.pitchVelocity).toBeLessThan(-5);
+  const before = r.air.pitch;
+  hold(r, 0, 0, 0.45);
+  expect(r.air.pitch).toBeGreaterThan(before);
+  expect(Math.abs(r.air.pitchVelocity)).toBeLessThan(0.3);
 });
 it('centering helps near upright but never completes an inverted flip', () => {
   const aligned = prepared(),

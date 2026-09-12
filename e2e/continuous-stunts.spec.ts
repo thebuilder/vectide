@@ -149,3 +149,44 @@ for (const device of ['keyboard', 'gamepad', 'touch'] as const)
         expect(errors).toEqual([]);
       });
   });
+
+test('keyboard counter-input carries the spin before reversing', async ({ page }) => {
+  await page.goto('/e2e/fixtures/coast.html');
+  await page.waitForFunction(() => !!(window as any).demo);
+  await page.evaluate(() => {
+    const e = (window as any).demo;
+    cancelAnimationFrame(e.frameId);
+    e.onFrame = () => {};
+    e.start('trial');
+    e.state = 'racing';
+    Object.assign(e.player, { y: 30, vy: 0, wet: 0, onRamp: false });
+    e.player.air.armed = true;
+    e.player.body.airtime = 0.1;
+    e.previous = 1000;
+  });
+  const advance = (frames: number) =>
+    page.evaluate((frames) => {
+      const e = (window as any).demo;
+      for (let i = 0; i < frames; i++) {
+        e.frame(e.previous + 1000 / 60);
+        cancelAnimationFrame(e.frameId);
+      }
+      return {
+        rotation: e.player.air.pitch,
+        velocity: e.player.air.pitchVelocity,
+        armed: e.player.air.armed,
+      };
+    }, frames);
+  await page.keyboard.down('Shift');
+  const spinning = await advance(30);
+  expect(spinning.velocity).toBeGreaterThan(6);
+  await page.keyboard.up('Shift');
+  await page.keyboard.down('c');
+  const braking = await advance(12);
+  expect(braking.armed).toBe(true);
+  expect(braking.velocity).toBeGreaterThan(0);
+  expect(braking.rotation).toBeGreaterThan(spinning.rotation);
+  const reversing = await advance(12);
+  expect(reversing.velocity).toBeLessThan(0);
+  await page.keyboard.up('c');
+});

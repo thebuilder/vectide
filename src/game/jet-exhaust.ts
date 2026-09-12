@@ -24,7 +24,7 @@ export class JetExhaust {
       'z',
     );
     const shellMaterial = new T.MeshBasicMaterial({
-      color: new T.Color(0.15, 1.6, 2.5),
+      color: new T.Color(0.1, 1, 1.5),
       transparent: true,
       opacity: 0.4,
       blending: T.AdditiveBlending,
@@ -34,7 +34,7 @@ export class JetExhaust {
     this.core = new T.Mesh(
       geometry,
       new T.MeshBasicMaterial({
-        color: new T.Color(1.5, 2.5, 3),
+        color: new T.Color(0.8, 1.5, 1.8),
         transparent: true,
         opacity: 0.8,
         blending: T.AdditiveBlending,
@@ -48,21 +48,21 @@ export class JetExhaust {
   update(racer: Racer, dt: number, throttle = Math.min(Math.hypot(racer.vx, racer.vz) / 8, 1)) {
     const speed = Math.min(Math.hypot(racer.vx, racer.vz) / 30, 1);
     const supported = racer.wet > 0 || racer.onRamp;
-    this.contact += ((supported ? 1 : 0) - this.contact) * (1 - Math.exp(-dt * 12));
+    this.contact += ((supported ? 1 : 0) - this.contact) * (1 - Math.exp(-dt * 20));
     const boost = racer.boost > 0 ? Math.min(racer.boostPower - 1, 1.8) * this.contact : 0;
     const driving = racer.recovery.phase === 'riding';
     const target = driving
-      ? Math.max(0, Math.min(1, throttle)) * (0.2 + speed * 0.8) * (0.12 + this.contact * 0.88)
+      ? Math.max(0, Math.min(1, throttle)) * (0.2 + speed * 0.8) * (0.08 + this.contact * 0.92)
       : 0;
-    this.amount += (target - this.amount) * (1 - Math.exp(-dt * 14));
+    this.amount += (target - this.amount) * (1 - Math.exp(-dt * 20));
     this.phase += dt * (18 + speed * 18);
     this.group.visible = this.amount > 0.015;
     const pulse = 1 + Math.sin(this.phase) * 0.055 + Math.sin(this.phase * 2.7) * 0.025;
-    const width = (0.5 + this.amount * 0.5 + boost * 0.2) * pulse * (0.4 + this.contact * 0.6);
-    this.group.scale.set(width, width, this.amount * (1.8 + boost * 1.2) * pulse);
+    const width = (0.4 + this.amount * 0.4 + boost * 0.12) * pulse * (0.4 + this.contact * 0.6);
+    this.group.scale.set(width, width, this.amount * (0.85 + boost * 0.3) * pulse);
     this.shell.material.opacity =
       (0.28 + this.amount * 0.15 + boost * 0.08) * (0.2 + this.contact * 0.8);
-    this.core.material.opacity = 0.8 * (0.25 + this.contact * 0.75);
-    this.shell.material.color.setRGB(boost > 1 ? 0.65 : 0.15, 1.6, 2.5 + boost * 0.4);
+    this.core.material.opacity = 0.6 * (0.25 + this.contact * 0.75);
+    this.shell.material.color.setRGB(boost > 1 ? 0.65 : 0.1, 1, 1.5 + boost * 0.4);
   }
 }

@@ -4,7 +4,7 @@ import { TRACKS } from '../game/tracks';
 
 export const MAX_RACERS = 12;
 // Course geometry and handling must match on host and predicting clients.
-export const VERSION = 19;
+export const VERSION = 20;
 // Discovery must survive protocol updates so the join handshake can explain mismatches.
 // Keep the deployed v13 address for compatibility; do not bump this with VERSION.
 export const ROOM_PREFIX = 'vectide-v13-';

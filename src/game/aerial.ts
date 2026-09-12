@@ -41,7 +41,9 @@ export function cancelTrickSetup(r: Racer): void {
 function turnVelocity(velocity: number, input: number, rotation: number, dt: number): number {
   if (Math.abs(input) > 0.12) {
     const target = input * 6.8;
-    return velocity + (target - velocity) * (1 - Math.exp(-dt * 10));
+    // Bounded torque carries the current spin through counter-input before reversing.
+    const acceleration = 22 * Math.abs(input) * dt;
+    return velocity + Math.max(-acceleration, Math.min(acceleration, target - velocity));
   }
   const error = wrap(rotation);
   if (Math.abs(error) < 0.44) return velocity + (-error * 70 - velocity * 17) * dt;
