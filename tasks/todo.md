@@ -1,6 +1,6 @@
 - [x] Approved cover and metadata (production build and live asset browser test passed)
 - [x] Checkpoints visible in and outside the camera view, with reduced-motion support (205 unit tests; full Storm lap and touch rotation browser checks passed)
 - [x] First-race guidance, help focus/pause access, short-screen setup and readable HUD (205 unit tests; desktop/portrait/landscape help, controller navigation and driving-tip browser checks passed)
-- [ ] Water, wake, spray and camera visual polish
-- [ ] Finish presentation and replay flow
-- [ ] Full regression, runtime visual/performance checks, review and delivery
+- [x] Water, wake, spray and camera visual polish (filled broken foam and fuller angular spray after user feedback; 210 unit tests; three-course Chromium captures and phone-sized WebKit rendering passed)
+- [x] Finish presentation and replay flow (camera/reduced-motion unit checks, actual finish/replay and saved-best comparison, rendered audio sting passed)
+- [x] Full regression, runtime visual/performance checks and independent review (52 Chromium cases covered across full and focused runs, 12 local WebRTC tests, 4 WebKit cases, build/format; physical-device and separate-network limits documented)
