@@ -2,33 +2,35 @@ import { expect, it } from 'vitest';
 import { MusicWater } from '../src/game/music-water';
 import { MusicSpectrum } from '../src/game/spectrum';
 
-it('copies real audio into a fixed uniform buffer with no rider or timing dependency', () => {
+it('limits a sudden audio attack to a gentle highlight change and clears on disable', () => {
   const water = new MusicWater(),
-    music = new MusicSpectrum();
-  const buffer = water.uniforms.uMusicWaveform.value;
-  music.beatStrength = 0.8;
+    music = new MusicSpectrum(),
+    buffer = water.uniforms.uMusicWaveform.value;
+  music.bands.high = 1;
+  music.bands.mid = 1;
+  music.beatStrength = 1;
   music.waveform[4] = 0.6;
-  water.update(music);
-  expect(water.uniforms.uMusicBeat.value).toBe(0.8);
+  water.update(0, music);
+  expect(water.uniforms.uMusicGlint.value).toBeGreaterThan(0);
+  expect(water.uniforms.uMusicGlint.value).toBeLessThan(0.05);
   expect(buffer[4]).toBeCloseTo(0.6);
-  music.waveform[4] = -0.3;
-  water.update(music);
+  for (let i = 1; i < 60; i++) water.update(i / 60, music);
+  expect(water.uniforms.uMusicGlint.value).toBeGreaterThan(0.9);
+  expect(water.uniforms.uMusicGlint.value).toBeLessThan(1);
   expect(water.uniforms.uMusicWaveform.value).toBe(buffer);
-  expect(buffer[4]).toBeCloseTo(-0.3);
-  expect(buffer).toHaveLength(32);
+  water.update(1, music, false);
+  expect(water.uniforms.uMusicGlint.value).toBe(0);
+  expect([...buffer]).toEqual(Array(32).fill(0));
 });
 
-it('clears beat and waveform on silence or reduced motion without retaining an old pulse', () => {
+it.each([30, 60, 120])('filters the same musical envelope at %i fps', (fps) => {
   const water = new MusicWater(),
     music = new MusicSpectrum();
-  music.beatStrength = 1;
-  music.waveform.fill(0.4);
-  for (const enabled of [true, false, true]) {
-    water.update(music, enabled);
-    expect(water.uniforms.uMusicBeat.value).toBe(enabled ? 1 : 0);
-    expect(water.uniforms.uMusicWaveform.value[0]).toBeCloseTo(enabled ? 0.4 : 0);
-  }
-  water.update();
-  expect(water.uniforms.uMusicBeat.value).toBe(0);
-  expect([...water.uniforms.uMusicWaveform.value]).toEqual(Array(32).fill(0));
+  water.update(0, music);
+  music.bands.mid = 1;
+  music.bands.high = 1;
+  for (let i = 1; i <= fps; i++) water.update(i / fps, music);
+  expect(water.uniforms.uMusicGlint.value).toBeCloseTo(1 - Math.exp(-3), 8);
+  water.update(2);
+  expect(water.uniforms.uMusicGlint.value).toBe(0);
 });

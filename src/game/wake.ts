@@ -70,8 +70,8 @@ export class Wake {
             float foam=smoothstep(.4,.6,churn+edge*.08);
             vec3 color=mix(vec3(.12,.44,.36),vec3(.72,1.,.88),foam);
             // Music lights the churn while keeping the foam's full silhouette and contact trail.
-            color+=mix(vec3(.015,.38,.27),vec3(.24,.09,.32),uMusic.y)*uMusic.x*foam;
-            color+=vec3(.14,.21,.24)*uMusic.z*smoothstep(.63,.8,churn);
+            color+=mix(vec3(.015,.1,.07),vec3(.08,.035,.1),uMusic.y)*uMusic.x*foam;
+            color+=vec3(.035,.05,.06)*uMusic.z*smoothstep(.63,.8,churn);
             gl_FragColor=vec4(color,vOpacity*foam*feather);
           }`,
       }),
@@ -85,12 +85,16 @@ export class Wake {
     this.activeSegments = 0;
     this.object.geometry.setDrawRange(0, 0);
   }
-  reactToMusic(bands: Spectrum, beat: number) {
-    this.object.material.uniforms.uMusic.value.set(
-      Math.min(1, beat + bands.low * 0.3),
-      bands.mid,
-      bands.high,
-    );
+  reactToMusic(bands: Spectrum, dt: number, enabled = true) {
+    const value = this.object.material.uniforms.uMusic.value as T.Vector3;
+    if (!enabled) {
+      value.set(0, 0, 0);
+      return;
+    }
+    const blend = 1 - Math.exp(-dt * 3);
+    value.x += (bands.low - value.x) * blend;
+    value.y += (bands.mid - value.y) * blend;
+    value.z += (bands.high - value.z) * blend;
   }
   update(racers: Racer[], time: number, water: WaterProfile) {
     const ids = new Set(racers.map((r) => r.id));

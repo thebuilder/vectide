@@ -353,7 +353,7 @@ export function createWorld(track: Track): World {
       reducedMotion = false,
       music,
     ) {
-      musicWater.update(music, !reducedMotion);
+      musicWater.update(t, music, !reducedMotion);
       updateWaterPulses(waterMaterial, surface, t);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {
@@ -364,7 +364,7 @@ export function createWorld(track: Track): World {
         (base, material) =>
           (material.emissiveIntensity = base * (1 + bands.low * 0.5 + bands.high * 0.15)),
       );
-      musicVisuals.update(bands);
+      musicVisuals.update(bands, reducedMotion ? 0 : (music?.beatStrength ?? 0));
       sun.scale.setScalar(1 + bands.low * 0.035);
       waterMaterial.uniforms.uMusic.value.set(bands.low, bands.mid, bands.high);
       passing.update(t, player);

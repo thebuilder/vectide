@@ -103,16 +103,12 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
         color=mix(color,vec3(.36,.64,.56),min(.85,surf));
         }
         color=mix(color,horizon*.23,1.-exp(-distanceToCamera*.0008));
-        // Bass lights existing swells; mids color the wave faces and treble catches foam.
+        // Music gently catches the existing sun glints and breaking foam, leaving the sea's color steady.
         float nearField=1.-smoothstep(65.,135.,distanceToCamera);
         if(nearField>0.) {
-          float ridge=pow(smoothstep(.42,.96,crest),2.);
           float detail=crestDetail(vWorld.xz);
-          float bassLight=(uMusic.x*.24+uMusicBeat*.76)*ridge*detail;
-          color+=vec3(.018,.34,.255)*bassLight*nearField;
-          float face=smoothstep(.28,.62,crest)*(1.-smoothstep(.7,1.,crest));
-          color+=vec3(.032,.055,.12)*uMusic.y*face*nearField;
-          color+=vec3(.18,.28,.27)*uMusic.z*(foam*.6+specular*.35)*nearField;
+          color+=vec3(.035,.055,.05)*uMusicGlint*specular*detail*nearField;
+          color+=vec3(.009,.015,.012)*uMusicGlint*foam*nearField;
         }
         // Weapon light lands on the ocean's displaced facets, including crests and troughs.
         for(int i=0;i<${MAX_WATER_PULSES};i++) {

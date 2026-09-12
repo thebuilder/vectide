@@ -687,7 +687,7 @@ export class Engine {
         ? this.audio.spectrum
         : undefined;
     this.world.update(this.visualTime, p, bands, itemSurface, this.reducedMotion.matches, music);
-    this.wake.reactToMusic(bands, this.reducedMotion.matches ? 0 : (music?.beatStrength ?? 0));
+    this.wake.reactToMusic(bands, dt, !this.reducedMotion.matches);
     this.pickupVisuals.update(
       this.network?.items ?? this.items,
       this.visualTime,

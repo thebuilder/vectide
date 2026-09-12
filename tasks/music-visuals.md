@@ -1,18 +1,17 @@
-# Music in the racing water
+# Music in the racing scene
 
-The soundtrack should be visible in the ocean being ridden. Bass transients now light the existing wave crests, the midrange colors their faces, and treble catches breaking foam and the hull wake. A short live waveform sample adds detail along the crests. All light follows the authored water surface; there is no rider-centered emitter, extra displacement, camera motion or gameplay timing change.
+Music gently modulates existing sun glints, breaking foam and the hull wake. The water keeps its base color: there is no broad illumination across wave crests/faces, no rider-centered emitter and no extra displacement. Bass accents remain in the distant illuminated columns. Coastal surf follows the physical waves independently of music.
 
-The existing audio analyser provides frequency energy and time-domain samples. Rising bass attacks are detected with a cooldown and a frame-rate-adjusted slope threshold. Sustained notes and silence do not synthesize a tempo. The shader uses one fixed 32-float buffer and skips waveform work outside the near field. No extra meshes, draw calls, dependencies or networking messages are added.
+A continuous mid/treble envelope, smoothed with a 3-per-second exponential response, controls the small surface highlights. A fixed 32-sample live waveform adds variation inside those glints. The wake uses the same smoothing rate and a restrained color range. Rising bass attacks are still detected for the distant lights, with a cooldown and a frame-rate-adjusted slope threshold; sustained notes do not synthesize a tempo.
 
-Reduced motion disables the added modulation. Pause, mute and zero music volume clear beat accents; existing band highlights fade smoothly with the analyser. The effect resumes from live audio rather than replaying stored pulses.
+The shader skips waveform work outside the near field. No extra meshes, draw calls, dependencies or networking messages are added. Reduced motion disables the modulation. Pause, mute and zero music volume clear surface accents; band-driven wake highlights fade smoothly.
 
 ## Verification
 
-- 217 unit/simulation tests pass, including bass attacks at 30/60/120 fps, sustained notes, silence, waveform capture and uniform clearing. Existing CPU/GPU surface and wake contact tests remain green.
-- Production build and formatting pass.
-- Native Chromium, all three real course songs: roughly 16.7–16.8 ms p95 frame time at 1280×800 with six racers. The soundtrack-specific tests observe real beat changes, waveform values and wake response.
-- Phone-sized WebKit: all three songs pass live waveform, wake response, pause, mute and reduced-motion checks at 390×844.
-- All seven final Chromium checks pass: three course music integrations, soundtrack selection/mute, GPU/CPU water agreement, weapon lighting and wake release.
-- A 20-second in-game capture includes the live soundtrack and game sound mix. It records the renderer without the HTML HUD.
+- 224 unit/simulation tests pass, including envelope behavior at 30/60/120 fps, sustained tones, silence, waveform capture and uniform clearing. Existing coastal CPU/GPU surface and wake-contact tests remain green.
+- Production build, formatting and independent code review pass.
+- Final native Chromium tests pass for all three actual course songs, mute, pause, reduced motion, coastal rendering/resource cleanup and GPU/CPU shore agreement. Frame time is 16.7–16.8 ms p95 at 1280×800 with six racers.
+- All three song integrations and coastal checks passed in phone-sized WebKit during this work. The final softer-lighting pass also passes the Palm soundtrack, mute, pause and reduced-motion checks at 390×844.
+- The 20-second renderer capture includes the live soundtrack and game sounds, without the HTML HUD: `artifacts/ride-the-waveform.mp4`.
 
-These are desktop browser measurements. Physical phone performance, speaker balance and controller feel are not claimed.
+These are desktop browser measurements. Physical phone performance, speaker balance and separate-network behavior are not claimed.
