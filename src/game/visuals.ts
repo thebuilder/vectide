@@ -208,6 +208,9 @@ export function createWorld(track: Track): World {
     ramp.rotation.y = Math.atan2(r.tx, r.tz);
     ramp.position.set(r.x, r.baseHeight, r.z);
     ramps.add(ramp);
+    const markings = glowing(0xffbc57);
+    // Draw after the water so its depth hides submerged portions of the glowing strips.
+    markings.transparent = true;
     for (let i = 0; i < 5; i++) {
       const mark = box(
         ramp,
@@ -218,7 +221,7 @@ export function createWorld(track: Track): World {
         h * (i / 5),
         -l + (r.length * i) / 5,
         0xffbc57,
-        glowing(0xffbc57),
+        markings,
       );
       mark.rotation.x = -Math.atan2(h, r.length);
     }
