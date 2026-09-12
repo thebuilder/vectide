@@ -214,7 +214,7 @@ export class Pickups {
         effect.z += effect.launch.vz * release;
       }
       if (effect.kind <= 3) this.projectile(effect, dt, time, active);
-      else this.wave(effect, active, time);
+      else this.wave(effect, active);
     }
     this.state.effects = this.state.effects.filter(
       (e) => e.age < (e.kind === 3 ? 18 : e.kind === 4 ? 1.1 : e.kind === 5 ? 2 : 4),
@@ -267,10 +267,12 @@ export class Pickups {
       e.hit = 0;
     }
   }
-  private wave(e: ItemEffect, racers: Racer[], time: number) {
+  private wave(e: ItemEffect, racers: Racer[]) {
     for (const r of racers) {
       if (e.hit & (1 << r.id) || (e.kind === 5 && r.id === e.owner)) continue;
-      if (Math.abs(r.y - waterHeight(r.x, r.z, time, this.surface)) > 5) continue;
+      // Buoyancy owns water contact and vertical lift. A crest transfers its shove only
+      // while it touches the hull; proximity below an airborne rider is not a hit.
+      if (r.wet === 0 || r.onRamp) continue;
       const dx = r.x - e.x,
         dz = r.z - e.z;
       const d = Math.hypot(dx, dz);
@@ -288,9 +290,6 @@ export class Pickups {
       const nz = e.kind === 4 ? dz / (d || 1) : Math.cos(e.yaw);
       r.vx += nx * 12 * power;
       r.vz += nz * 12 * power;
-      r.vy = Math.max(r.vy, 6 * power);
-      r.y += 0.25;
-      r.onRamp = false;
       r.rollVelocity += clamp(side || nx, -1, 1) * power;
     }
   }

@@ -134,9 +134,10 @@ torpedoes require near-direct hull contact to explode. Sea mines toss and grow f
 the stern, splash down, then arm. Jet boost gives a short speed increase; wake boost is stronger
 and leaves waves behind. Wake emitter builds a wave at the stern that spreads
 outward and travels backwards. Explosions
-raise expanding shockwaves that lift and push nearby craft. These waves deform
-the ocean mesh and the same water field drives hull buoyancy, camera clearance and
-spray. They are not separate overlay planes.
+raise expanding waves. Each crest shoves a craft once while its hull is in water contact;
+airborne riders and craft supported by ramps receive no weapon shove. Vertical lift comes
+from buoyancy against the displaced water, with no extra launch impulse or height snap.
+The same water field drives the ocean mesh, hull buoyancy, camera clearance and spray.
 
 First place receives mostly wake emitters and some mines, never boosts or torpedoes.
 The trailing third receives torpedoes and boosts only. Middle positions get a mix.

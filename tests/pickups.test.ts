@@ -83,7 +83,7 @@ describe('race pickups', () => {
     off.use(r, true);
     expect(off.state.effects).toHaveLength(0);
   });
-  it('direct torpedo hits detonate and shockwaves lift and push racers once', () => {
+  it('direct torpedo hits detonate and shockwaves shove contacting racers once', () => {
     const { items, racers } = setup(),
       r = racers[0],
       victim = racers[1];
@@ -91,11 +91,11 @@ describe('race pickups', () => {
     items.use(r, true);
     for (let i = 0; i < 12; i++) items.step(1 / 120, 0, racers);
     expect(items.state.effects[0].kind).toBe(4);
-    expect(victim.vy).toBeGreaterThan(0);
+    expect(victim.vy).toBe(0);
     expect(victim.vz).toBeGreaterThan(0);
-    const vy = victim.vy;
+    const vz = victim.vz;
     items.step(1 / 120, 0, racers);
-    expect(victim.vy).toBe(vy);
+    expect(victim.vz).toBe(vz);
   });
   it('seeking torpedoes turn toward a racer ahead', () => {
     const { items, racers } = setup();
@@ -125,7 +125,8 @@ describe('race pickups', () => {
     expect(wave.yaw).toBeCloseTo(Math.PI);
     Object.assign(racers[1], { x: wave.x, z: wave.z - wakeTravel(0.5), vy: 0 });
     items.step(0.5, 0, racers);
-    expect(racers[1].vy).toBeGreaterThan(0);
+    expect(racers[1].vz).toBeLessThan(0);
+    expect(racers[1].vy).toBe(0);
   });
   it('boosts increase speed, expire, and only wake boost sheds waves', () => {
     for (const item of [4, 5]) {
