@@ -64,7 +64,7 @@ app.innerHTML = `
  <div class="touch-navigation"><button data-touch-key="reset" hidden>RESET</button><div class="touch-stick-wrap"><button data-touch-key="stick" class="touch-stick" aria-label="Slide to steer and lean" aria-describedby="stick-help"><span class="stick-axis" aria-hidden="true"></span><span class="stick-thumb" aria-hidden="true"></span></button><span id="stick-help">STEER / LEAN</span></div></div>
  <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
 </div>
-<div id="lap-split" hidden role="status" aria-live="polite"></div>
+<div id="lap-split" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><div class="pause-volume"><label for="sounds-volume"><span>SOUNDS</span><output id="sounds-volume-value" for="sounds-volume"></output></label><input id="sounds-volume" type="range" min="0" max="100" step="1" /><label for="music-volume"><span>MUSIC</span><output id="music-volume-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1" /></div><button autofocus id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button><button id="pause-help" class="quiet">CONTROLS</button></dialog>
 ${rideHelp}
@@ -186,7 +186,7 @@ function clearFinishPresentation() {
   results.clear();
   shownLaps = 0;
   splitUntil = 0;
-  $('lap-split').hidden = true;
+  $('lap-split').classList.remove('is-visible');
 }
 function showRace() {
   clearFinishPresentation();
@@ -288,15 +288,22 @@ engine.onUpdate = (s) => {
     shownLaps = s.player.laps.length;
     const latest = s.player.laps[shownLaps - 1];
     const previous = s.player.laps[shownLaps - 2];
+    const difference = previous === undefined ? undefined : Math.round((latest - previous) * 100);
+    const comparison =
+      difference === undefined || difference === 0 ? 'even' : difference < 0 ? 'faster' : 'slower';
     const delta =
-      previous === undefined
+      difference === undefined
         ? ''
-        : ` · ${latest < previous ? '−' : '+'}${Math.abs(latest - previous).toFixed(2)}s`;
-    $('lap-split').textContent = `LAP ${shownLaps} · ${formatTime(latest)}${delta}`;
+        : `<span class="lap-split-delta"><strong>${difference === 0 ? '±' : difference < 0 ? '−' : '+'}${(Math.abs(difference) / 100).toFixed(2)}s</strong><small>${comparison.toUpperCase()}</small></span>`;
+    $('lap-split').dataset.comparison = comparison;
+    $('lap-split').innerHTML =
+      `<span class="lap-split-label">LAP ${shownLaps}</span><strong class="lap-split-time">${formatTime(latest)}</strong>${delta}`;
     splitUntil = performance.now() + 3200;
   }
-  $('lap-split').hidden =
-    !['racing', 'finished'].includes(s.state) || performance.now() > splitUntil;
+  $('lap-split').classList.toggle(
+    'is-visible',
+    ['racing', 'finished'].includes(s.state) && performance.now() < splitUntil,
+  );
   const audio = engine.audio.status;
   $('sound-label').textContent = audio.error || (audio.enabled ? 'SOUND ON' : 'SOUND OFF');
   $('sound').setAttribute('aria-pressed', String(audio.enabled));
