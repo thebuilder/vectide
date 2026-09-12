@@ -38,7 +38,7 @@ pnpm build
 | Enter / Space / gamepad A          | Select focused control                                  |
 | Gamepad B                          | Back or close dialog                                    |
 
-Pass between both buoys at each gate, in order and in the forward direction. The compact HUD arrow and minimap point toward the next gate. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Manual reset does not advance a checkpoint, and reset runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
+Pass between both buoys at each gate, in order and in the forward direction. Camera-facing amber double chevrons mark the next gate. Its HUD badge follows the gate and stays within the screen edges when the gate is outside the view, with explicit turn-back or turn-left/right guidance. The badge stays clear of mobile controls in both orientations; reduced motion disables its directional animation and the chevron bob. Only the next two gates are shown, with the finish gantry also visible on the final approach. Cutting across the course does not advance checkpoints. Manual reset does not advance a checkpoint, and reset runs cannot set a local best. Best laps are stored locally, separately for each course and mode.
 
 ## Multiplayer
 

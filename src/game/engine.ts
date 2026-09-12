@@ -59,6 +59,15 @@ export class Engine {
   private spray = new VoxelSpray();
   private pickupVisuals = new PickupVisuals();
   private cameraAnchor = new T.Vector3();
+  private guideTarget = new T.Vector3();
+  get checkpointTarget() {
+    const gate = this.world.gates[this.player.nextGate];
+    if (gate) {
+      this.guideTarget.copy(gate.position);
+      this.guideTarget.y += 6.5;
+    }
+    return this.guideTarget;
+  }
   readonly audio = new RaceAudio();
   private itemSounds = new ItemSoundEvents(this.audio);
   track = TRACKS[0];
@@ -663,7 +672,7 @@ export class Engine {
       ? { low: 0, mid: 0, high: 0 }
       : this.audio.spectrum.bands;
     const itemSurface = (this.network?.items ?? this.items).surface;
-    this.world.update(this.visualTime, p, bands, itemSurface);
+    this.world.update(this.visualTime, p, bands, itemSurface, this.reducedMotion.matches);
     this.pickupVisuals.update(
       this.network?.items ?? this.items,
       this.visualTime,
@@ -747,6 +756,13 @@ export class Engine {
     }
     this.cameraAnchor.set(p.x, p.y, p.z);
     this.camera.lookAt(this.camTarget);
+    this.world.gates.forEach((gate) => {
+      const marker = gate.getObjectByName('next')!;
+      marker.rotation.y = Math.atan2(
+        this.camera.position.x - gate.position.x,
+        this.camera.position.z - gate.position.z,
+      );
+    });
     if (this.state === 'racing' || this.state === 'finished' || this.lobby)
       this.spray.update(dt, this.racers, this.track, this.visualTime, itemSurface);
     this.audio.update(

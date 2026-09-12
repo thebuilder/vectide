@@ -19,7 +19,13 @@ export interface World {
   gates: T.Group[];
   ramps: T.Group;
   turbines: T.Group[];
-  update: (t: number, player: Racer, bands?: Spectrum, surface?: WaterProfile) => void;
+  update: (
+    t: number,
+    player: Racer,
+    bands?: Spectrum,
+    surface?: WaterProfile,
+    reducedMotion?: boolean,
+  ) => void;
   dispose: () => void;
 }
 export function createWorld(track: Track): World {
@@ -141,10 +147,29 @@ export function createWorld(track: Track): World {
     }
     const marker = new T.Group();
     marker.name = 'next';
-    const arrow = new T.Mesh(new T.ConeGeometry(1.2, 2, 3), glowing(0xffbc57, 0.35));
-    arrow.rotation.x = Math.PI;
-    arrow.position.y = 8;
-    marker.add(arrow);
+    const chevron = new T.Shape();
+    chevron.moveTo(-1.8, 1);
+    chevron.lineTo(-1.8, 0.2);
+    chevron.lineTo(0, -1);
+    chevron.lineTo(1.8, 0.2);
+    chevron.lineTo(1.8, 1);
+    chevron.lineTo(0, -0.15);
+    chevron.closePath();
+    const geometry = new T.ShapeGeometry(chevron);
+    for (let j = 0; j < 2; j++) {
+      const backing = new T.Mesh(
+        geometry,
+        new T.MeshBasicMaterial({ color: 0x07171e, side: T.DoubleSide }),
+      );
+      backing.position.set(0, 8 + j * 1.7, -0.04);
+      backing.scale.setScalar(1.2);
+      const arrow = new T.Mesh(
+        geometry,
+        new T.MeshBasicMaterial({ color: 0xffc65a, side: T.DoubleSide, toneMapped: false }),
+      );
+      arrow.position.y = 8 + j * 1.7;
+      marker.add(backing, arrow);
+    }
     gate.add(marker);
     gates.push(gate);
     group.add(gate);
@@ -317,7 +342,7 @@ export function createWorld(track: Track): World {
     gates,
     ramps,
     turbines,
-    update(t, player, bands = { low: 0, mid: 0, high: 0 }, surface = track) {
+    update(t, player, bands = { low: 0, mid: 0, high: 0 }, surface = track, reducedMotion = false) {
       updateWaterPulses(waterMaterial, surface, t);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {
@@ -345,7 +370,9 @@ export function createWorld(track: Track): World {
             buoy.position.y =
               waterHeight(p.x + buoy.position.x, p.z + buoy.position.z, t, surface) - g.position.y;
           });
-        g.getObjectByName('next')!.visible = i === player.nextGate;
+        const marker = g.getObjectByName('next')!;
+        marker.visible = i === player.nextGate;
+        marker.position.y = reducedMotion ? 0 : (Math.sin(t * 4) + 1) * 0.5;
       });
       turbines.forEach((r, i) => (r.rotation.z = t * 0.3 + i));
     },

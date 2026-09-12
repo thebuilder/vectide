@@ -1,5 +1,6 @@
 import { formatTime, setupResults } from './results';
 import { PickupHud } from './pickup-hud';
+import { CheckpointGuide } from './checkpoint-guide';
 import './pickups.css';
 import { courseCards } from './course-cards';
 import { setupMultiplayer } from './multiplayer/ui';
@@ -12,6 +13,7 @@ import { Controls } from './controls';
 import './style.css';
 import './multiplayer/style.css';
 import './menu.css';
+import './checkpoint-guide.css';
 import { setupMenuScreens } from './menu';
 import { Engine, type Mode, type Snapshot } from './game/engine';
 import { TRACKS } from './game/tracks';
@@ -46,7 +48,7 @@ app.innerHTML = `
 </main>
 <section id="hud" hidden aria-label="Race information">
   <div class="race-top"><div><span class="label" id="position-label">POSITION</span><strong id="position">01<span>/ 06</span></strong></div><div class="lap-info"><span class="label">LAP <b id="lap">1 / 3</b></span><strong id="timer">00:00.000</strong></div></div>
-  <div id="checkpoint" class="checkpoint"><span id="direction" aria-hidden="true">↑</span><div>NEXT GATE <b id="gate">01</b><small id="distance">0 M</small></div></div>
+  <div id="checkpoint" class="checkpoint"><span id="direction" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 7-7 7 7M5 20l7-7 7 7"/></svg></span><div><span id="gate-bearing">NEXT GATE</span> <b id="gate">01</b><small id="distance">0 M</small></div></div>
   <div id="item-hud" hidden><span id="item-icon" aria-hidden="true">◇</span><div><strong id="item-name" aria-hidden="true"></strong><span id="item-announcement" class="sr-only" role="status"></span><small id="item-description">Ride through a pickup</small><span id="item-use"><span class="item-use-label"><kbd data-keyboard="Q" data-gamepad="LB" data-touch="USE button">Q</kbd> USE ITEM</span></span></div></div>
   <div id="notice" class="notice" role="status"></div>
   <div class="race-bottom"><div class="map-wrap"><canvas id="map" width="220" height="190" aria-label="Course map"></canvas><span id="track-name">PALM CIRCUIT</span></div><div class="speed"><strong id="speed">0</strong><span>KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small id="water-state">ON THE WATER</small></div></div>
@@ -114,6 +116,7 @@ $('pickups-toggle').onclick = () => {
   $('pickups-toggle').textContent = engine.pickupsEnabled ? 'ON' : 'OFF';
 };
 const pickupHud = new PickupHud($('item-hud'));
+const checkpointGuide = new CheckpointGuide($('checkpoint'));
 engine.onFrame = (now) => {
   controls.poll(now);
   pickupHud.update(
@@ -312,15 +315,6 @@ engine.onUpdate = (s) => {
       ? 'AIRBORNE'
       : s.track.sea + ' WATER';
   $('track-name').textContent = s.track.name;
-  const gate = s.track.gates[s.player.nextGate];
-  const d = Math.hypot(gate.x - s.player.x, gate.z - s.player.z);
-  $('gate').textContent = String(s.player.nextGate + 1).padStart(2, '0');
-  $('distance').textContent = `${Math.round(d)} M`;
-  const turn = Math.atan2(
-    Math.sin(Math.atan2(gate.x - s.player.x, gate.z - s.player.z) - s.player.yaw),
-    Math.cos(Math.atan2(gate.x - s.player.x, gate.z - s.player.z) - s.player.yaw),
-  );
-  $('direction').style.transform = `rotate(${-turn}rad)`;
   const recovery = s.player.recovery.phase;
   $('notice').textContent =
     recovery !== 'riding'
@@ -393,7 +387,10 @@ const multiplayer = setupMultiplayer(
     document.body.classList.remove('playing');
   },
 );
-engine.onRender = multiplayer.render;
+engine.onRender = () => {
+  multiplayer.render();
+  checkpointGuide.render(engine);
+};
 // Read-only diagnostics support reproducible browser verification without altering race state.
 Object.defineProperty(window, '__vectide', {
   get: () =>
@@ -416,6 +413,7 @@ Object.defineProperty(window, '__vectide', {
       intro: engine.introStatus,
       sprayCount: engine.sprayCount,
       renderer: engine.renderer.info.render,
+      checkpointGuide: checkpointGuide.state,
     }),
 });
 

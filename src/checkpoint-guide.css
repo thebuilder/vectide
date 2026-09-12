@@ -1,0 +1,60 @@
+/* The next gate stays inside the playable viewport, even when the world marker cannot. */
+#hud #checkpoint {
+  position: fixed;
+  width: 148px;
+  min-height: 56px;
+  margin: 0;
+  padding: 10px 12px;
+  transform: translate(-50%, -50%);
+  gap: 9px;
+  color: #fff4db;
+  background: #07171ef2;
+  border: 1px solid #ffc65a;
+  box-shadow: 0 4px 12px #020b1280;
+  text-shadow: none;
+  transition: background-color 160ms ease-out;
+}
+#hud #checkpoint[hidden] {
+  display: none;
+}
+#checkpoint > div {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+#checkpoint b {
+  color: #ffc65a;
+  font-weight: 700;
+}
+#checkpoint small {
+  font-size: 12px;
+  margin-top: 4px;
+  color: #fff4db;
+}
+#checkpoint #direction {
+  display: none;
+  width: 25px;
+  height: 28px;
+  flex: none;
+  color: #ffc65a;
+}
+#checkpoint #direction svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#checkpoint[data-outside='true'] #direction {
+  display: block;
+}
+#checkpoint[data-outside='true'] {
+  border-width: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #checkpoint[data-outside='true'] #direction svg {
+    animation: gate-direction 1.2s ease-in-out infinite;
+  }
+  @keyframes gate-direction {
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+}
