@@ -682,7 +682,12 @@ export class Engine {
       ? { low: 0, mid: 0, high: 0 }
       : this.audio.spectrum.bands;
     const itemSurface = (this.network?.items ?? this.items).surface;
-    this.world.update(this.visualTime, p, bands, itemSurface, this.reducedMotion.matches);
+    const music =
+      this.audio.enabled && this.audio.volumes.music > 0 && this.state !== 'paused'
+        ? this.audio.spectrum
+        : undefined;
+    this.world.update(this.visualTime, p, bands, itemSurface, this.reducedMotion.matches, music);
+    this.wake.reactToMusic(bands, this.reducedMotion.matches ? 0 : (music?.beatStrength ?? 0));
     this.pickupVisuals.update(
       this.network?.items ?? this.items,
       this.visualTime,

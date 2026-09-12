@@ -1,11 +1,13 @@
 import * as T from 'three';
 import type { Track } from './tracks';
+import { MusicWater, musicWaterGLSL } from './music-water';
 import { MAX_WATER_PULSES, pulseGLSL, pulseUniformsGLSL } from './water-pulses';
 import { waterGLSL, type WaterProfile } from './water';
 
-export function createWaterMaterial(track: Track): T.ShaderMaterial {
+export function createWaterMaterial(track: Track, music = new MusicWater()): T.ShaderMaterial {
   return new T.ShaderMaterial({
     uniforms: {
+      ...music.uniforms,
       uTime: { value: 0 },
       uPulseCount: { value: 0 },
       uPulses: { value: Array.from({ length: MAX_WATER_PULSES }, () => new T.Vector4()) },
@@ -34,6 +36,7 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
       }`,
     fragmentShader: `
       ${pulseUniformsGLSL}
+      ${musicWaterGLSL}
       uniform float uIntro;
       uniform vec3 uMusic;
       uniform vec3 base;
@@ -73,12 +76,17 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         float foam=breaking*smoothstep(.52,.77,broadNoise*.55+ripples*.45);
         color=mix(color,vec3(.16,.44,.38),foam*.42);
         color=mix(color,horizon*.23,1.-exp(-distanceToCamera*.0008));
-        // Music catches the actual crests and facets; no separate moving overlay.
+        // Bass lights existing swells; mids color the wave faces and treble catches foam.
         float nearField=1.-smoothstep(65.,135.,distanceToCamera);
-        float crestLight=pow(crest,6.)*(.2+foam*.8);
-        color+=vec3(.045,.34,.26)*crestLight*uMusic.x*nearField;
-        color+=vec3(.025,.09,.12)*foam*uMusic.y*nearField;
-        color+=vec3(.15,.24,.28)*uMusic.z*specular*nearField;
+        if(nearField>0.) {
+          float ridge=pow(smoothstep(.42,.96,crest),2.);
+          float detail=crestDetail(vWorld.xz);
+          float bassLight=(uMusic.x*.24+uMusicBeat*.76)*ridge*detail;
+          color+=vec3(.018,.34,.255)*bassLight*nearField;
+          float face=smoothstep(.28,.62,crest)*(1.-smoothstep(.7,1.,crest));
+          color+=vec3(.032,.055,.12)*uMusic.y*face*nearField;
+          color+=vec3(.18,.28,.27)*uMusic.z*(foam*.6+specular*.35)*nearField;
+        }
         // Weapon light lands on the ocean's displaced facets, including crests and troughs.
         for(int i=0;i<${MAX_WATER_PULSES};i++) {
           if(i>=uPulseCount) break;

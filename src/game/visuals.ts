@@ -1,5 +1,6 @@
 import * as T from 'three';
-import type { Spectrum } from './spectrum';
+import type { MusicSpectrum, Spectrum } from './spectrum';
+import { MusicWater } from './music-water';
 import { batchStatic } from './batch';
 import { CELL, waterHeight, type WaterProfile } from './water';
 import { createWaterMaterial, updateWaterPulses } from './water-material';
@@ -25,6 +26,7 @@ export interface World {
     bands?: Spectrum,
     surface?: WaterProfile,
     reducedMotion?: boolean,
+    music?: MusicSpectrum,
   ) => void;
   dispose: () => void;
 }
@@ -64,7 +66,8 @@ export function createWorld(track: Track): World {
   sun.position.set(2300, 360, 500);
   sun.lookAt(0, 0, 0);
   group.add(sun);
-  const waterMaterial = createWaterMaterial(track);
+  const musicWater = new MusicWater();
+  const waterMaterial = createWaterMaterial(track, musicWater);
   const waterGeo = new T.PlaneGeometry(1536, 1536, 1536 / CELL, 1536 / CELL);
   waterGeo.rotateX(-Math.PI / 2);
   const water = new T.Mesh(waterGeo, waterMaterial);
@@ -342,7 +345,15 @@ export function createWorld(track: Track): World {
     gates,
     ramps,
     turbines,
-    update(t, player, bands = { low: 0, mid: 0, high: 0 }, surface = track, reducedMotion = false) {
+    update(
+      t,
+      player,
+      bands = { low: 0, mid: 0, high: 0 },
+      surface = track,
+      reducedMotion = false,
+      music,
+    ) {
+      musicWater.update(music, !reducedMotion);
       updateWaterPulses(waterMaterial, surface, t);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {

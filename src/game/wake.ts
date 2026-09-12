@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { Racer } from './physics';
+import type { Spectrum } from './spectrum';
 import { waterHeight, type WaterProfile } from './water';
 
 type Point = {
@@ -45,12 +46,14 @@ export class Wake {
     this.object = new T.Mesh(
       geometry,
       new T.ShaderMaterial({
+        uniforms: { uMusic: { value: new T.Vector3() } },
         transparent: true,
         depthWrite: false,
         side: T.DoubleSide,
         vertexShader:
           'attribute float opacity; attribute float across; attribute vec2 flow; varying float vOpacity; varying float vAcross; varying vec2 vFlow; void main(){vOpacity=opacity;vAcross=across;vFlow=flow;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader: `varying float vOpacity;
+        fragmentShader: `uniform vec3 uMusic;
+          varying float vOpacity;
           varying float vAcross;
           varying vec2 vFlow;
           float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -66,6 +69,9 @@ export class Wake {
             float feather=smoothstep(0.,.28,edge+(noise(flow*.8)-.5)*.28);
             float foam=smoothstep(.4,.6,churn+edge*.08);
             vec3 color=mix(vec3(.12,.44,.36),vec3(.72,1.,.88),foam);
+            // Music lights the churn while keeping the foam's full silhouette and contact trail.
+            color+=mix(vec3(.015,.38,.27),vec3(.24,.09,.32),uMusic.y)*uMusic.x*foam;
+            color+=vec3(.14,.21,.24)*uMusic.z*smoothstep(.63,.8,churn);
             gl_FragColor=vec4(color,vOpacity*foam*feather);
           }`,
       }),
@@ -78,6 +84,13 @@ export class Wake {
     this.airborne.clear();
     this.activeSegments = 0;
     this.object.geometry.setDrawRange(0, 0);
+  }
+  reactToMusic(bands: Spectrum, beat: number) {
+    this.object.material.uniforms.uMusic.value.set(
+      Math.min(1, beat + bands.low * 0.3),
+      bands.mid,
+      bands.high,
+    );
   }
   update(racers: Racer[], time: number, water: WaterProfile) {
     const ids = new Set(racers.map((r) => r.id));
