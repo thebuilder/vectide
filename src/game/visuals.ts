@@ -381,7 +381,7 @@ export function createWorld(track: Track): World {
               waterHeight(p.x + buoy.position.x, p.z + buoy.position.z, t, surface) - g.position.y;
           });
         const marker = g.getObjectByName('next')!;
-        marker.visible = i === player.nextGate;
+        marker.visible = i !== 0 && i === player.nextGate;
         marker.position.y = reducedMotion ? 0 : (Math.sin(t * 4) + 1) * 0.5;
       });
       turbines.forEach((r, i) => (r.rotation.z = t * 0.3 + i));

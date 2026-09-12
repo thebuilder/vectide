@@ -70,10 +70,12 @@ test.describe('touch checkpoint guidance', () => {
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await start(page);
+    await expect(page.locator('#checkpoint')).toBeHidden();
     await page.evaluate(() => {
       const e = (window as any).__testEngine;
       e.input = () => ({ throttle: 0, brake: 1, steer: 0, lean: 0 });
       e.player.vx = e.player.vz = 0;
+      e.player.nextGate = 1;
       const g = e.track.gates[e.player.nextGate];
       e.player.yaw = Math.atan2(g.x - e.player.x, g.z - e.player.z) + Math.PI;
     });

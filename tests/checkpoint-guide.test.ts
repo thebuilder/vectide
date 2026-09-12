@@ -9,7 +9,10 @@ it('animates only the active gate marker and keeps reduced-motion markers still'
   const track = TRACKS[0],
     world = createWorld(track),
     racer = createRacer(track, 0);
-  const marker = world.gates[0].getObjectByName('next')!;
+  world.update(0, racer);
+  expect(world.gates[0].getObjectByName('next')!.visible).toBe(false);
+  racer.nextGate = 1;
+  const marker = world.gates[1].getObjectByName('next')!;
   world.update(0, racer);
   const first = marker.position.y;
   world.update(0.4, racer);
@@ -18,10 +21,10 @@ it('animates only the active gate marker and keeps reduced-motion markers still'
   const still = marker.position.y;
   world.update(2, racer, undefined, track, true);
   expect(marker.position.y).toBe(still);
-  racer.nextGate = 1;
+  racer.nextGate = 2;
   world.update(2, racer);
   expect(marker.visible).toBe(false);
-  expect(world.gates[1].getObjectByName('next')!.visible).toBe(true);
+  expect(world.gates[2].getObjectByName('next')!.visible).toBe(true);
   world.dispose();
 });
 

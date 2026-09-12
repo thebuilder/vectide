@@ -18,7 +18,7 @@ export class CheckpointGuide {
 
   render(engine: Engine) {
     const shown = ['countdown', 'racing'].includes(engine.state) && !engine.track.practiceRadius;
-    this.element.hidden = !shown;
+    this.element.hidden = !shown || engine.player.nextGate === 0;
     if (!shown) return;
     const width = innerWidth,
       height = innerHeight;
