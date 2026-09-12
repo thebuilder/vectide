@@ -253,6 +253,9 @@ it('round-trips continuous stunt rotation and diving state through a real snapsh
     pitchVelocity: -6.1,
     yawVelocity: 2.4,
     dive: 0.35,
+    landings: 3,
+    message: '1080 SPIN! LANDED',
+    messageTime: 1.7,
   });
   const message = parseMessage(
     encodeMessage({ type: 'snapshot', race: 1, state: host.snapshot() }),

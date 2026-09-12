@@ -178,7 +178,7 @@ it.each([0, 2])('loads on a real ramp and releases %s meters before the lip', (l
       1 / 120,
     );
     started ||= r.air.armed && r.air.pitch > 1;
-    landed ||= r.air.message === 'FLIP LANDED';
+    landed ||= r.air.message === 'BACKFLIP LANDED';
     maxCompression = Math.max(maxCompression, r.body.compression);
   }
   expect(started).toBe(true);

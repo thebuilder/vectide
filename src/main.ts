@@ -1,4 +1,6 @@
 import { formatTime, setupResults } from './results';
+import { StuntHud } from './stunt-hud';
+import './stunt-hud.css';
 import { PickupHud } from './pickup-hud';
 import { CheckpointGuide } from './checkpoint-guide';
 import { RideCoach } from './ride-coach';
@@ -64,6 +66,8 @@ app.innerHTML = `
  <div class="touch-navigation"><button data-touch-key="reset" hidden>RESET</button><div class="touch-stick-wrap"><button data-touch-key="stick" class="touch-stick" aria-label="Slide to steer and lean" aria-describedby="stick-help"><span class="stick-axis" aria-hidden="true"></span><span class="stick-thumb" aria-hidden="true"></span></button><span id="stick-help">STEER / LEAN</span></div></div>
  <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
 </div>
+<div id="stunt-hud" aria-hidden="true" hidden></div>
+<div id="stunt-announcement" class="sr-only" role="status" aria-atomic="true"></div>
 <div id="lap-split" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="countdown" hidden aria-live="polite"></div>
 <dialog id="pause-dialog"><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Water can wait.</h2><p id="pause-note"></p><div class="pause-volume"><label for="sounds-volume"><span>SOUNDS</span><output id="sounds-volume-value" for="sounds-volume"></output></label><input id="sounds-volume" type="range" min="0" max="100" step="1" /><label for="music-volume"><span>MUSIC</span><output id="music-volume-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1" /></div><button autofocus id="resume" class="primary">KEEP RIDING <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button><button id="restart" class="secondary">RESTART RACE</button><button id="exit" class="quiet">BACK TO COURSES</button><button id="pause-help" class="quiet">CONTROLS</button></dialog>
@@ -121,10 +125,12 @@ $('pickups-toggle').onclick = () => {
   $('pickups-toggle').setAttribute('aria-pressed', String(engine.pickupsEnabled));
   $('pickups-toggle').textContent = engine.pickupsEnabled ? 'ON' : 'OFF';
 };
+const stuntHud = new StuntHud($('stunt-hud'), $('stunt-announcement'));
 const pickupHud = new PickupHud($('item-hud'));
 const checkpointGuide = new CheckpointGuide($('checkpoint'));
 engine.onFrame = (now) => {
   controls.poll(now);
+  stuntHud.update(engine.player, ['racing', 'freeride', 'paused'].includes(engine.state));
   pickupHud.update(
     engine.player,
     (engine.network?.items ?? engine.items).enabled && ['racing', 'paused'].includes(engine.state),
@@ -184,6 +190,7 @@ let splitUntil = 0;
 function clearFinishPresentation() {
   clearTimeout(finishTimer);
   results.clear();
+  stuntHud.clear();
   shownLaps = 0;
   splitUntil = 0;
   $('lap-split').classList.remove('is-visible');

@@ -57,7 +57,7 @@ for (const scenario of ['flip', 'spin', 'inverted'] as const)
       expect(landing.phase).toBe('riding');
       expect(landing.speed).toBeGreaterThan(14);
       expect(landing.speed).toBeLessThan(20);
-      expect(landing.message).toBe('STUNT LANDED');
+      expect(landing.message).toBe(scenario === 'flip' ? 'BACKFLIP LANDED' : '360 SPIN LANDED');
       if (scenario === 'flip') {
         expect(Math.abs(landing.pitch)).toBeGreaterThan(0.01);
         expect(Math.abs(landing.pitch)).toBeLessThan(Math.PI / 4);

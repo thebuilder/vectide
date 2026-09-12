@@ -828,8 +828,39 @@ test('continuous flip controls and rendered rotation reach the other racer', asy
     );
     expect(Math.hypot(...after.map((v: number, i: number) => v - before[i]))).toBeGreaterThan(0.2);
     await host.keyboard.up('Shift');
-    await expect.poll(async () => (await state(guest)).racers[0].air.message).toBe('FLIP LANDED');
+    await expect
+      .poll(async () => (await state(guest)).racers[0].air.message)
+      .toBe('BACKFLIP LANDED');
     expect((await state(guest)).racers[0].recovery.phase).toBe('riding');
+    await expect(host.locator('#stunt-hud')).toHaveText('BACKFLIP');
+    await expect(guest.locator('#stunt-hud')).toBeHidden();
+    await host.evaluate(async () => {
+      const e = (window as any).__testEngine,
+        r = e.racers[1];
+      const path = '/src/game/water.ts',
+        { waterHeight } = await import(path);
+      Object.assign(r, {
+        y: waterHeight(r.x, r.z, e.visualTime, e.track) + 0.9,
+        vy: -4,
+        wet: 0,
+        onRamp: false,
+        pitch: 0,
+        roll: 0,
+        pitchVelocity: 0,
+        rollVelocity: 0,
+      });
+      r.body.airtime = 0.3;
+      Object.assign(r.air, {
+        armed: true,
+        pitch: 0,
+        yaw: Math.PI * 6,
+        pitchVelocity: 0,
+        yawVelocity: 0,
+      });
+    });
+    await expect(guest.locator('#stunt-hud')).toHaveText('1080 SPIN!');
+    await expect(guest.locator('#stunt-hud')).toBeVisible();
+    await expect(host.locator('#stunt-hud')).not.toHaveText('1080 SPIN!');
     expect(errors).toEqual([]);
   } finally {
     await hostContext.close();

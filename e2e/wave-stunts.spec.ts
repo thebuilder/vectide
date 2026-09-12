@@ -81,7 +81,7 @@ for (const mode of ['flip', 'dive'] as const)
     expect(result.phase).toBe('riding');
     if (mode === 'flip') {
       expect(result.maxRotation).toBeGreaterThan(Math.PI * 2 - 0.1);
-      expect(result.message).toBe('FLIP LANDED');
+      expect(result.message).toBe('BACKFLIP LANDED');
     } else {
       expect(result.maxDive).toBeGreaterThan(0.1);
       expect(result.minDepth).toBeLessThan(-0.15);

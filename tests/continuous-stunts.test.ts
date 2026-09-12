@@ -100,7 +100,7 @@ it('counts multiple completed turns on landing and rewards a flip only once', ()
   r.vz = 16;
   r.yaw = Math.atan2(12, 16);
   landAerial(r, -5);
-  expect(r.air.message).toBe('DOUBLE FLIP LANDED');
+  expect(r.air.message).toBe('DOUBLE BACKFLIP LANDED');
   expect(Math.hypot(r.vx, r.vz)).toBeCloseTo(22);
   expect(r.air.armed).toBe(false);
   landAerial(r, -5);

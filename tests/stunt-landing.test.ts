@@ -39,7 +39,7 @@ it('grades one landing against the deck when water contact and ramp support over
       slopeZ: (ramp.tz * ramp.height) / ramp.length,
       velocity: 0,
     });
-    expect(r.air.message).toBe('FLIP LANDED');
+    expect(r.air.message).toBe('BACKFLIP LANDED');
     expect(r.recovery.phase).toBe('riding');
   } finally {
     land.mockRestore();

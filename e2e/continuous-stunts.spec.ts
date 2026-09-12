@@ -144,7 +144,7 @@ for (const device of ['keyboard', 'gamepad', 'touch'] as const)
         else await cdp!.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
         const landing = await advance('land');
         expect(landing.phase).toBe('riding');
-        expect(landing.message).toBe(`${axis.toUpperCase()} LANDED`);
+        expect(landing.message).toBe(axis === 'flip' ? 'BACKFLIP LANDED' : '360 SPIN LANDED');
         expect(landing.speed).toBeGreaterThan(15);
         expect(errors).toEqual([]);
       });

@@ -12,6 +12,7 @@ export interface AerialState {
   charge: number;
   queued: boolean;
   buffer: number;
+  landings: number;
   message: string;
   messageTime: number;
 }
@@ -27,12 +28,14 @@ export function createAerialState(): AerialState {
     charge: 0,
     queued: false,
     buffer: 0,
+    landings: 0,
     message: '',
     messageTime: 0,
   };
 }
 const wrap = (v: number) => Math.atan2(Math.sin(v), Math.cos(v));
 const TAU = Math.PI * 2;
+export const STUNT_MESSAGE_SECONDS = 2;
 /** Clear only takeoff intent; pausing must not release a queued stunt. */
 export function cancelTrickSetup(r: Racer): void {
   Object.assign(r.air, { held: false, charge: 0, queued: false, buffer: 0 });
@@ -112,7 +115,9 @@ export function landAerial(
   const air = r.air;
   const armed = air.armed;
   const flips = Math.floor((Math.abs(air.pitch) + 0.06) / TAU);
-  const spins = Math.floor((Math.abs(air.yaw) + 0.06) / TAU);
+  // A saved landing within 45 degrees still names the intended rotation.
+  const namedFlips = Math.floor((Math.abs(air.pitch) + Math.PI / 4) / TAU);
+  const spinDegrees = Math.floor((Math.abs(air.yaw) + Math.PI / 4) / Math.PI) * 180;
   const rotation = Math.max(Math.abs(air.pitch), Math.abs(air.yaw));
   // The visible landing orientation becomes the physical hull orientation, even for
   // unfinished tricks. Preserve world momentum so an angled spin skids into its new heading.
@@ -150,16 +155,19 @@ export function landAerial(
         r.vz *= (speed + gain) / speed;
       }
     }
-    const labels = [
-      flips ? rotationLabel(flips, 'FLIP') : '',
-      spins ? rotationLabel(spins, 'SPIN') : '',
-    ].filter(Boolean);
-    air.message = labels.length
-      ? `${labels.join(' + ')} LANDED`
-      : rotation > Math.PI
-        ? 'STUNT LANDED'
-        : '';
-    air.messageTime = air.message ? 1.8 : 0;
+    if (armed) {
+      const labels = [
+        namedFlips ? rotationLabel(namedFlips, air.pitch < 0 ? 'FRONTFLIP' : 'BACKFLIP') : '',
+        spinDegrees ? `${spinDegrees} SPIN${spinDegrees >= 1080 ? '!' : ''}` : '',
+      ].filter(Boolean);
+      air.message = labels.length
+        ? `${labels.join(' + ')} LANDED`
+        : rotation > Math.PI
+          ? 'STUNT LANDED'
+          : '';
+      air.messageTime = air.message ? STUNT_MESSAGE_SECONDS : 0;
+      if (air.message) air.landings++;
+    }
   }
   air.armed = false;
   air.pitch = 0;

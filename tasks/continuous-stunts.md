@@ -31,3 +31,10 @@ This is one local gameplay change. Existing course geometry, weapons, and scener
 
 - Reduced normal plume length by about 53% and maximum boost length by about 65%, with narrower, dimmer emission and faster reduction to a nozzle glow in flight.
 - 276 unit tests and the production build pass. Fifteen distinct native Chromium checks cover mapped stunt controls, counter-input momentum, ramp landings, wave flips/diving, airborne exhaust, real local WebRTC stunt replication, and protocol compatibility. Touch and gamepad inputs are simulated; physical devices were not exercised.
+
+## Landing trick text
+
+- Successful landings show unboxed, italic trick text above the rider: 180/360/540/720 spins, `1080 SPIN!` and beyond, frontflips/backflips, multiple flips, and combinations. Saved landings within 45 degrees receive the intended name; the existing flip speed reward threshold is unchanged.
+- Each landing has an event counter, so identical tricks replay the entrance. Ordinary wave contact preserves the message; crashes, expiry, restarting, and leaving play clear it.
+- The two-second display has a 240ms upward entrance and 240ms fade-out. Simulation time freezes it during pause. Reduced motion retains only the fade, and a separate live region announces the result.
+- Verified: 289 unit tests, production build, and 18 distinct native Chromium checks, including phone layout, repeated tricks, pause/restart, crashes, mapped controls, and local WebRTC host/guest trick ownership. A six-second browser recording shows a real ramp backflip and its landing text.
