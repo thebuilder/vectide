@@ -1,3 +1,4 @@
+import { PHYSICS_STEP, RacerPresentation } from './racer-presentation';
 import { RideCamera } from './ride-camera';
 import { Wake } from './wake';
 import { PickupVisuals } from './pickup-visuals';
@@ -59,6 +60,7 @@ export class Engine {
   private world: World;
   private jets: T.Group[] = [];
   private rideCamera = new RideCamera();
+  private presentation = new RacerPresentation();
   private wake = new Wake();
   private spray = new VoxelSpray();
   private pickupVisuals = new PickupVisuals();
@@ -235,6 +237,7 @@ export class Engine {
     this.spray.clear();
     this.wake.clear();
     this.rideCamera.clear();
+    this.presentation.clear();
     this.jets.forEach((j) => {
       this.scene.remove(j);
       const materials = new Set<T.Material>();
@@ -450,6 +453,7 @@ export class Engine {
     this.spray.clear();
     this.wake.clear();
     this.rideCamera.clear();
+    this.presentation.clear();
     this.audio.setScene('title');
     this.state = 'menu';
     this.items = new Pickups(this.track, false);
@@ -478,7 +482,10 @@ export class Engine {
   reset() {
     if (this.state !== 'racing' && this.state !== 'freeride') return;
     if (this.network) this.network.requestReset();
-    else recoverRacer(this.player, this.track, this.visualTime);
+    else {
+      recoverRacer(this.player, this.track, this.visualTime);
+      this.presentation.clear();
+    }
     this.audio.tone(180);
   }
   readonly drivingInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
@@ -667,12 +674,23 @@ export class Engine {
       this.state === 'finished'
     ) {
       this.accumulator += dt;
-      while (this.accumulator >= 1 / 120) {
-        this.tick(1 / 120);
-        this.accumulator -= 1 / 120;
+      while (this.accumulator >= PHYSICS_STEP) {
+        if (!this.network && (this.state === 'racing' || this.state === 'finished'))
+          this.presentation.capture(this.racers);
+        this.tick(PHYSICS_STEP);
+        this.accumulator -= PHYSICS_STEP;
       }
     }
-    const rendered = this.racers.map((r) => this.network?.renderRacer(r, dt) ?? r);
+    const interpolate =
+      !this.network &&
+      this.presentation.ready &&
+      ['racing', 'finished', 'paused'].includes(this.state);
+    const alpha = this.accumulator / PHYSICS_STEP;
+    const renderTime = interpolate ? this.visualTime - (1 - alpha) * PHYSICS_STEP : this.visualTime;
+    const rendered = this.racers.map(
+      (r) =>
+        this.network?.renderRacer(r, dt) ?? (interpolate ? this.presentation.render(r, alpha) : r),
+    );
     const p = rendered[this.racers.indexOf(this.player)];
     const control = this.input();
     Object.assign(this.drivingInput, control);
@@ -686,11 +704,11 @@ export class Engine {
       this.audio.enabled && this.audio.volumes.music > 0 && this.state !== 'paused'
         ? this.audio.spectrum
         : undefined;
-    this.world.update(this.visualTime, p, bands, itemSurface, this.reducedMotion.matches, music);
+    this.world.update(renderTime, p, bands, itemSurface, this.reducedMotion.matches, music);
     this.wake.reactToMusic(bands, dt, !this.reducedMotion.matches);
     this.pickupVisuals.update(
       this.network?.items ?? this.items,
-      this.visualTime,
+      renderTime,
       !this.track.practiceRadius &&
         ['countdown', 'racing', 'paused', 'finished'].includes(this.state),
       bands.low,
@@ -729,7 +747,7 @@ export class Engine {
       const portrait = this.camera.aspect < 1;
       const a =
         (portrait ? 1.4 : 1.72) +
-        (this.reducedMotion.matches ? 0 : Math.sin(this.visualTime * 0.1) * 0.06);
+        (this.reducedMotion.matches ? 0 : Math.sin(renderTime * 0.1) * 0.06);
       // Leave the menu's left column clear. Portrait looks farther ahead from above,
       // placing the rider in the open water below the buttons while retaining the sunset.
       const offset = portrait ? 2.6 : this.camera.aspect * 3.2;
@@ -763,8 +781,7 @@ export class Engine {
       this.camera.position.lerp(desired, 1 - Math.exp(-dt * 8));
       this.camera.position.y = Math.max(
         this.camera.position.y,
-        waterHeight(this.camera.position.x, this.camera.position.z, this.visualTime, itemSurface) +
-          0.8,
+        waterHeight(this.camera.position.x, this.camera.position.z, renderTime, itemSurface) + 0.8,
       );
       this.camTarget.lerp(
         new T.Vector3(p.x + Math.sin(p.yaw) * 4, p.y + 0.6, p.z + Math.cos(p.yaw) * 4),
@@ -783,8 +800,8 @@ export class Engine {
       );
     });
     if (this.state === 'racing' || this.state === 'finished' || this.lobby) {
-      this.spray.update(dt, rendered, this.track, this.visualTime, itemSurface);
-      this.wake.update(rendered, this.visualTime, itemSurface);
+      this.spray.update(dt, rendered, this.track, renderTime, itemSurface);
+      this.wake.update(rendered, renderTime, itemSurface);
     }
     this.audio.update(
       Math.hypot(p.vx, p.vz),
