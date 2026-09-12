@@ -122,12 +122,15 @@
     window.noiseStarts = 0;
     const originalStart = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (...args) {
-      window.noiseStarts++;
+      // Count one-shot weapon cues, excluding the continuous engine water loop.
+      if (!this.loop) window.noiseStarts++;
       return originalStart.apply(this, args);
     };
     document.querySelector('#detonate').onclick = async () => {
       await demo.audio.start();
       demo.state = 'racing';
+      // This frozen fixture changes state outside the engine frame; resume its audio bus too.
+      demo.audio.transport(false, 0);
       showWeapon(4, 3, 0, 0.08);
       demo.state = 'paused';
       demo.spray.update(0.16, [], demo.track, 3, demo.items.surface);

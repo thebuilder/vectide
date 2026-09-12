@@ -8,7 +8,7 @@ test('select courses, ride, pause, recover and restart', async ({ page }) => {
   await page.getByRole('button', { name: /PORT AFTERDARK/ }).click();
   await expect(page.locator('#description')).toContainText('docks');
   await page.getByRole('button', { name: /STORM SIGNAL/ }).click();
-  await expect(page.locator('#description')).toContainText('Heavy swell');
+  await expect(page.locator('#description')).toContainText(/heavy swell/i);
   await page.getByRole('button', { name: /PALM CIRCUIT/ }).click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
   await page.locator('#start').click();

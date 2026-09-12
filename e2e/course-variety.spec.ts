@@ -30,14 +30,16 @@ for (const [index, id] of [
         crates: e.items.boxes.length,
         dolphins: !!e.scene.getObjectByName('dolphin-pod'),
         boat: !!e.scene.getObjectByName('offshore-cargo-boat'),
-        heading: Math.cos(e.player.yaw),
+        heading:
+          Math.sin(e.player.yaw) * e.track.gates[0].tx +
+          Math.cos(e.player.yaw) * e.track.gates[0].tz,
       };
     });
     expect(setup.ramps).toBe(0);
     expect(setup.crates).toBe(15);
     expect(setup.boat).toBe(id === 'storm');
     expect(setup.dolphins).toBe(id !== 'storm');
-    expect(id === 'storm' ? setup.heading : -setup.heading).toBeGreaterThan(0.9);
+    expect(setup.heading).toBeGreaterThan(0.99);
     await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 2);
     await page.screenshot({ path: `artifacts/${id}-pickup-spacing.png` });
     await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 8);
