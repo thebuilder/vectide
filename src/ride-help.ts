@@ -17,7 +17,7 @@ export const rideHelp = `
       <dt data-keyboard="STEER + E" data-touch="JUMP" data-gamepad="STICK + RB">STEER + E</dt><dd data-keyboard="Steer while loading to prepare a spin." data-touch="Use a wave crest or amber ramp to launch your flip." data-gamepad="Steer while loading to prepare a spin.">Steer while loading to prepare a spin.</dd>
       <dt data-keyboard="Q" data-touch="USE" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd>
     </dl>
-    <p>Jumps are optional. An unfinished trick can throw you off; your rider will swim back and remount.</p>
+    <p>Jumps are optional. Land close to upright: imperfect flips lose speed, and spins keep their landing direction. Inverted or steep, hard landings can throw you off; your rider will swim back and remount.</p>
   </details>
   <button id="close-help" class="primary">GOT IT</button>
 </dialog>`;

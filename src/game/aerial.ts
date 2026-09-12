@@ -91,15 +91,48 @@ export function stepAerial(r: Racer, input: Input, clearance: number, dt: number
     air.yaw = 0;
   }
 }
-export function landAerial(r: Racer, entryVelocity: number): void {
+export interface LandingSurface {
+  slopeX: number;
+  slopeZ: number;
+  velocity: number;
+}
+
+export function landAerial(
+  r: Racer,
+  entryVelocity: number,
+  surface: LandingSurface = { slopeX: 0, slopeZ: 0, velocity: 0 },
+): void {
   const air = r.air;
-  const failed = air.trick !== 'none' && air.progress > 0.06 && air.progress < 0.94;
-  const severe = entryVelocity < -16 && Math.abs(r.pitch) > 1;
-  if (failed || severe) {
-    r.pitch = Math.atan2(Math.sin(r.pitch + air.pitch), Math.cos(r.pitch + air.pitch));
-    r.yaw += air.yaw;
-    beginRecovery(r);
-  } else {
+  const trick = air.trick;
+  const rotation = Math.max(Math.abs(air.pitch), Math.abs(air.yaw));
+  const wrap = (v: number) => Math.atan2(Math.sin(v), Math.cos(v));
+  // The visible landing orientation becomes the physical hull orientation, even for
+  // unfinished tricks. Preserve world momentum so an angled spin skids into its new heading.
+  r.pitch = wrap(r.pitch + air.pitch);
+  r.yaw = wrap(r.yaw + air.yaw);
+  const fx = Math.sin(r.yaw),
+    fz = Math.cos(r.yaw);
+  const pitchError = wrap(r.pitch - Math.atan(surface.slopeX * fx + surface.slopeZ * fz));
+  const rollError = wrap(r.roll - Math.atan(surface.slopeX * fz - surface.slopeZ * fx));
+  const tilt = Math.acos(Math.max(-1, Math.min(1, Math.cos(pitchError) * Math.cos(rollError))));
+  const impact = Math.max(
+    0,
+    (surface.velocity + r.vx * surface.slopeX + r.vz * surface.slopeZ - entryVelocity) /
+      Math.hypot(1, surface.slopeX, surface.slopeZ),
+  );
+  const unsafe = tilt > Math.PI / 2 || (tilt > 1.15 && impact > 7) || (tilt > 0.9 && impact > 16);
+  if (unsafe) beginRecovery(r);
+  else {
+    if (trick !== 'none') {
+      const speed = Math.hypot(r.vx, r.vz);
+      const sideways = speed > 0.1 ? Math.abs((r.vx * fz - r.vz * fx) / speed) : 0;
+      const scrub = Math.min(
+        0.18,
+        ((1 - Math.cos(tilt)) * 0.25 + sideways * 0.05) * Math.min(1.5, Math.max(0.25, impact / 8)),
+      );
+      r.vx *= 1 - scrub;
+      r.vz *= 1 - scrub;
+    }
     if (air.pending === 'FLIP LANDED' && !r.finished && r.recovery.phase === 'riding') {
       const speed = Math.hypot(r.vx, r.vz);
       // A small landing reward follows existing momentum; it cannot turn or launch the ski.
@@ -109,8 +142,9 @@ export function landAerial(r: Racer, entryVelocity: number): void {
         r.vz *= (speed + gain) / speed;
       }
     }
-    air.message = air.pending;
-    air.messageTime = air.pending ? 1.8 : 0;
+    air.message =
+      air.pending || (rotation > Math.PI ? `${trick === 'flip' ? 'FLIP' : 'SPIN'} LANDED` : '');
+    air.messageTime = air.message ? 1.8 : 0;
   }
   air.trick = 'none';
   air.pitch = 0;

@@ -4,13 +4,14 @@ import { landAerial, stepAerial, cancelTrickSetup } from '../src/game/aerial';
 import { beginRecovery } from '../src/game/recovery';
 import { TRACKS } from '../src/game/tracks';
 const track = { ...TRACKS[0], wave: 0, waveZones: [], land: [], obstacles: [], ramps: [] };
-function jump(height: number, velocity: number, trick: number) {
+function jump(height: number, velocity: number, trick: number, startProgress?: number) {
   const r = createRacer(track, 0);
   for (let i = 0; i < 24; i++)
     stepAerial(r, { throttle: 1, steer: 0, brake: 0, lean: 0, trick }, 0.5, 1 / 120);
   r.wet = 0;
   Object.assign(r, { x: 0, z: 0, y: height, vy: velocity, vx: 0, vz: 20, yaw: 0 });
   r.body.airtime = 0.2;
+  if (startProgress !== undefined) Object.assign(r.air, { trick: 'flip', progress: startProgress });
   const phases = new Set<string>();
   let rotated = false,
     landed = false;
@@ -31,8 +32,8 @@ it.each([1, 2, -2])('completes an airborne trick %s when there is enough height'
   expect(r.air.pitch).toBe(0);
   expect(r.air.yaw).toBe(0);
 });
-it('a late trick throws the rider off and remounts beside the craft', () => {
-  const { r, phases, landed } = jump(1.8, -4, 1);
+it('an inverted flip throws the rider off and remounts beside the craft', () => {
+  const { r, phases, landed } = jump(0.9, -6, 1, 0.5);
   expect(landed).toBe(false);
   expect(phases.has('falling')).toBe(true);
   expect(phases.has('swimming')).toBe(true);
@@ -163,5 +164,67 @@ it.each([0, 2])('loads on a real ramp and releases %s meters before the lip', (l
   expect(started).toBe(true);
   expect(landed).toBe(true);
   expect(maxCompression).toBeGreaterThan(0.25);
+  expect(r.recovery.crashes).toBe(0);
+});
+
+it.each([10, 25, 45])('saves a flip landing %i degrees short with a speed penalty', (degrees) => {
+  const r = createRacer(track, 0);
+  r.vz = 20;
+  Object.assign(r.air, {
+    trick: 'flip',
+    progress: 0.9,
+    pitch: 2 * Math.PI - (degrees * Math.PI) / 180,
+  });
+  landAerial(r, -6);
+  expect(r.recovery.phase).toBe('riding');
+  expect(r.pitch).toBeCloseTo((-degrees * Math.PI) / 180);
+  expect(r.vz).toBeLessThan(20);
+  expect(r.vz).toBeGreaterThan(16);
+});
+
+it.each([-1, 1])(
+  'keeps an unfinished spin heading in direction %i without throwing the rider',
+  (direction) => {
+    const r = createRacer(track, 0);
+    r.vz = 20;
+    r.yaw = 0;
+    Object.assign(r.air, { trick: 'spin', progress: 0.85, yaw: direction * (2 * Math.PI - 0.4) });
+    landAerial(r, -6);
+    expect(r.recovery.phase).toBe('riding');
+    expect(r.yaw).toBeCloseTo(-direction * 0.4);
+    expect(r.vx).toBe(0);
+    expect(r.vz).toBeGreaterThan(16);
+  },
+);
+
+it('judges landing orientation rather than the animation completion percentage', () => {
+  const results = [0.1, 0.5, 0.93, 0.99].map((progress) => {
+    const r = createRacer(track, 0);
+    Object.assign(r, { yaw: 0, vz: 20 });
+    Object.assign(r.air, { trick: 'flip', progress, pitch: 2 * Math.PI - 0.2 });
+    landAerial(r, -6);
+    return { phase: r.recovery.phase, pitch: r.pitch, speed: r.vz };
+  });
+  expect(results.every((result) => result.phase === 'riding')).toBe(true);
+  results.forEach((result) => expect(result).toEqual(results[0]));
+});
+
+it('still ejects an upside-down landing', () => {
+  const r = createRacer(track, 0);
+  Object.assign(r.air, { trick: 'flip', progress: 0.99, pitch: Math.PI });
+  landAerial(r, -4);
+  expect(r.recovery.phase).toBe('falling');
+});
+
+it('judges pitch against the slope being landed on', () => {
+  const r = createRacer(track, 0);
+  Object.assign(r, { yaw: 0, pitch: 1.2, vz: 0 });
+  landAerial(r, -12, { slopeX: 0, slopeZ: Math.tan(1.2), velocity: 0 });
+  expect(r.recovery.phase).toBe('riding');
+});
+
+it('keeps a shallow late flip attached instead of failing its incomplete animation', () => {
+  const { r, phases } = jump(1.8, -4, 1);
+  expect([...phases]).toEqual(['riding']);
   expect(r.recovery.crashes).toBe(0);
 });

@@ -140,11 +140,22 @@ export function stepRacer(
     left = 0,
     right = 0,
     contacts = 0;
+  const stunt = r.air.trick !== 'none';
+  const contactYaw = r.yaw + r.air.yaw,
+    contactPitch = r.pitch + r.air.pitch;
   for (const along of [-1.55, 1.55])
     for (const side of [-0.62, 0.62]) {
-      const x = r.x + fx * along + rx * side,
-        z = r.z + fz * along + rz * side;
-      const localY = r.y + Math.sin(r.pitch) * along + Math.sin(r.roll) * side;
+      // During a stunt, sample the rotated hull that is actually being drawn.
+      const longitudinal = stunt
+        ? along * Math.cos(contactPitch) - side * Math.sin(r.roll) * Math.sin(contactPitch)
+        : along;
+      const lateral = stunt ? side * Math.cos(r.roll) : side;
+      const x = r.x + Math.sin(contactYaw) * longitudinal + Math.cos(contactYaw) * lateral,
+        z = r.z + Math.cos(contactYaw) * longitudinal - Math.sin(contactYaw) * lateral;
+      const localY =
+        r.y +
+        Math.sin(contactPitch) * along +
+        Math.sin(r.roll) * side * (stunt ? Math.cos(contactPitch) : 1);
       const h = waterHeight(x, z, t, surface),
         waterV = (waterHeight(x, z, t + 0.025, surface) - h) / 0.025;
       const immersion = h + 0.48 + Math.min(speed / 120, 0.2) - localY;
@@ -172,22 +183,7 @@ export function stepRacer(
       (waterHeight(r.x, r.z + 1.5, t, surface) - waterHeight(r.x, r.z - 1.5, t, surface)) / 3;
   r.wet = contacts / 4;
   if (r.wet === 0 && !r.onRamp) r.body.airtime += dt;
-  else {
-    if (wasAirborne) landAerial(r, entryVelocity);
-    if (wasAirborne && !r.onRamp) {
-      // Judge entry against the moving face, including the water crossed by forward motion.
-      const impact = Math.max(
-        0,
-        (surfaceV + r.vx * slopeX + r.vz * slopeZ - entryVelocity) / Math.hypot(1, slopeX, slopeZ),
-      );
-      r.body.impact = Math.min(16, impact);
-      const mismatch = Math.abs(r.pitch - Math.atan(slopeX * fx + slopeZ * fz));
-      const scrub = clamp((impact - 2) * (0.009 + Math.min(mismatch, 1) * 0.018), 0, 0.28);
-      r.vx *= 1 - scrub;
-      r.vz *= 1 - scrub;
-    }
-    r.body.airtime = 0;
-  }
+  else r.body.airtime = 0;
   r.vy += (force - 9.81) * dt;
   r.y += r.vy * dt;
   const targetBank = -r.body.side * 0.82;
@@ -256,10 +252,35 @@ export function stepRacer(
     r.pitch += (rampPitch - r.pitch) * (1 - Math.exp(-dt * 14));
     r.pitchVelocity = 0;
     r.roll *= Math.exp(-dt * 12);
-    if (wasAirborne) landAerial(r, entryVelocity);
     r.body.airtime = 0;
     r.onRamp = true;
     r.wet = 0;
+  }
+  // Resolve the supporting surface once. At a water/deck boundary the rigid deck
+  // wins; grading before this point can punish the same touchdown twice.
+  if (wasAirborne && (r.wet > 0 || r.onRamp)) {
+    const landingSurface =
+      r.onRamp && deck
+        ? {
+            slopeX: (deck.ramp.tx * deck.ramp.height) / deck.ramp.length,
+            slopeZ: (deck.ramp.tz * deck.ramp.height) / deck.ramp.length,
+            velocity: 0,
+          }
+        : { slopeX, slopeZ, velocity: surfaceV };
+    landAerial(r, entryVelocity, landingSurface);
+    if (!r.onRamp) {
+      const impact = Math.max(
+        0,
+        (surfaceV + r.vx * slopeX + r.vz * slopeZ - entryVelocity) / Math.hypot(1, slopeX, slopeZ),
+      );
+      r.body.impact = Math.min(16, impact);
+      const mismatch = Math.abs(
+        r.pitch - Math.atan(slopeX * Math.sin(r.yaw) + slopeZ * Math.cos(r.yaw)),
+      );
+      const scrub = clamp((impact - 2) * (0.009 + Math.min(mismatch, 1) * 0.018), 0, 0.28);
+      r.vx *= 1 - scrub;
+      r.vz *= 1 - scrub;
+    }
   }
   collideTerrain(r, track);
   for (const o of track.obstacles) {
