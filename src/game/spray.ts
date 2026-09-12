@@ -19,19 +19,20 @@ export class VoxelSpray {
   private lastVy = new Map<number, number>();
   private cooldown = new Map<number, number>();
   private dummy = new T.Object3D();
-  private white = new T.Color('#b7f8ec');
-  private blue = new T.Color('#51bfc3');
+  private white = new T.Color('#ddfff3');
+  private blue = new T.Color('#87dfcf');
   activeCount = 0;
 
   constructor() {
     this.object = new T.InstancedMesh(
-      new T.BoxGeometry(1, 1, 1),
+      new T.TetrahedronGeometry(0.85),
       new T.MeshStandardMaterial({
         color: 0xffffff,
-        roughness: 0.32,
+        roughness: 0.65,
+        flatShading: true,
         metalness: 0.08,
-        emissive: 0x17433f,
-        emissiveIntensity: 0.15,
+        emissive: 0x3c8d7c,
+        emissiveIntensity: 0.2,
       }),
       CAPACITY,
     );
@@ -83,8 +84,8 @@ export class VoxelSpray {
       ? 0.35 + strength * (0.95 + Math.random() * 0.8)
       : 0.2 + strength * (0.25 + Math.random() * 0.65);
     this.sizes[i] = isFoam
-      ? 0.05 + strength * (0.1 + Math.random() * 0.17)
-      : 0.018 + strength * (0.025 + Math.random() * 0.085) + impact * 0.015;
+      ? 0.12 + strength * (0.16 + Math.random() * 0.22)
+      : 0.045 + strength * (0.07 + Math.random() * 0.14) + impact * 0.018;
     this.positions[j] = r.x - fx * (isFoam ? 1.8 : 0.4) + fz * side * (0.65 + Math.random() * 0.35);
     this.positions[j + 1] = r.y - 0.15;
     this.positions[j + 2] =
@@ -117,9 +118,14 @@ export class VoxelSpray {
       if (r.wet > 0 && !r.onRamp && r.recovery.phase === 'riding' && speed > 0.5) {
         let count =
           (this.emission.get(r.id) ?? 0) +
-          dt * 210 * Math.pow(Math.min(speed / 22, 1), 1.6) * r.wet * (r.id === 0 ? 1 : 0.6);
+          dt *
+            310 *
+            (1 + Math.abs(r.steer) * 0.7) *
+            Math.pow(Math.min(speed / 22, 1), 1.6) *
+            r.wet *
+            (r.id === 0 ? 1 : 0.6);
         while (count >= 1) {
-          this.emit(r, Math.random() > 0.5 ? 1 : -1, 0, Math.random() < 0.28);
+          this.emit(r, Math.random() < 0.5 + r.steer * 0.3 ? -1 : 1, 0, Math.random() < 0.38);
           count--;
         }
         this.emission.set(r.id, count);
@@ -162,7 +168,7 @@ export class VoxelSpray {
         this.foam[i] ? i : time * 0.7,
         this.foam[i] ? 0 : time * 0.5,
       );
-      this.dummy.scale.set(size, this.foam[i] ? 0.06 : size, size * (this.foam[i] ? 1.5 : 1));
+      this.dummy.scale.set(size, this.foam[i] ? 0.035 : size, size * (this.foam[i] ? 1.5 : 1));
       this.dummy.updateMatrix();
       this.object.setMatrixAt(i, this.dummy.matrix);
     }

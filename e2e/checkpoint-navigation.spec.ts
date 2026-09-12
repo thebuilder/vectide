@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-async function start(page: Page, track = 0) {
+async function start(page: Page, track = 0, trial = false) {
   await page.route('**/src/main.ts*', async (route) => {
     const response = await route.fetch();
     await route.fulfill({
@@ -11,6 +11,7 @@ async function start(page: Page, track = 0) {
   await page.goto('/');
   await page.locator('#open-setup').click();
   await page.locator(`[data-track="${track}"]`).click();
+  if (trial) await page.getByRole('button', { name: /TIME TRIAL/ }).click();
   await page.locator('#start').click();
   await page.waitForFunction(() => (window as any).__vectide?.state === 'racing');
 }
@@ -19,7 +20,8 @@ test('gate guidance stays in view through a complete Storm lap', async ({ page }
   test.setTimeout(100000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await start(page, 2);
+  // Isolate navigation across the full lap; weapon traffic has separate race coverage.
+  await start(page, 2, true);
   await page.evaluate(async () => {
     const path = '/src/game/physics.ts';
     const { aiInput } = await import(path);

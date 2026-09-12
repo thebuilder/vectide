@@ -28,7 +28,7 @@ it('leaves a continuous, bounded trail that follows the current displaced water 
   expect(wake.activeSegments).toBe(0);
 });
 
-it('never draws a connecting streak through a reset, airborne rider, or recovery', () => {
+it('clears a reset streak and lets old foam fade without bridging an airborne gap', () => {
   const wake = new Wake(),
     track = TRACKS[0],
     r = createRacer(track, 0);
@@ -45,11 +45,20 @@ it('never draws a connecting streak through a reset, airborne rider, or recovery
   wake.update([r], 0.2, track);
   expect(wake.activeSegments).toBe(0);
   ride(0.3);
+  const beforeJump = wake.activeSegments;
   r.wet = 0;
   wake.update([r], 0.5, track);
-  expect(wake.activeSegments).toBe(0);
+  expect(wake.activeSegments).toBe(beforeJump);
+  r.x += 5;
   r.wet = 1;
-  ride(0.6);
+  wake.update([r], 0.6, track);
+  expect(wake.activeSegments).toBe(beforeJump);
+  r.x++;
+  wake.update([r], 0.62, track);
+  expect(wake.activeSegments).toBe(beforeJump + 1);
+  r.vx = 0;
+  wake.update([r], 3.2, track);
+  expect(wake.activeSegments).toBe(0);
   wake.clear();
   expect(wake.object.geometry.drawRange.count).toBe(0);
 });
@@ -70,7 +79,7 @@ it('shares strip vertices within a fixed twelve-rider geometry budget', () => {
   const geometry = wake.object.geometry;
   expect(wake.activeSegments).toBe(12 * 71);
   expect(geometry.attributes.position.count).toBe(12 * 72 * 4);
-  expect(geometry.drawRange.count).toBe(12 * 71 * 12);
+  expect(geometry.drawRange.count).toBe(12 * 71 * 18);
   for (let i = 0; i < geometry.drawRange.count; i++)
     expect(geometry.index!.getX(i)).toBeLessThan(geometry.attributes.position.count);
 });
