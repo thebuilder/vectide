@@ -776,3 +776,63 @@ for (const updated of ['host', 'guest', 'legacy host'] as const) {
     }
   });
 }
+
+test('continuous flip controls and rendered rotation reach the other racer', async ({
+  browser,
+}) => {
+  const hostContext = await browser.newContext(),
+    guestContext = await browser.newContext();
+  const host = await hostContext.newPage(),
+    guest = await guestContext.newPage();
+  const errors: string[] = [];
+  for (const page of [host, guest]) {
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.route('**/src/main.ts*', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: (await response.text()) + '\nwindow.__testEngine = engine;',
+      });
+    });
+  }
+  try {
+    await openOnline(host);
+    await expect(host.locator('#online-lobby')).toBeVisible();
+    const code = await host.locator('#room-code').inputValue();
+    await openOnline(guest, 'JOIN');
+    await guest.getByLabel('Room code', { exact: true }).fill(code);
+    await guest.getByRole('button', { name: 'JOIN ROOM' }).click();
+    await expect(host.locator('#room-count')).toHaveText('2 RACERS');
+    await host.getByRole('button', { name: 'START RACE', exact: true }).click();
+    await expect.poll(async () => (await state(host)).state).toBe('racing');
+    await expect.poll(async () => (await state(guest)).state).toBe('racing');
+    await host.bringToFront();
+    await host.evaluate(() => {
+      const e = (window as any).__testEngine,
+        r = e.player;
+      Object.assign(r, { y: 8, vy: 5, wet: 0, pitch: 0 });
+      r.body.airtime = 0.3;
+      r.air.armed = true;
+    });
+    await host.keyboard.down('Shift');
+    await host.waitForFunction(() => (window as any).__testEngine.player.air.pitch > 1);
+    await guest.waitForFunction(() => (window as any).__testEngine.racers[0].air.pitch > 0.5);
+    const before = await guest.evaluate(() =>
+      (window as any).__testEngine.jets[0].quaternion.toArray(),
+    );
+    await host.waitForFunction(
+      () => (window as any).__testEngine.player.air.pitch > Math.PI * 2 - 0.65,
+    );
+    const after = await guest.evaluate(() =>
+      (window as any).__testEngine.jets[0].quaternion.toArray(),
+    );
+    expect(Math.hypot(...after.map((v: number, i: number) => v - before[i]))).toBeGreaterThan(0.2);
+    await host.keyboard.up('Shift');
+    await expect.poll(async () => (await state(guest)).racers[0].air.message).toBe('FLIP LANDED');
+    expect((await state(guest)).racers[0].recovery.phase).toBe('riding');
+    expect(errors).toEqual([]);
+  } finally {
+    await hostContext.close();
+    await guestContext.close();
+  }
+});

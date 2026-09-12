@@ -29,8 +29,9 @@ for (const scenario of ['flip', 'spin', 'inverted'] as const)
       });
       r.body.airtime = 0.3;
       Object.assign(r.air, {
-        trick: scenario === 'spin' ? 'spin' : 'flip',
-        progress: scenario === 'inverted' ? 0.5 : scenario === 'spin' ? 0.85 : 0.9,
+        armed: true,
+        pitch: scenario === 'inverted' ? Math.PI : scenario === 'flip' ? 2 * Math.PI - 0.2 : 0,
+        yaw: scenario === 'spin' ? 2 * Math.PI - 0.4 : 0,
       });
       e.cameraAnchor.set(r.x, r.y, r.z);
       e.camera.position.set(r.x - 4, r.y + 3, r.z - 8);
@@ -38,7 +39,7 @@ for (const scenario of ['flip', 'spin', 'inverted'] as const)
       const step = e.items.step.bind(e.items);
       e.items.step = (dt: number, time: number, racers: any[]) => {
         step(dt, time, racers);
-        if (!(window as any).landing && r.air.trick === 'none' && r.wet > 0)
+        if (!(window as any).landing && !r.air.armed && r.wet > 0)
           (window as any).landing = {
             phase: r.recovery.phase,
             pitch: r.pitch,
@@ -56,7 +57,7 @@ for (const scenario of ['flip', 'spin', 'inverted'] as const)
       expect(landing.phase).toBe('riding');
       expect(landing.speed).toBeGreaterThan(14);
       expect(landing.speed).toBeLessThan(20);
-      expect(landing.message).toBe(`${scenario.toUpperCase()} LANDED`);
+      expect(landing.message).toBe('STUNT LANDED');
       if (scenario === 'flip') {
         expect(Math.abs(landing.pitch)).toBeGreaterThan(0.01);
         expect(Math.abs(landing.pitch)).toBeLessThan(Math.PI / 4);

@@ -526,17 +526,7 @@ export class Engine {
         1,
       ),
       use: this.itemRequested || !!touch?.use || !!key('KeyQ') || !!pad?.buttons[4]?.pressed,
-      trick:
-        touch?.trick ||
-        (key('KeyE') || pad?.buttons[5]?.pressed
-          ? Math.abs(axis) > 0.3
-            ? -Math.sign(axis) * 2
-            : key('KeyA', 'ArrowLeft')
-              ? 2
-              : key('KeyD', 'ArrowRight')
-                ? -2
-                : 1
-          : 0),
+      trick: Number(!!touch?.trick || !!key('KeyE') || !!pad?.buttons[5]?.pressed),
     };
   }
   get riderPose() {

@@ -57,7 +57,7 @@ app.innerHTML = `
   <div id="notice" class="notice" role="status"></div>
   <div class="race-bottom"><div class="map-wrap"><canvas id="map" width="220" height="190" aria-label="Course map"></canvas><span id="track-name">PALM CIRCUIT</span></div><div class="speed"><strong id="speed">0</strong><span>KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small id="water-state">ON THE WATER</small></div></div>
   <div id="online-race-status" hidden></div>
-  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE STUNT · RELEASE AT TAKEOFF</div>
+  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE · RELEASE AT TAKEOFF · LEAN TO ROTATE</div>
 </section>
 <aside id="ride-coach" hidden aria-label="Driving tip"><kbd class="coach-key"></kbd><span class="coach-text"></span><button aria-label="Dismiss driving tips">×</button></aside>
 <div id="touch-controls" aria-label="Touch driving controls">

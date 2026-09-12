@@ -134,13 +134,24 @@ export function stepRacer(
     fz = Math.cos(r.yaw),
     rx = fz,
     rz = -fx;
+  r.air.dive *= Math.exp(-dt * 3);
+  if (
+    !r.air.armed &&
+    r.body.airtime > 0.12 &&
+    input.lean < -0.3 &&
+    r.pitch < -0.12 &&
+    r.pitch > -0.8 &&
+    r.vy < -1 &&
+    speed > 8
+  )
+    r.air.dive = Math.max(r.air.dive, clamp(-r.pitch / 0.45, 0, 1) * clamp(speed / 20, 0, 1));
   let force = 0,
     front = 0,
     back = 0,
     left = 0,
     right = 0,
     contacts = 0;
-  const stunt = r.air.trick !== 'none';
+  const stunt = r.air.armed;
   const contactYaw = r.yaw + r.air.yaw,
     contactPitch = r.pitch + r.air.pitch;
   for (const along of [-1.55, 1.55])
@@ -159,11 +170,19 @@ export function stepRacer(
       const h = waterHeight(x, z, t, surface),
         waterV = (waterHeight(x, z, t + 0.025, surface) - h) / 0.025;
       const immersion = h + 0.48 + Math.min(speed / 120, 0.2) - localY;
-      const pointV = r.vy + r.pitchVelocity * along + r.rollVelocity * side;
+      const pointV = stunt
+        ? r.vy +
+          (Math.cos(contactPitch) * along - Math.sin(r.roll) * side * Math.sin(contactPitch)) *
+            (r.pitchVelocity + r.air.pitchVelocity) +
+          Math.cos(r.roll) * side * Math.cos(contactPitch) * r.rollVelocity
+        : r.vy + r.pitchVelocity * along + r.rollVelocity * side;
       const spring =
         immersion > -0.12
           ? clamp(
-              immersion * (30 + Math.max(0, immersion - 0.6) * 22) - (pointV - waterV) * 4.2,
+              immersion * (30 + Math.max(0, immersion - 0.6) * 22) -
+                // A nose-first entry pierces the surface before buoyancy arrests its descent.
+                // Keep the spring and full upward damping so the hull always resurfaces.
+                (pointV - waterV) * 4.2 * (pointV < waterV ? 1 - r.air.dive * 0.8 : 1),
               0,
               110,
             )
@@ -188,7 +207,11 @@ export function stepRacer(
   r.y += r.vy * dt;
   const targetBank = -r.body.side * 0.82;
   r.pitchVelocity +=
-    ((front - back) * 0.19 - r.pitchVelocity * 2.8 - r.pitch * 2.5 + r.body.fore * 4.8) * dt;
+    ((front - back) * 0.19 -
+      r.pitchVelocity * 2.8 -
+      r.pitch * 2.5 +
+      r.body.fore * (stunt ? 0 : 4.8)) *
+    dt;
   r.rollVelocity += ((right - left) * 0.25 + (targetBank - r.roll) * 15 - r.rollVelocity * 5) * dt;
   r.pitch = clamp(r.pitch + r.pitchVelocity * dt, -1.15, 1.15);
   r.roll = clamp(r.roll + r.rollVelocity * dt, -0.9, 0.9);
@@ -209,6 +232,7 @@ export function stepRacer(
   const drag =
     (0.037 * forward * Math.abs(forward) * response * (0.35 + 0.65 * input.throttle) +
       input.brake * forward * 1.8 +
+      r.air.dive * clamp((height + 0.25 - r.y) / 0.75, 0, 1) * forward * 1.4 +
       (1 - input.throttle) * forward * (0.08 + 0.8 * clamp((8 - speed) / 6, 0, 1))) *
     grip;
   const sideDrag = lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * grip;
@@ -258,7 +282,7 @@ export function stepRacer(
   }
   // Resolve the supporting surface once. At a water/deck boundary the rigid deck
   // wins; grading before this point can punish the same touchdown twice.
-  if (wasAirborne && (r.wet > 0 || r.onRamp)) {
+  if ((wasAirborne || r.air.armed) && (r.wet > 0 || r.onRamp)) {
     const landingSurface =
       r.onRamp && deck
         ? {

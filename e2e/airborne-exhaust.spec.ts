@@ -32,8 +32,8 @@ test('a ramp flip has a small airborne plume that recovers on landing', async ({
       throttle: 1,
       steer: 0,
       brake: 0,
-      lean: 0,
-      trick: !touchedRamp || p.onRamp ? -1 : 0,
+      lean: touchedRamp && !p.onRamp && p.air.pitch < Math.PI * 2 - 0.6 ? 1 : 0,
+      trick: !touchedRamp || p.onRamp ? 1 : 0,
     });
     e.previous = 1000;
     for (let i = 0; i < 60 * 4; i++) {
@@ -44,7 +44,7 @@ test('a ramp flip has a small airborne plume that recovers on landing', async ({
         touchedRamp = true;
         deckLength = Math.max(deckLength, plume.scale.z);
       }
-      if (p.air.trick === 'flip' && p.air.progress > 0.4 && p.air.progress < 0.7) {
+      if (p.air.armed && p.air.pitch > Math.PI * 0.8 && p.air.pitch < Math.PI * 1.4) {
         flipped = true;
         airLength = Math.min(airLength, plume.scale.z);
       }

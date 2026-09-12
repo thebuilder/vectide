@@ -27,7 +27,7 @@ it('grades one landing against the deck when water contact and ramp support over
     wet: 0,
   });
   r.body.airtime = 0.3;
-  Object.assign(r.air, { trick: 'flip', progress: 0.9 });
+  Object.assign(r.air, { armed: true, pitch: Math.PI * 2 });
   expect(rampSurface(r.x, r.z, track)!.height).toBeCloseTo(0.05);
   const land = vi.spyOn(aerial, 'landAerial');
   try {

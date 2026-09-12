@@ -13,10 +13,12 @@ export const rideHelp = `
   <details><summary>Jumps, weight shifts and pickups</summary>
     <dl>
       <dt data-keyboard="SHIFT / C" data-touch="STICK ↓ / ↑" data-gamepad="STICK ↓ / ↑">SHIFT / C</dt><dd>Shift weight back / forward</dd>
-      <dt data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</dt><dd>Prepare a flip. Release at takeoff.</dd>
-      <dt data-keyboard="STEER + E" data-touch="JUMP" data-gamepad="STICK + RB">STEER + E</dt><dd data-keyboard="Steer while loading to prepare a spin." data-touch="Use a wave crest or amber ramp to launch your flip." data-gamepad="Steer while loading to prepare a spin.">Steer while loading to prepare a spin.</dd>
+      <dt data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</dt><dd>Prepare a stunt. Release at takeoff, then choose your rotation.</dd>
+      <dt data-keyboard="SHIFT / C" data-touch="STICK ↓ / ↑" data-gamepad="STICK ↓ / ↑">SHIFT / C</dt><dd>After release: lean back / forward to flip.</dd>
+      <dt data-keyboard="A / D" data-touch="STICK ← / →" data-gamepad="STICK ← / →">A / D</dt><dd>After release: steer left / right to spin.</dd>
       <dt data-keyboard="Q" data-touch="USE" data-gamepad="LB">Q</dt><dd>Use your held pickup</dd>
     </dl>
+    <p>Hold a direction to keep rotating. Release it near upright to settle; the opposite direction brakes the rotation. Extra airtime allows multiple turns. Lean forward on an ordinary jump for a shallow dive; water slows the craft and buoyancy brings it back up.</p>
     <p>Jumps are optional. Land close to upright: imperfect flips lose speed, and spins keep their landing direction. Inverted or steep, hard landings can throw you off; your rider will swim back and remount.</p>
   </details>
   <button id="close-help" class="primary">GOT IT</button>

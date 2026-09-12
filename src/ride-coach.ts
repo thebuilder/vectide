@@ -78,21 +78,27 @@ export class RideCoach {
     else if (!(progress & BRAKE)) step = 2;
     else if (
       !(progress & JUMP) &&
-      s.track.ramps.some((r) => {
-        const dx = r.x - p.x,
-          dz = r.z - p.z;
-        return Math.hypot(dx, dz) < 45 && dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw) > -5;
-      })
+      (p.air.armed ||
+        s.track.ramps.some((r) => {
+          const dx = r.x - p.x,
+            dz = r.z - p.z;
+          return Math.hypot(dx, dz) < 45 && dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw) > -5;
+        }))
     )
       step = 3;
     this.element.hidden = step < 0;
     if (step < 0) return;
-    this.key.textContent = bindings[device][step];
+    this.key.textContent =
+      step === 3 && p.air.armed
+        ? device === 'keyboard'
+          ? 'SHIFT / C · A / D'
+          : 'LEAN / STEER'
+        : bindings[device][step];
     this.text.textContent = [
       device === 'touch' ? 'Slide the stick to steer' : 'Hold to accelerate',
       'Steer between both glowing buoys',
       'Brake before a tight turn',
-      'Optional jump: release at takeoff',
+      p.air.armed ? 'Hold to rotate; release to settle' : 'Optional stunt: release at takeoff',
     ][step];
   }
 }

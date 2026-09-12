@@ -59,7 +59,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
   await expect.poll(async () => (await state()).player.air.charge).toBeGreaterThan(0.12);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
   await expect(page.locator('#touch-controls .held')).toHaveCount(0);
-  expect((await state()).player.air.queued).toBe(0);
+  expect((await state()).player.air.queued).toBe(false);
   await page.screenshot({ path: 'artifacts/mobile-auto-throttle.png' });
   await page.locator('#pause').tap();
   await expect(page.locator('#pause-dialog')).toBeVisible();

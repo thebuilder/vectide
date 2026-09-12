@@ -4,7 +4,7 @@ import { TRACKS } from '../game/tracks';
 
 export const MAX_RACERS = 12;
 // Course geometry and handling must match on host and predicting clients.
-export const VERSION = 18;
+export const VERSION = 19;
 // Discovery must survive protocol updates so the join handshake can explain mismatches.
 // Keep the deployed v13 address for compatibility; do not bump this with VERSION.
 export const ROOM_PREFIX = 'vectide-v13-';
@@ -100,7 +100,7 @@ export function validCommands(value: unknown): value is Command[] {
         finite(c.input.brake, 0, 1) &&
         finite(c.input.steer, -1, 1) &&
         finite(c.input.lean, -1, 1) &&
-        integer(c.input.trick ?? 0, -2, 2) &&
+        integer(c.input.trick ?? 0, 0, 1) &&
         (c.input.use === undefined || typeof c.input.use === 'boolean'),
     )
   );
@@ -229,7 +229,9 @@ export function validSnapshot(value: unknown): value is RaceSnapshot {
         integer(r.lap, 0, 4) &&
         integer(r.passed, 0, 100) &&
         ['riding', 'falling', 'swimming', 'remounting'].includes(r.recovery.phase) &&
-        ['none', 'flip', 'spin'].includes(r.air.trick),
+        finite(r.air.dive, 0, 1) &&
+        finite(r.air.pitchVelocity, -10, 10) &&
+        finite(r.air.yawVelocity, -10, 10),
     ) && new Set(value.racers.map((r) => r.id)).size === value.racers.length
   );
 }
