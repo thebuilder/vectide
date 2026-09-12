@@ -86,8 +86,10 @@ version-12 address to report its mismatch. A guest still running version 12 must
 reload first; its old lookup cannot discover newer hosts.
 
 Deploy over HTTPS. No application backend is required for default signaling.
-The production site is deployed as a Cloudflare Worker with static assets; run
-`pnpm deploy` to build and publish it after authenticating Wrangler. Connect the
+The production site is deployed as a Cloudflare Worker with static assets.
+Cloudflare Workers Builds deploys every merge to `main`; configure it with
+`pnpm build` as the build command and `pnpm exec wrangler deploy` as the deploy
+command. `pnpm deploy` is reserved for an emergency manual release. Connect the
 `vectide.thebuilder.dk` hostname to that Worker once the `thebuilder.dk` zone is
 managed by Cloudflare. Cloudflare serves immutable build assets from its edge;
 the game's root document is the single-page fallback.
