@@ -27,6 +27,7 @@ export interface World {
     surface?: WaterProfile,
     reducedMotion?: boolean,
     music?: MusicSpectrum,
+    racers?: readonly Racer[],
   ) => void;
   dispose: () => void;
 }
@@ -322,6 +323,7 @@ export function createWorld(track: Track): World {
   group.add(passing.group);
   batchStatic(ramps, []);
   batchStatic(group, [water, ramps, ...gates, ...turbines, passing.group, musicVisuals.group]);
+  if ('waterEffects' in passing) group.add(passing.waterEffects);
   const pulseMaterials = new Map<T.MeshStandardMaterial, number>();
   const outlines = new Map<T.LineBasicMaterial, { color: T.Color; opacity: number }>();
   group.traverse((object) => {
@@ -352,6 +354,7 @@ export function createWorld(track: Track): World {
       surface = track,
       reducedMotion = false,
       music,
+      racers = [player],
     ) {
       musicWater.update(t, music, !reducedMotion);
       updateWaterPulses(waterMaterial, surface, t);
@@ -367,7 +370,8 @@ export function createWorld(track: Track): World {
       musicVisuals.update(bands, reducedMotion ? 0 : (music?.beatStrength ?? 0));
       sun.scale.setScalar(1 + bands.low * 0.035);
       waterMaterial.uniforms.uMusic.value.set(bands.low, bands.mid, bands.high);
-      passing.update(t, player);
+      if ('waterEffects' in passing) passing.update(t, player, racers, surface);
+      else passing.update(t);
       waterMaterial.uniforms.uTime.value = t;
       water.position.x = Math.floor(player.x / CELL) * CELL;
       water.position.z = Math.floor(player.z / CELL) * CELL;

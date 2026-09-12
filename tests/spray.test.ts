@@ -68,3 +68,14 @@ it('explosions spray outward and upward, settle into foam and expire within the 
   spray.clear();
   expect(spray.activeCount).toBe(0);
 });
+
+it('keeps small swimmer trails in a bounded pool and expires them without hull input', () => {
+  const spray = new VoxelSpray(32),
+    track = TRACKS[0];
+  for (let i = 0; i < 40; i++) spray.foamTrail(-100, -150 + i, 0, 20);
+  spray.update(1 / 60, [], track, 0);
+  expect(spray.activeCount).toBe(32);
+  expect(spray.object.instanceMatrix.count).toBe(32);
+  for (let i = 0; i < 120; i++) spray.update(1 / 60, [], track, i / 60);
+  expect(spray.activeCount).toBe(0);
+});

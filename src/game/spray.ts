@@ -3,16 +3,15 @@ import type { Racer } from './physics';
 import type { Track } from './tracks';
 import { waterHeight, type WaterProfile } from './water';
 
-const CAPACITY = 4200;
 /** Solid water fragments and floating foam, emitted from hull contacts and landing impacts. */
 export class VoxelSpray {
   readonly object: T.InstancedMesh;
-  private positions = new Float32Array(CAPACITY * 3);
-  private velocities = new Float32Array(CAPACITY * 3);
-  private life = new Float32Array(CAPACITY);
-  private duration = new Float32Array(CAPACITY);
-  private sizes = new Float32Array(CAPACITY);
-  private foam = new Uint8Array(CAPACITY);
+  private positions: Float32Array;
+  private velocities: Float32Array;
+  private life: Float32Array;
+  private duration: Float32Array;
+  private sizes: Float32Array;
+  private foam: Uint8Array;
   private cursor = 0;
   private emission = new Map<number, number>();
   private lastWet = new Map<number, number>();
@@ -23,7 +22,13 @@ export class VoxelSpray {
   private blue = new T.Color('#87dfcf');
   activeCount = 0;
 
-  constructor() {
+  constructor(private readonly capacity = 4200) {
+    this.positions = new Float32Array(capacity * 3);
+    this.velocities = new Float32Array(capacity * 3);
+    this.life = new Float32Array(capacity);
+    this.duration = new Float32Array(capacity);
+    this.sizes = new Float32Array(capacity);
+    this.foam = new Uint8Array(capacity);
     this.object = new T.InstancedMesh(
       new T.TetrahedronGeometry(0.85),
       new T.MeshStandardMaterial({
@@ -34,7 +39,7 @@ export class VoxelSpray {
         emissive: 0x3c8d7c,
         emissiveIntensity: 0.2,
       }),
-      CAPACITY,
+      this.capacity,
     );
     this.object.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.object.frustumCulled = false;
@@ -50,12 +55,12 @@ export class VoxelSpray {
     this.dummy.position.set(0, -999, 0);
     this.dummy.scale.setScalar(0);
     this.dummy.updateMatrix();
-    for (let i = 0; i < CAPACITY; i++) this.object.setMatrixAt(i, this.dummy.matrix);
+    for (let i = 0; i < this.capacity; i++) this.object.setMatrixAt(i, this.dummy.matrix);
     this.object.instanceMatrix.needsUpdate = true;
   }
   burst(x: number, y: number, z: number, strength = 1) {
     for (let n = 0; n < Math.ceil(140 * strength); n++) {
-      const i = this.cursor++ % CAPACITY,
+      const i = this.cursor++ % this.capacity,
         j = i * 3;
       const theta = Math.random() * Math.PI * 2;
       const speed = (5 + Math.random() * 14) * Math.sqrt(strength);
@@ -71,8 +76,25 @@ export class VoxelSpray {
       this.object.setColorAt(i, n % 4 ? this.white : this.blue);
     }
   }
+  /** A small surface trail for swimmers, without a hull's powered spray. */
+  foamTrail(x: number, z: number, vx: number, vz: number) {
+    const speed = Math.max(1, Math.hypot(vx, vz));
+    for (const side of [-1, 1]) {
+      const i = this.cursor++ % this.capacity,
+        j = i * 3;
+      this.foam[i] = 1;
+      this.duration[i] = this.life[i] = 0.7 + Math.random() * 0.35;
+      this.sizes[i] = 0.24 + Math.random() * 0.16;
+      this.positions[j] = x - (vx / speed) * 1.2 + (vz / speed) * side * 0.3;
+      this.positions[j + 2] = z - (vz / speed) * 1.2 - (vx / speed) * side * 0.3;
+      this.velocities[j] = vx * 0.06 + (vz / speed) * side * 0.7;
+      this.velocities[j + 1] = 0;
+      this.velocities[j + 2] = vz * 0.06 - (vx / speed) * side * 0.7;
+      this.object.setColorAt(i, this.white);
+    }
+  }
   private emit(r: Racer, side: number, impact: number, isFoam: boolean) {
-    const i = this.cursor++ % CAPACITY,
+    const i = this.cursor++ % this.capacity,
       j = i * 3,
       fx = Math.sin(r.yaw),
       fz = Math.cos(r.yaw),
@@ -134,7 +156,7 @@ export class VoxelSpray {
       this.lastVy.set(r.id, r.vy);
     }
     this.activeCount = 0;
-    for (let i = 0; i < CAPACITY; i++) {
+    for (let i = 0; i < this.capacity; i++) {
       if (this.life[i] <= 0) continue;
       this.life[i] -= dt;
       const j = i * 3;

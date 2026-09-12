@@ -1,4 +1,5 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
+import { VoxelSpray } from '../src/game/spray';
 import { createDolphins } from '../src/game/dolphins';
 import { TRACKS } from '../src/game/tracks';
 import { polygonContact } from '../src/game/hull-contact';
@@ -120,4 +121,29 @@ it('arches the spine through the jump without sharing pose state or moving fins 
   const reentry = center(body, 0);
   poseDolphin(rising, 2.5 + 0.0001);
   expect(center(body, 0).distanceTo(reentry)).toBeLessThan(0.001);
+});
+
+it('leaves swimming foam and splashes at actual takeoff and re-entry', () => {
+  const burst = vi.spyOn(VoxelSpray.prototype, 'burst');
+  const foam = vi.spyOn(VoxelSpray.prototype, 'foamTrail');
+  try {
+    const track = TRACKS[0],
+      pod = createDolphins(track),
+      r = createRacer(track, 0);
+    Object.assign(r, track.dolphin, { vx: track.dolphin.tx * 20, vz: track.dolphin.tz * 20 });
+    for (let frame = 0; frame < 180; frame++) {
+      r.x += r.vx / 60;
+      r.z += r.vz / 60;
+      pod.update(frame / 60, r);
+    }
+    expect(foam).toHaveBeenCalled();
+    expect(burst.mock.calls.some((call) => call[3] === 0.08)).toBe(true);
+    expect(burst.mock.calls.some((call) => call[3] === 0.15)).toBe(true);
+    expect(pod.waterEffects.instanceMatrix.count).toBe(384);
+    const count = burst.mock.calls.length;
+    for (let frame = 600; frame < 780; frame++) pod.update(frame / 60, r);
+    expect(burst.mock.calls.length).toBe(count);
+  } finally {
+    vi.restoreAllMocks();
+  }
 });

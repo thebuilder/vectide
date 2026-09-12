@@ -35,8 +35,16 @@ for (const { name, track, viewport } of [
       ]);
       const engine = (window as any).__testEngine;
       engine.input = () => aiInput(engine.player, engine.track, engine.racers);
-      const check = { frames: [0, 0, 0], clipped: [0, 0, 0], seenPod: false, done: false };
+      const check = {
+        frames: [0, 0, 0],
+        clipped: [0, 0, 0],
+        seenPod: false,
+        done: false,
+        foam: false,
+        splash: false,
+      };
       (window as any).__dolphinCheck = check;
+      const matrix = new T.Matrix4();
       const onRender = engine.onRender;
       engine.onRender = () => {
         onRender();
@@ -57,6 +65,19 @@ for (const { name, track, viewport } of [
               }
           if (clipped) check.clipped[i]++;
         });
+        const effects = engine.scene.getObjectByName('dolphin-water');
+        for (let i = 0; i < effects.count; i++) {
+          effects.getMatrixAt(i, matrix);
+          const m = matrix.elements,
+            height = Math.hypot(m[4], m[5], m[6]);
+          if (height === 0) continue;
+          const screen = new T.Vector3(m[12], m[13], m[14]).project(engine.camera);
+          if (Math.abs(screen.x) >= 1 || Math.abs(screen.y) >= 1 || Math.abs(screen.z) >= 1)
+            continue;
+          if (height < 0.04) check.foam = true;
+          if (m[13] > waterHeight(m[12], m[14], engine.visualTime, engine.track) + 0.3)
+            check.splash = true;
+        }
         if (check.frames.every((frames: number) => frames > 0)) check.seenPod = true;
         if (
           check.seenPod &&
@@ -75,5 +96,7 @@ for (const { name, track, viewport } of [
     const check = await page.evaluate(() => (window as any).__dolphinCheck);
     expect(check.frames.every((frames: number) => frames > 15)).toBe(true);
     expect(check.clipped).toEqual([0, 0, 0]);
+    expect(check.foam).toBe(true);
+    expect(check.splash).toBe(true);
     expect(errors).toEqual([]);
   });

@@ -1,7 +1,9 @@
 import * as T from 'three';
 import { poseDolphin } from './dolphin-pose';
 import { createDolphinModel } from './dolphin-model';
-import { waterHeight } from './water';
+import { waterHeight, type WaterProfile } from './water';
+import { VoxelSpray } from './spray';
+import { steerDolphin } from './dolphin-ai';
 import { shoreDistance } from './shore';
 import type { Track } from './tracks';
 import type { Racer } from './physics';
@@ -15,16 +17,33 @@ const swimmers = [
 export function createDolphins(track: Track) {
   const group = new T.Group();
   group.name = 'dolphin-pod';
+  const spray = new VoxelSpray(384);
+  spray.object.name = 'dolphin-water';
   const model = createDolphinModel();
   const animals = swimmers.map((swimmer) => {
     const mesh = model.clone();
     group.add(mesh);
-    return { ...swimmer, mesh, x: 0, z: 0, vx: 0, vz: 0, jumpAt: -Infinity, jumpY: 0, nextJump: 0 };
+    return {
+      ...swimmer,
+      mesh,
+      x: 0,
+      z: 0,
+      vx: 0,
+      vz: 0,
+      yaw: 0,
+      jumpAt: -Infinity,
+      jumpY: 0,
+      nextJump: 0,
+      targetId: null as number | null,
+      interestUntil: 0,
+      departAt: Infinity,
+      wasAirborne: false,
+      foam: 0,
+    };
   });
   let started = -Infinity,
     lastLap = -1,
-    previousTime = 0,
-    departAt = Infinity;
+    previousTime = 0;
   const location = track.dolphin;
   const clear = (x: number, z: number) =>
     shoreDistance(x, z, track.shore) > 5 &&
@@ -36,10 +55,17 @@ export function createDolphins(track: Track) {
     );
   return {
     group,
-    update(t: number, player: Racer) {
+    waterEffects: spray.object,
+    update(
+      t: number,
+      player: Racer,
+      racers: readonly Racer[] = [player],
+      water: WaterProfile = track,
+    ) {
       if (t < previousTime) {
         lastLap = -1;
         started = -Infinity;
+        spray.clear();
       }
       const dt = Math.min(Math.max(t - previousTime, 0), 0.1);
       previousTime = t;
@@ -53,7 +79,6 @@ export function createDolphins(track: Track) {
       ) {
         started = t;
         lastLap = player.lap;
-        departAt = Infinity;
         animals.forEach((a, i) => {
           a.side = swimmers[i].side;
           a.x = player.x + fx * a.lead + fz * a.side;
@@ -65,47 +90,50 @@ export function createDolphins(track: Track) {
           }
           a.vx = player.vx;
           a.vz = player.vz;
+          a.yaw = Math.atan2(a.vx, a.vz);
           a.jumpAt = -Infinity;
           a.nextJump = t + a.delay;
+          a.targetId = null;
+          a.interestUntil = t + 5.8 + i * 0.6;
+          a.departAt = Infinity;
+          a.wasAirborne = false;
+          a.foam = 0;
         });
       }
       const age = t - started;
-      if (departAt === Infinity && (age > 6 || speed < 4 || player.recovery.phase !== 'riding'))
-        departAt = t;
       for (const a of animals) {
-        const departure = Math.max(0, t - departAt);
+        const departure = Math.max(0, t - a.departAt);
         a.mesh.visible = age >= 0 && age < 9 && departure < 2.5;
         if (!a.mesh.visible) continue;
         let flight = t - a.jumpAt;
         const duration = (2 * a.lift) / 9.81;
+        const target = steerDolphin(a, animals, racers, clear, t, flight >= duration ? dt : 0);
+        const targetSpeed = target ? Math.hypot(target.vx, target.vz) : 0;
+        const tx = target ? target.vx / targetSpeed : fx;
+        const tz = target ? target.vz / targetSpeed : fz;
         if (flight >= duration) {
-          const side = a.side + Math.sign(a.side) * departure * 7;
-          const targetX = player.x + fx * (a.lead + departure * 8) + fz * side;
-          const targetZ = player.z + fz * (a.lead + departure * 8) - fx * side;
-          let vx = player.vx + (targetX - a.x) * 2,
-            vz = player.vz + (targetZ - a.z) * 2;
-          const limit = Math.min(32, Math.max(12, speed + 5)) / Math.max(1, Math.hypot(vx, vz));
-          if (limit < 1) {
-            vx *= limit;
-            vz *= limit;
-          }
-          const follow = 1 - Math.exp(-dt * 5);
-          a.vx += (vx - a.vx) * follow;
-          a.vz += (vz - a.vz) * follow;
           if (
             t >= a.nextJump &&
-            departAt === Infinity &&
+            target &&
             Math.hypot(a.vx, a.vz) > 7 &&
             // Wait through tight turns; a breach holds its takeoff heading.
-            (a.vx * fx + a.vz * fz) / Math.hypot(a.vx, a.vz) > 0.98 &&
-            Math.abs((a.x - player.x) * fz - (a.z - player.z) * fx - a.side) < 3 &&
-            [0, 0.25, 0.5, 0.75, 1].every((fraction) =>
-              clear(a.x + a.vx * duration * fraction, a.z + a.vz * duration * fraction),
+            (a.vx * tx + a.vz * tz) / Math.hypot(a.vx, a.vz) > 0.98 &&
+            Math.abs((a.x - target.x) * tz - (a.z - target.z) * tx - a.side) < 4 &&
+            [0, 0.25, 0.5, 0.75, 1].every(
+              (fraction) =>
+                clear(a.x + a.vx * duration * fraction, a.z + a.vz * duration * fraction) &&
+                racers.every(
+                  (r) =>
+                    Math.hypot(
+                      a.x + a.vx * duration * fraction - r.x - r.vx * duration * fraction,
+                      a.z + a.vz * duration * fraction - r.z - r.vz * duration * fraction,
+                    ) > 5,
+                ),
             )
           ) {
             a.jumpAt = t;
-            a.jumpY = waterHeight(a.x, a.z, t, track) - 0.45;
-            a.nextJump = t + a.interval;
+            a.jumpY = waterHeight(a.x, a.z, t, water) - 0.28;
+            a.nextJump = t + a.interval + Math.sin(t * 1.7 + a.lead) * 0.35;
             flight = 0;
           }
         }
@@ -115,28 +143,37 @@ export function createDolphins(track: Track) {
           a.x = nextX;
           a.z = nextZ;
         }
-        const sea = waterHeight(a.x, a.z, t, track);
+        const sea = waterHeight(a.x, a.z, t, water);
         const airborne = flight < duration;
-        let y = sea - 0.45 - Math.min(departure * 2.5, 5);
+        let y = sea - 0.28 - Math.min(departure * 2.5, 5);
         let vertical = 0;
         if (airborne) {
           y = a.jumpY + a.lift * flight - 4.905 * flight * flight;
           vertical = a.lift - 9.81 * flight;
           // A moving crest can catch a diving dolphin before its nominal flight ends.
-          if (vertical < 0 && y < sea - 0.45) {
+          if (vertical < 0 && y < sea - 0.28) {
             a.jumpAt = -Infinity;
-            y = sea - 0.45;
+            y = sea - 0.28;
           }
         }
         a.mesh.visible &&= clear(a.x, a.z);
+        const aboveWater = y > sea - 0.15;
+        if (a.mesh.visible && aboveWater !== a.wasAirborne) {
+          spray.burst(a.x, sea - 0.25, a.z, aboveWater ? 0.08 : 0.15);
+        }
+        a.wasAirborne = aboveWater;
+        if (a.mesh.visible && !aboveWater && departure === 0) {
+          a.foam += dt * Math.min(24, Math.hypot(a.vx, a.vz));
+          while (a.foam >= 1) {
+            spray.foamTrail(a.x, a.z, a.vx, a.vz);
+            a.foam--;
+          }
+        }
         a.mesh.position.set(a.x, y, a.z);
-        a.mesh.rotation.set(
-          -Math.atan2(vertical, Math.max(8, Math.hypot(a.vx, a.vz))),
-          Math.atan2(a.vx, a.vz),
-          0,
-        );
+        a.mesh.rotation.set(-Math.atan2(vertical, Math.max(8, Math.hypot(a.vx, a.vz))), a.yaw, 0);
         poseDolphin(a.mesh, Number.isFinite(flight) ? flight : duration + t, duration);
       }
+      spray.update(dt, [], track, t, water);
     },
   };
 }

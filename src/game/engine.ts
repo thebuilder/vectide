@@ -704,7 +704,15 @@ export class Engine {
       this.audio.enabled && this.audio.volumes.music > 0 && this.state !== 'paused'
         ? this.audio.spectrum
         : undefined;
-    this.world.update(renderTime, p, bands, itemSurface, this.reducedMotion.matches, music);
+    this.world.update(
+      renderTime,
+      p,
+      bands,
+      itemSurface,
+      this.reducedMotion.matches,
+      music,
+      rendered,
+    );
     this.wake.reactToMusic(bands, dt, !this.reducedMotion.matches);
     this.pickupVisuals.update(
       this.network?.items ?? this.items,
