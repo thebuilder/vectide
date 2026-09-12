@@ -1,4 +1,5 @@
-import { PerspectiveCamera, Vector3 } from 'three';
+import { Frustum, Matrix4, PerspectiveCamera, Vector3 } from 'three';
+import type { Gate } from './game/tracks';
 import type { Engine } from './game/engine';
 
 export interface GuideBounds {
@@ -10,7 +11,7 @@ export interface GuideBounds {
 
 export class CheckpointGuide {
   private direction: HTMLElement;
-  state: ReturnType<typeof projectCheckpoint> | undefined;
+  state: (ReturnType<typeof projectCheckpoint> & { inView: boolean }) | undefined;
 
   constructor(private element: HTMLElement) {
     this.direction = element.querySelector('#direction')!;
@@ -18,7 +19,7 @@ export class CheckpointGuide {
 
   render(engine: Engine) {
     const shown = ['countdown', 'racing'].includes(engine.state) && !engine.track.practiceRadius;
-    this.element.hidden = !shown || engine.player.nextGate === 0;
+    this.element.hidden = !shown || (engine.player.nextGate === 0 && engine.player.passed === 0);
     if (!shown) return;
     const width = innerWidth,
       height = innerHeight;
@@ -31,7 +32,13 @@ export class CheckpointGuide {
       bottom: Math.max(top + 20, height - (touch ? (height < 500 ? 245 : 200) : 90)),
     };
     const guide = projectCheckpoint(engine.checkpointTarget, engine.camera, width, height, bounds);
-    this.state = guide;
+    const inView = checkpointInView(
+      engine.track.gates[engine.player.nextGate],
+      engine.checkpointTarget,
+      engine.camera,
+    );
+    this.element.hidden ||= inView;
+    this.state = { ...guide, inView };
     this.element.style.left = `${guide.x}px`;
     this.element.style.top = `${guide.y}px`;
     this.element.dataset.outside = String(guide.outside);
@@ -82,4 +89,25 @@ export function projectCheckpoint(
     outside,
     behind,
   };
+}
+
+const viewFrustum = new Frustum();
+const viewProjection = new Matrix4();
+const gateCenter = new Vector3();
+
+/** Include the opening and both posts, so approaching a wide gate does not summon an arrow. */
+export function checkpointInView(gate: Gate, target: Vector3, camera: PerspectiveCamera) {
+  const halfWidth = gate.width / 2 + 1.5;
+  gateCenter.set(target.x, target.y - 1.5, target.z);
+  viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  viewFrustum.setFromProjectionMatrix(viewProjection);
+  // Project the oriented opening, post height and depth onto each camera clipping plane.
+  return viewFrustum.planes.every((plane) => {
+    const n = plane.normal;
+    const radius =
+      halfWidth * Math.abs(-gate.tz * n.x + gate.tx * n.z) +
+      Math.abs(gate.tx * n.x + gate.tz * n.z) +
+      5 * Math.abs(n.y);
+    return plane.distanceToPoint(gateCenter) + radius >= 0;
+  });
 }

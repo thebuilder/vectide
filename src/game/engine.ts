@@ -74,6 +74,9 @@ export class Engine {
     }
     return this.guideTarget;
   }
+  get simulationTime() {
+    return this.visualTime;
+  }
   readonly audio = new RaceAudio();
   private itemSounds = new ItemSoundEvents(this.audio);
   track = TRACKS[0];

@@ -78,3 +78,24 @@ test('first driving tips respond to input and remember dismissal', async ({ page
   await page.locator('#start').click();
   await expect(coach).toBeHidden();
 });
+
+test('touch racing starts without driving tips to dismiss', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.locator('#open-setup').tap();
+  await page.locator('#start').tap();
+  await expect(page.locator('#countdown')).toBeVisible();
+  await expect(page.locator('#ride-coach')).toBeHidden();
+  await page.waitForFunction(() => (window as any).__vectide.speed > 15);
+  await expect(page.locator('#ride-coach')).toBeHidden();
+  await page.locator('#pause').tap();
+  await page.locator('#pause-help').tap();
+  await expect(page.locator('#help-dialog')).toContainText('Throttle is automatic');
+  await context.close();
+});

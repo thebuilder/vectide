@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { projectCheckpoint } from '../src/checkpoint-guide';
+import { projectCheckpoint, checkpointInView } from '../src/checkpoint-guide';
 import { createWorld } from '../src/game/visuals';
 import { createRacer } from '../src/game/physics';
 import { TRACKS } from '../src/game/tracks';
@@ -75,4 +75,47 @@ it('projects a visible gate at its actual camera position instead of pinning eve
   expect(a.x).toBeCloseTo(640);
   expect(a.y).toBeCloseTo(400);
   expect(b.x).toBeGreaterThan(a.x);
+});
+
+it('treats gates inside the viewport but outside HUD margins as visible', () => {
+  const camera = new PerspectiveCamera(60, 1.6, 0.1, 6000);
+  camera.updateMatrixWorld();
+  const gate = { x: 80, z: -100, tx: 0, tz: 1, width: 40 };
+  const target = new Vector3(gate.x, 6.5, gate.z);
+  const projected = projectCheckpoint(target, camera, 1280, 800, {
+    left: 200,
+    right: 1080,
+    top: 200,
+    bottom: 600,
+  });
+  expect(projected.outside).toBe(true);
+  expect(checkpointInView(gate, target, camera)).toBe(true);
+});
+
+it('keeps guidance quiet while part of the gate opening remains visible', () => {
+  const camera = new PerspectiveCamera(60, 1.6, 0.1, 6000);
+  camera.updateMatrixWorld();
+  const gate = { x: 105, z: -100, tx: 0, tz: 1, width: 40 };
+  expect(new Vector3(gate.x, 6.5, gate.z).project(camera).x).toBeGreaterThan(1);
+  expect(checkpointInView(gate, new Vector3(gate.x, 6.5, gate.z), camera)).toBe(true);
+  gate.x = 150;
+  expect(checkpointInView(gate, new Vector3(gate.x, 6.5, gate.z), camera)).toBe(false);
+  gate.x = 0;
+  gate.z = 50;
+  expect(checkpointInView(gate, new Vector3(gate.x, 6.5, gate.z), camera)).toBe(false);
+});
+
+it('shows guidance when a diagonal gate is wholly outside the viewport', () => {
+  const camera = new PerspectiveCamera(60, 1.6, 0.1, 6000);
+  camera.updateMatrixWorld();
+  const gate = { x: 120, z: -100, tx: Math.SQRT1_2, tz: Math.SQRT1_2, width: 40 };
+  for (const side of [-1, 1]) {
+    const post = new Vector3(
+      gate.x - (gate.tz * side * gate.width) / 2,
+      6.5,
+      gate.z + (gate.tx * side * gate.width) / 2,
+    );
+    expect(post.project(camera).x).toBeGreaterThan(1);
+  }
+  expect(checkpointInView(gate, new Vector3(gate.x, 6.5, gate.z), camera)).toBe(false);
 });

@@ -135,13 +135,33 @@ test('stunt text freezes during pause and clears on restart', async ({ page }) =
   await expect(page.locator('#stunt-hud')).toBeHidden();
 });
 
-test('crashes and ordinary jumps do not announce tricks', async ({ page }) => {
+test('crashes show yellow wipeout feedback while ordinary jumps stay quiet', async ({ page }) => {
   await start(page);
   await land(page, 0, 0);
   await expect(page.locator('#stunt-hud')).toBeHidden();
   await land(page, 180, 360);
-  await expect(page.locator('#stunt-hud')).toBeHidden();
-  await expect(page.locator('#stunt-announcement')).toBeEmpty();
+  const hud = page.locator('#stunt-hud');
+  await expect(hud).toBeVisible();
+  await expect(hud).toHaveText('WIPEOUT');
+  await expect(hud).toHaveCSS('color', 'rgb(255, 198, 90)');
+  await expect(page.locator('#stunt-announcement')).toHaveText('WIPEOUT');
+  await expect(page.locator('#notice')).toBeEmpty();
+  await page.screenshot({ path: 'artifacts/wipeout-feedback.png' });
+  await page.locator('#pause').click();
+  const pausedAt = await advance(page, 1);
+  expect(await advance(page, 90)).toBe(pausedAt);
+  await page.locator('#resume').click();
+  await advance(page, 150);
+  await expect(hud).toBeHidden();
+  // The staged landing is off course; normal missed-gate help can return after recovery.
+  await expect(page.locator('#notice')).not.toHaveText(/RIDER DOWN|CLIMBING BACK ON/);
+  await advance(page, 180);
+  await land(page, 180, 0);
+  await expect(hud).toHaveText('WIPEOUT');
+  await expect(hud).toBeVisible();
+  await page.locator('#pause').click();
+  await page.locator('#restart').click();
+  await expect(hud).toBeHidden();
 });
 
 test.describe('phone and reduced motion', () => {
@@ -164,5 +184,10 @@ test.describe('phone and reduced motion', () => {
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(844);
     expect(bounds.y + bounds.height).toBeLessThan(200);
     await page.screenshot({ path: 'artifacts/trick-text-phone.png' });
+    await land(page, 180, 0);
+    await expect(hud).toHaveText('WIPEOUT');
+    await expect(hud).toHaveCSS('color', 'rgb(255, 198, 90)');
+    await expect(hud).toHaveCSS('transform', 'none');
+    await page.screenshot({ path: 'artifacts/wipeout-phone.png' });
   });
 });

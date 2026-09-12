@@ -1,6 +1,6 @@
 # Racing polish verification, 12 September 2026
 
-Branch `feat/showcase-polish` includes current `origin/main` f960c15.
+The showcase work shipped in PR #9. Branch `feat/quiet-racing-feedback` starts from `origin/main` 1d68582.
 
 ## Delivered behavior
 
@@ -14,7 +14,7 @@ Branch `feat/showcase-polish` includes current `origin/main` f960c15.
 
 ## Final verification
 
-- `pnpm check`: 336 tests across 50 files pass, including full six-rider three-lap simulations on all courses, pickup races, twelve-rider multiplayer simulation, gate admission/recovery, landing physics, water contact, dolphins and rendering interpolation.
+- `pnpm check`: 339 tests across 50 files pass, including full six-rider three-lap simulations on all courses, pickup races, twelve-rider multiplayer simulation, gate admission/recovery, landing physics, water contact, dolphins and rendering interpolation.
 - `pnpm build`: passes with the existing large Three.js chunk advisory. Formatting and `git diff --check` pass.
 - Seventeen distinct native Chromium checks passed for the checkpoint redesign: full rendered laps on all courses, complete Storm guidance and phone rotation, four ramp rendering rates from 60 to 240 Hz, Storm's opening, wave flips/diving, two-client WebRTC driving, three version mismatch cases and replicated stunt controls.
 - One Harbor run was interrupted by a Vite source reload returning it to the menu. Holding source steady and rerunning Harbor passed; the same run also passed Palm's full rendered lap.
@@ -41,6 +41,13 @@ Earlier slice verification also covered desktop WebKit phone setup/rotation, the
 - Gamepads can reach multiplayer text fields, and keyboard users can leave volume sliders vertically while retaining native Left/Right/Home/End value controls. Typing and text-cursor movement retain their native behavior.
 - A shared focus style adds a solid inner ring with a slow cyan halo pulse. The inner ring remains visible at clipped panel edges, and reduced motion retains a steady highlight.
 - All 336 tests, the production build and fourteen native browser checks pass. Browser checks cover desktop row boundaries, gamepad form navigation and analog direction, keyboard sliders, phone portrait/landscape scrolling, animated/reduced-motion focus, pause controls and driving tips. Independent review found no required issues. Gamepad inputs were simulated through the browser API; physical controller feel remains unverified.
+
+## Quiet racing feedback follow-up
+
+- Touch driving tips stay hidden, so automatic throttle and follow-on coaching require no dismissal. Touch controls remain explained in the help dialog.
+- Removed the rider-down and climbing-back-on status messages. A yellow, unboxed WIPEOUT now uses the same brief animation as landed tricks. Recovery physics and rider animation are unchanged. The popup expires automatically, freezes with a paused local race, respects reduced motion, and resets correctly between runs.
+- Direction guidance stays hidden while the next gate opening or posts are in the camera viewport, including near approaches and targets outside the reserved HUD margins. The oriented gate volume avoids false visibility around diagonal gates. Offscreen and behind-camera guidance remains available, including the finish gate after the opening grid.
+- All 339 tests and the production build pass. Thirteen distinct native browser cases pass across a complete Storm lap, visible/offscreen gate views, phone rotation, touch startup/help, stunt/wipeout feedback, pause/restart, and real local WebRTC guest-only wipeout delivery and expiry. Desktop and phone wipeout renders were inspected. A diagonal visibility regression caught during review was reproduced and corrected.
 
 ## External checks
 

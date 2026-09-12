@@ -113,3 +113,51 @@ test.describe('touch checkpoint guidance', () => {
     await expect(page.locator('#checkpoint')).toBeHidden();
   });
 });
+
+test('guidance stays quiet for visible gate openings and returns for off-screen and finish gates', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await start(page);
+  await page.evaluate(() => {
+    const e = (window as any).__testEngine;
+    cancelAnimationFrame(e.frameId);
+    e.player.nextGate = 1;
+    e.player.passed = 1;
+  });
+  const viewGate = async (distance: number, side: number, nextGate = 1) =>
+    page.evaluate(
+      async ({ distance, side, nextGate }) => {
+        const e = (window as any).__testEngine;
+        e.player.nextGate = nextGate;
+        const g = e.track.gates[nextGate];
+        e.camera.position.set(
+          g.x - g.tx * distance + g.tz * side,
+          6.5,
+          g.z - g.tz * distance - g.tx * side,
+        );
+        e.camera.lookAt(e.camera.position.x + g.tx * 100, 6.5, e.camera.position.z + g.tz * 100);
+        e.camera.updateMatrixWorld();
+        const path = '/src/checkpoint-guide.ts';
+        const { CheckpointGuide } = await import(path);
+        const guide = new CheckpointGuide(document.getElementById('checkpoint')!);
+        guide.render(e);
+        e.renderer.render(e.scene, e.camera);
+        return guide.state;
+      },
+      { distance, side, nextGate },
+    );
+  for (const distance of [100, 50, 20, 8]) {
+    const guide = await viewGate(distance, 14);
+    expect(guide.inView).toBe(true);
+    await expect(page.locator('#checkpoint')).toBeHidden();
+  }
+  await page.screenshot({ path: 'artifacts/checkpoint-visible-no-arrow.png' });
+  const outside = await viewGate(50, 160);
+  expect(outside.inView).toBe(false);
+  await expect(page.locator('#checkpoint')).toBeVisible();
+  const finish = await viewGate(-50, 0, 0);
+  expect(finish.behind).toBe(true);
+  await expect(page.locator('#checkpoint')).toBeVisible();
+  await expect(page.locator('#checkpoint')).toHaveAttribute('aria-label', /TURN BACK, gate 1/);
+});
