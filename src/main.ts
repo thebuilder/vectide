@@ -9,7 +9,6 @@ import { rideHelp, setupRideHelp } from './ride-help';
 import './pickups.css';
 import { courseCards } from './course-cards';
 import { setupMultiplayer } from './multiplayer/ui';
-import { inject } from '@vercel/analytics';
 import { TouchControls } from './touch';
 import '@fontsource/roboto/latin-900-italic.css';
 import '@fontsource/roboto/latin-400-italic.css';
@@ -23,8 +22,6 @@ import './checkpoint-guide.css';
 import { setupMenuScreens } from './menu';
 import { Engine, type Mode, type Snapshot } from './game/engine';
 import { TRACKS } from './game/tracks';
-
-inject();
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `

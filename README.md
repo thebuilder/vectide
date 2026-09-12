@@ -86,6 +86,11 @@ version-12 address to report its mismatch. A guest still running version 12 must
 reload first; its old lookup cannot discover newer hosts.
 
 Deploy over HTTPS. No application backend is required for default signaling.
+The production site is deployed as a Cloudflare Worker with static assets; run
+`pnpm deploy` to build and publish it after authenticating Wrangler. Connect the
+`vectide.thebuilder.dk` hostname to that Worker once the `thebuilder.dk` zone is
+managed by Cloudflare. Cloudflare serves immutable build assets from its edge;
+the game's root document is the single-page fallback.
 Networks that cannot establish direct WebRTC connections need a working TURN
 relay. Configure these optional Vite environment variables before building:
 
@@ -194,4 +199,7 @@ The approved promotional artwork is served at `public/og.png`. Its dark teal wat
 
 ## Web Analytics
 
-Vercel Web Analytics initializes once from the app entry point. Enable Web Analytics for the Vercel project, then deploy this change to collect page views. Local Vite development uses the SDK's development mode.
+After `vectide.thebuilder.dk` is proxied through Cloudflare, enable Cloudflare
+Web Analytics for that hostname in the dashboard. Cloudflare will inject the
+browser beacon at the edge; the Worker's request-level observability is enabled
+in `wrangler.jsonc`.

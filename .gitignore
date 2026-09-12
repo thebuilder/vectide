@@ -4,4 +4,6 @@ dist/
 test-results/
 playwright-report/
 artifacts/
+.wrangler/
+.dev.vars*
 .DS_Store
