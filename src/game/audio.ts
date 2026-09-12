@@ -188,6 +188,9 @@ export class RaceAudio {
   countdownCue(go = false) {
     if (this.enabled && !this.suspended) this.effects?.countdownCue(go);
   }
+  finish() {
+    if (this.enabled && !this.suspended) this.effects?.finish();
+  }
   tone(frequency: number, duration = 0.14) {
     if (this.enabled && !this.suspended) this.effects?.tone(frequency, duration);
   }

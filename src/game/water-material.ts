@@ -57,21 +57,21 @@ export function createWaterMaterial(track: Track): T.ShaderMaterial {
         float crest=clamp(vHeight/uAmplitude*.5+.5,0.,1.);
         float broadNoise=noise(vWorld.xz*.065+vec2(uTime*.035,-uTime*.08));
         float ripples=noise(vWorld.xz*.4+vec2(uTime*.17,uTime*.08));
-        vec3 deep=base*.5+vec3(.005,.025,.045);
-        vec3 shallow=vec3(.025,.34,.34);
-        vec3 color=mix(deep,shallow,crest*.65+broadNoise*.12);
+        vec3 deep=base*.45+vec3(.002,.008,.013);
+        vec3 shallow=vec3(.008,.15,.145);
+        vec3 color=mix(deep,shallow,crest*.52+broadNoise*.08);
         float facing=max(dot(normal,normalize(vec3(-.3,1.,.5))),0.);
         color*=.52+facing*.66;
         float fresnel=pow(1.-max(dot(normal,viewDir),0.),3.);
         vec3 reflection=mix(vec3(.025,.09,.16),horizon*.48,.5+normal.z*.5);
         color=mix(color,reflection,fresnel*.55);
         vec3 halfDirection=normalize(viewDir+normalize(vec3(.65,.5,.35)));
-        float specular=pow(max(dot(normal,halfDirection),0.),55.);
-        color+=vec3(.66,.91,.87)*specular*.8;
+        float specular=pow(max(dot(normal,halfDirection),0.),110.);
+        color+=vec3(.66,.91,.87)*specular*.23;
         // Broken, moving foam follows crests rather than painting every polygon edge.
-        float breaking=max(smoothstep(.57,.92,vHeight/uAmplitude),smoothstep(.3,1.8,vPulse));
-        float foam=breaking*smoothstep(.38,.68,broadNoise*.55+ripples*.45);
-        color=mix(color,vec3(.53,.83,.77),foam*.85);
+        float breaking=max(smoothstep(.82,1.16,vHeight/uAmplitude),smoothstep(.3,1.8,vPulse));
+        float foam=breaking*smoothstep(.52,.77,broadNoise*.55+ripples*.45);
+        color=mix(color,vec3(.16,.44,.38),foam*.42);
         color=mix(color,horizon*.23,1.-exp(-distanceToCamera*.0008));
         // Music catches the actual crests and facets; no separate moving overlay.
         float nearField=1.-smoothstep(65.,135.,distanceToCamera);

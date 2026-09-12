@@ -13,6 +13,10 @@ export class SoundEffects {
     const samples = this.noise.getChannelData(0);
     for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
   }
+  finish() {
+    for (const [i, frequency] of [523.25, 659.25, 783.99, 1046.5].entries())
+      this.note(frequency, frequency, i === 3 ? 0.6 : 0.22, 0.045, i * 0.12, 'triangle');
+  }
   pickup() {
     for (const [i, frequency] of [660, 990, 1320].entries())
       this.note(frequency, frequency, 0.18, 0.055, i * 0.055, 'triangle');

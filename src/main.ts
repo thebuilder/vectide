@@ -346,6 +346,7 @@ engine.onUpdate = (s) => {
   drawMap(s);
 };
 engine.onFinish = (s) => {
+  engine.audio.finish();
   const best = Math.min(...s.player.laps),
     courseVersion = s.track.id === 'storm' ? 'v12' : s.track.id === 'palms' ? 'v8' : 'v9',
     key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
@@ -373,8 +374,8 @@ engine.onFinish = (s) => {
     : !saved
       ? 'Best time could not be saved in this browser.'
       : best < previous
-        ? `NEW LOCAL BEST LAP · ${formatTime(best)}`
-        : `LOCAL BEST LAP · ${formatTime(previous)}`;
+        ? `NEW LOCAL BEST LAP · ${formatTime(best)}${Number.isFinite(previous) ? ` · ${(previous - best).toFixed(2)}s FASTER` : ''}`
+        : `LOCAL BEST LAP · ${formatTime(previous)} · ${(best - previous).toFixed(2)}s TO BEAT`;
   finishTimer = setTimeout(() => {
     if (engine.state === 'finished') {
       $<HTMLDialogElement>('results').showModal();

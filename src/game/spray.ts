@@ -83,8 +83,8 @@ export class VoxelSpray {
       ? 0.35 + strength * (0.95 + Math.random() * 0.8)
       : 0.2 + strength * (0.25 + Math.random() * 0.65);
     this.sizes[i] = isFoam
-      ? 0.1 + strength * (0.28 + Math.random() * 0.48)
-      : 0.025 + strength * (0.055 + Math.random() * 0.19) + impact * 0.025;
+      ? 0.05 + strength * (0.1 + Math.random() * 0.17)
+      : 0.018 + strength * (0.025 + Math.random() * 0.085) + impact * 0.015;
     this.positions[j] = r.x - fx * (isFoam ? 1.8 : 0.4) + fz * side * (0.65 + Math.random() * 0.35);
     this.positions[j + 1] = r.y - 0.15;
     this.positions[j + 2] =
@@ -114,10 +114,10 @@ export class VoxelSpray {
         for (let n = 0; n < 30 + impact * 7; n++) this.emit(r, n % 2 ? 1 : -1, impact, n % 4 === 0);
         this.cooldown.set(r.id, 0.2);
       }
-      if (r.wet > 0 && speed > 0.5) {
+      if (r.wet > 0 && !r.onRamp && r.recovery.phase === 'riding' && speed > 0.5) {
         let count =
           (this.emission.get(r.id) ?? 0) +
-          dt * 360 * Math.pow(Math.min(speed / 22, 1), 1.6) * r.wet * (r.id === 0 ? 1 : 0.6);
+          dt * 210 * Math.pow(Math.min(speed / 22, 1), 1.6) * r.wet * (r.id === 0 ? 1 : 0.6);
         while (count >= 1) {
           this.emit(r, Math.random() > 0.5 ? 1 : -1, 0, Math.random() < 0.28);
           count--;
@@ -150,7 +150,7 @@ export class VoxelSpray {
         const surface = waterHeight(this.positions[j], this.positions[j + 2], time, water);
         if (this.positions[j + 1] < surface && this.velocities[j + 1] < 0) {
           this.foam[i] = 1;
-          this.sizes[i] *= 1.8;
+          this.sizes[i] *= 1.15;
           this.life[i] = Math.min(this.life[i], 0.45);
         }
       }

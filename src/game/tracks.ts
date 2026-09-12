@@ -52,7 +52,7 @@ const definitions = [
     sea: 'ROLLING',
     accent: '#86fadd',
     sky: '#080a20',
-    horizon: '#ad385e',
+    horizon: '#812b48',
     water: '#073438',
     wave: 1.35,
   },

@@ -58,7 +58,7 @@ export function createWorld(track: Track): World {
       vertexShader:
         'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:
-        'varying vec2 vUv; uniform float storm;void main(){if(vUv.y<.48&&mod(vUv.y,.065)<.013)discard;vec3 c=mix(vec3(1.,.08,.32),vec3(1.,.66,.27),vUv.y);gl_FragColor=vec4(mix(c,vec3(.5,.67,.76),storm),1.);}',
+        'varying vec2 vUv; uniform float storm;void main(){if(vUv.y<.48&&mod(vUv.y,.065)<.013)discard;vec3 c=mix(vec3(.95,.025,.07),vec3(1.,.32,.075),vUv.y);gl_FragColor=vec4(mix(c,vec3(.5,.67,.76),storm),1.);}',
     }),
   );
   sun.position.set(2300, 360, 500);

@@ -1,3 +1,5 @@
+import { RideCamera } from './ride-camera';
+import { Wake } from './wake';
 import { PickupVisuals } from './pickup-visuals';
 import { Pickups } from './pickups';
 import { NetworkRace } from '../multiplayer/race';
@@ -56,6 +58,8 @@ export class Engine {
   private bloom: UnrealBloomPass;
   private world: World;
   private jets: T.Group[] = [];
+  private rideCamera = new RideCamera();
+  private wake = new Wake();
   private spray = new VoxelSpray();
   private pickupVisuals = new PickupVisuals();
   private cameraAnchor = new T.Vector3();
@@ -155,7 +159,7 @@ export class Engine {
     fill.position.set(-500, 250, -350);
     this.scene.add(fill);
     this.world = createWorld(this.track);
-    this.scene.add(this.world.group, this.spray.object, this.pickupVisuals.group);
+    this.scene.add(this.world.group, this.spray.object, this.wake.object, this.pickupVisuals.group);
     this.pickupVisuals.onSplash = (x, y, z, strength) => this.spray.burst(x, y, z, strength);
     this.pickupVisuals.onExplosion = (x, y, z) => {
       this.spray.burst(x, y, z);
@@ -229,6 +233,8 @@ export class Engine {
   };
   private resetRacers(menu = this.state === 'menu') {
     this.spray.clear();
+    this.wake.clear();
+    this.rideCamera.clear();
     this.jets.forEach((j) => {
       this.scene.remove(j);
       const materials = new Set<T.Material>();
@@ -442,6 +448,8 @@ export class Engine {
   menu() {
     this.camera.clearViewOffset();
     this.spray.clear();
+    this.wake.clear();
+    this.rideCamera.clear();
     this.audio.setScene('title');
     this.state = 'menu';
     this.items = new Pickups(this.track, false);
@@ -732,11 +740,16 @@ export class Engine {
       this.camera.position.lerp(desired, this.reducedMotion.matches ? 1 : 1 - Math.exp(-dt * 2));
       this.camTarget.set(x + Math.sin(a) * lead, p.y + 1, z + Math.cos(a) * lead);
     } else if (this.state !== 'lobby') {
-      const speed = Math.hypot(p.vx, p.vz),
+      const framing = this.rideCamera.update(
+          this.state === 'paused' ? 0 : dt,
+          p,
+          this.state === 'finished',
+          this.reducedMotion.matches,
+        ),
         desired = new T.Vector3(
-          p.x - Math.sin(p.yaw) * 7.2,
-          p.y + 2.9,
-          p.z - Math.cos(p.yaw) * 7.2,
+          p.x - Math.sin(p.yaw + framing.yawOffset) * framing.distance,
+          p.y + framing.height,
+          p.z - Math.cos(p.yaw + framing.yawOffset) * framing.distance,
         );
       this.camera.position.x += p.x - this.cameraAnchor.x;
       this.camera.position.z += p.z - this.cameraAnchor.z;
@@ -752,8 +765,7 @@ export class Engine {
         new T.Vector3(p.x + Math.sin(p.yaw) * 4, p.y + 0.6, p.z + Math.cos(p.yaw) * 4),
         1 - Math.exp(-dt * 9),
       );
-      this.camera.fov +=
-        (58 + Math.min(speed / 32, 1) * 5 - this.camera.fov) * (1 - Math.exp(-dt * 2));
+      this.camera.fov += (framing.fov - this.camera.fov) * (1 - Math.exp(-dt * 2));
       this.camera.updateProjectionMatrix();
     }
     this.cameraAnchor.set(p.x, p.y, p.z);
@@ -765,8 +777,10 @@ export class Engine {
         this.camera.position.z - gate.position.z,
       );
     });
-    if (this.state === 'racing' || this.state === 'finished' || this.lobby)
-      this.spray.update(dt, this.racers, this.track, this.visualTime, itemSurface);
+    if (this.state === 'racing' || this.state === 'finished' || this.lobby) {
+      this.spray.update(dt, rendered, this.track, this.visualTime, itemSurface);
+      this.wake.update(rendered, this.visualTime, itemSurface);
+    }
     this.audio.update(
       Math.hypot(p.vx, p.vz),
       p.finished ? 0.65 : control.throttle * (1 - control.brake),
@@ -786,6 +800,7 @@ export class Engine {
     this.frameId = requestAnimationFrame(this.frame);
   };
   dispose() {
+    this.wake.dispose();
     cancelAnimationFrame(this.frameId);
     this.intro?.finish();
     window.removeEventListener('resize', this.resize);
