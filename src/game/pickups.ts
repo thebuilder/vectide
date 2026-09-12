@@ -3,6 +3,7 @@ import { angle, clamp, racePosition, rampSurface, type Racer } from './physics';
 import type { Track } from './tracks';
 import { waterHeight, type WaterProfile } from './water';
 import { wakeFront, wakeWidth } from './water-pulses';
+import { createTorpedoCollider, segmentCircleHit, TORPEDO_DEPTH } from './projectile-collision';
 
 export const ITEMS = [
   { name: 'EMPTY', icon: '◇', description: 'Ride through a pickup', color: '#86fadd' },
@@ -45,7 +46,7 @@ export function pickupRows(track: Track): Pickup[] {
   const lanes = track.id === 'palms' ? 5 : 3;
   const fractions =
     track.id === 'palms'
-      ? [0.125, 0.25, 0.625, 0.875, 0.9375]
+      ? [0.125, 0.25, 0.45, 0.625, 0.875]
       : track.id === 'storm'
         ? [0.17, 0.37, 0.57, 0.77, 0.97]
         : [0.14, 0.34, 0.54, 0.74, 0.94];
@@ -110,7 +111,7 @@ export function projectileHeight(
   surface: WaterProfile,
   age = effect.age,
 ): number {
-  if (effect.kind !== 3) return -0.35;
+  if (effect.kind !== 3) return TORPEDO_DEPTH;
   const sea = waterHeight(effect.x, effect.z, time, surface) + 0.7;
   if (!effect.launch || age >= MINE_TOSS_SECONDS) return sea;
   const progress = clamp(age / MINE_TOSS_SECONDS, 0, 1);
@@ -131,6 +132,7 @@ export class Pickups {
       pulseTime: this.waterTime,
     };
   }
+  private readonly torpedoContact: ReturnType<typeof createTorpedoCollider>;
   private nextId = 1;
   private wakeClock = new Map<number, number>();
   constructor(
@@ -138,6 +140,7 @@ export class Pickups {
     readonly enabled: boolean,
     private random = Math.random,
   ) {
+    this.torpedoContact = createTorpedoCollider(track);
     this.boxes = enabled ? pickupRows(track) : [];
     this.state = { cooldowns: this.boxes.map(() => 0), effects: [] };
   }
@@ -240,22 +243,26 @@ export class Pickups {
       e.z += e.launch.vz * flight;
     }
     if (e.kind === 3 && e.age < 0.65) return;
-    const hit = racers.some((r) => {
+    const from = { x: oldX, z: oldZ };
+    let contact = e.kind === 3 ? null : this.torpedoContact(from, e);
+    for (const r of racers) {
       if (
         (r.id === e.owner && e.kind !== 3) ||
         Math.abs(r.y - projectileHeight(e, time, this.surface)) > (e.kind === 3 ? 4 : 1.25)
       )
-        return false;
-      const dx = e.x - oldX,
-        dz = e.z - oldZ;
-      const t = clamp(((r.x - oldX) * dx + (r.z - oldZ) * dz) / (dx * dx + dz * dz || 1), 0, 1);
-      return Math.hypot(r.x - oldX - dx * t, r.z - oldZ - dz * t) < (e.kind === 3 ? 3.5 : 1.3);
-    });
+        continue;
+      const hit = segmentCircleHit(from, e, r, e.kind === 3 ? 3.5 : 1.3);
+      if (hit !== null) contact = Math.min(contact ?? 1, hit);
+    }
     if (
-      hit ||
-      !gatePointClear(e.x, e.z, this.track.land) ||
-      this.track.obstacles.some((o) => Math.hypot(e.x - o.x, e.z - o.z) < o.radius + 1)
-    ) {
+      e.kind === 3 &&
+      (!gatePointClear(e.x, e.z, this.track.land) ||
+        this.track.obstacles.some((o) => Math.hypot(e.x - o.x, e.z - o.z) < o.radius + 1))
+    )
+      contact = Math.min(contact ?? 1, 1);
+    if (contact !== null) {
+      e.x = oldX + (e.x - oldX) * contact;
+      e.z = oldZ + (e.z - oldZ) * contact;
       e.kind = 4;
       delete e.launch;
       e.age = 0;

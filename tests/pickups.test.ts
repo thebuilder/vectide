@@ -25,7 +25,7 @@ describe('race pickups', () => {
   it('places the Palm reef row after the waves and before the jump straight', () => {
     const reef = track.waveZones!.find((zone) => zone.name === 'Reef wave channel')!;
     const straight = track.waveZones!.find((zone) => zone.name === 'Jump straight')!;
-    for (const box of pickupRows(track).filter((box) => box.row === 2)) {
+    for (const box of pickupRows(track).filter((box) => box.row === 3)) {
       expect(waveZoneWeight(box.x, box.z, reef)).toBeLessThan(0.1);
       expect(box.z).toBeGreaterThan(reef.z);
       expect(box.z).toBeLessThan(straight.z);
@@ -336,4 +336,18 @@ it('a fast torpedo still detects direct contact between simulation positions', (
   items.state.effects = [torpedo];
   items.step(0.2, 0, racers);
   expect(torpedo.kind).toBe(4);
+});
+
+it('spaces Palm rows around the course with only one on the final approach', async () => {
+  const { nearestPoint } = await import('../src/game/tracks');
+  const centers = pickupRows(track).filter((box, i) => i % 5 === 2);
+  const positions = centers.map((box) => nearestPoint(track, box));
+  for (const [i, index] of positions.entries()) {
+    const next = positions[(i + 1) % positions.length];
+    expect(
+      (((next - index + track.points.length) % track.points.length) * track.length) /
+        track.points.length,
+    ).toBeGreaterThan(120);
+  }
+  expect(positions.filter((index) => index / track.points.length > 0.8)).toHaveLength(1);
 });
