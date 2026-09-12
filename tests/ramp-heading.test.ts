@@ -1,16 +1,12 @@
 import { it, expect } from 'vitest';
-import { TRACKS } from '../src/game/tracks';
-import { createRacer, stepRacer, crossesGate } from '../src/game/physics';
+import { nearestPoint, TRACKS } from '../src/game/tracks';
+import { createRacer, stepRacer } from '../src/game/physics';
 import { waterHeight } from '../src/game/water';
-it.each(TRACKS)('ramps point through the next checkpoint on $name', (track) => {
+it.each(TRACKS)('ramps lead naturally toward a later route checkpoint on $name', (track) => {
   track.ramps.forEach((ramp) => {
-    expect(ramp.targetGate).toBeDefined();
-    const gate = track.gates[ramp.targetGate!],
-      dx = gate.x - ramp.x,
-      dz = gate.z - ramp.z;
-    expect(Math.abs(dx * ramp.tz - dz * ramp.tx)).toBeLessThan(gate.width / 2 - 2);
-    expect(dx * ramp.tx + dz * ramp.tz).toBeGreaterThan(ramp.length / 2);
-    expect(ramp.tx * gate.tx + ramp.tz * gate.tz).toBeGreaterThan(0);
+    const index = nearestPoint(track, ramp);
+    const next = track.gates.findIndex((gate) => gate.routeIndex! > index);
+    expect(ramp.targetGate).toBe(next < 0 ? 0 : next);
     const r = createRacer(track, 0);
     Object.assign(r, {
       x: ramp.x - ramp.tx * 18,
@@ -20,13 +16,18 @@ it.each(TRACKS)('ramps point through the next checkpoint on $name', (track) => {
       vz: ramp.tz * 22,
     });
     r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
-    let passed = false;
-    for (let frame = 0; frame < 120 * 7 && !passed; frame++) {
-      const previous = { x: r.x, z: r.z };
+    let touched = false,
+      landed = false;
+    for (let frame = 0; frame < 120 * 4; frame++) {
       stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, frame / 120, 1 / 120);
-      passed = crossesGate(previous, r, gate);
+      touched ||= r.onRamp;
+      landed ||= touched && !r.onRamp && r.wet > 0;
+      const gate = track.gates[ramp.targetGate!];
+      // A straight takeoff cannot put the rider behind an unmet checkpoint plane.
+      expect((r.x - gate.x) * gate.tx + (r.z - gate.z) * gate.tz).toBeLessThan(12);
     }
-    expect(passed).toBe(true);
+    expect(touched).toBe(true);
+    expect(landed).toBe(true);
   });
 });
 

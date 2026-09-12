@@ -204,7 +204,7 @@ it('awards leader items for every roll, including tied HUD leaders and solo race
       const racers = Array.from({ length: count }, (_, i) => createRacer(track, i));
       const collector = racers.at(-1)!,
         box = items.boxes[0];
-      for (const r of racers) Object.assign(r, { passed: 5, nextGate: 10, x: -1000, z: -1000 });
+      for (const r of racers) Object.assign(r, box, { passed: 1, nextGate: 1, y: 50 });
       Object.assign(collector, box, { y: waterHeight(box.x, box.z, 0, track) + 1 });
       expect(racePosition(collector, racers, track)).toBe(1);
       items.step(1 / 120, 0, racers);

@@ -5,7 +5,7 @@ import { collideTerrain } from './terrain-collision';
 import { createRiderLoad, stepRiderLoad, type RiderLoad } from './rider-load';
 import { collideRampWalls } from './ramp-collision';
 import { waterHeight, type WaterProfile } from './water';
-import { nearestPoint, routePoint, type Track, type Gate } from './tracks';
+import { checkpointDistance, nearestPoint, routePoint, type Track, type Gate } from './tracks';
 export interface Input {
   throttle: number;
   steer: number;
@@ -407,9 +407,20 @@ export function advanceFinishLap(r: Racer, previous: { x: number; z: number }, t
   }
 }
 export function raceProgress(r: Racer, track: Track): number {
-  const g = track.gates[r.nextGate];
-  return r.passed - Math.min(Math.hypot(g.x - r.x, g.z - r.z) / 120, 0.99);
+  const gate = track.gates[r.nextGate],
+    next = gate.routeIndex ?? nearestPoint(track, gate),
+    pointGap = (next - nearestPoint(track, r) + track.points.length) % track.points.length,
+    remaining =
+      ((pointGap > track.points.length / 2 ? pointGap - track.points.length : pointGap) *
+        track.length) /
+      track.points.length;
+  // Position keeps changing on long sections, and catch-up keeps its original lap-distance scale.
+  return (
+    ((r.passed - clamp(remaining / checkpointDistance(track, r.nextGate), 0, 0.99)) * 16) /
+    track.gates.length
+  );
 }
+
 /** Ties share a position, matching the number shown in the race HUD. */
 export function racePosition(player: Racer, racers: Racer[], track: Track): number {
   return (
@@ -436,15 +447,19 @@ export function aiInput(
 ): Input {
   const nearest = nearestPoint(track, r),
     speed = Math.hypot(r.vx, r.vz);
-  let target = routePoint(track, nearest + Math.max(4, speed * 0.45));
-  const gate = track.gates[r.nextGate],
-    distance = Math.hypot(gate.x - r.x, gate.z - r.z);
+  let target = routePoint(track, nearest + Math.max(4, speed * 0.7));
+  const gate = track.gates[r.nextGate];
   const gateSide = (r.x - gate.x) * gate.tx + (r.z - gate.z) * gate.tz;
-  if (gateSide > 5) r.approachingGate = true;
+  const beyondGate =
+    (nearest - (gate.routeIndex ?? nearestPoint(track, gate)) + track.points.length) %
+    track.points.length;
+  // Distant bends can already lie behind a gate's infinite plane. Retry only after reaching it.
+  if (gateSide > 5 && (beyondGate * track.length) / track.points.length < 80)
+    r.approachingGate = true;
   if (r.approachingGate) {
     target = { x: gate.x - gate.tx * 40, z: gate.z - gate.tz * 40 };
     if (Math.hypot(target.x - r.x, target.z - r.z) < 8) r.approachingGate = false;
-  } else if (distance < 90) target = gate;
+  } else if (Math.hypot(gate.x - r.x, gate.z - r.z) < 40) target = gate;
   let desired = Math.atan2(target.x - r.x, target.z - r.z),
     avoidance = 0;
   for (const other of racers) {
@@ -482,9 +497,7 @@ export function recoverRacer(r: Racer, track: Track, time: number): void {
   r.x = start ? start.x : g.x;
   r.z = start ? start.z : g.z;
   r.y = waterHeight(r.x, r.z, time, track) + 0.6;
-  r.yaw = start
-    ? start.yaw
-    : Math.atan2(track.gates[r.nextGate].x - g.x, track.gates[r.nextGate].z - g.z);
+  r.yaw = start ? start.yaw : Math.atan2(g.tx, g.tz);
   r.onRamp = false;
   r.wet = 1;
   r.steer = 0;

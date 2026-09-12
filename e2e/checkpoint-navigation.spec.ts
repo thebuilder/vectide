@@ -44,7 +44,7 @@ test('gate guidance stays in view through a complete Storm lap', async ({ page }
     };
     requestAnimationFrame(inspect);
   });
-  await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 7);
+  await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 3);
   await page.screenshot({ path: 'artifacts/storm-checkpoint-guidance.png' });
   await page.waitForFunction(() => (window as any).__vectide.player.laps.length > 0, undefined, {
     timeout: 65000,

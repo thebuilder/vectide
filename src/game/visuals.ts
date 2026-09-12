@@ -93,16 +93,23 @@ export function createWorld(track: Track): World {
       const base = outlined(new T.CylinderGeometry(0.55, 1.1, 0.9, 6), color);
       base.position.y = 0.5;
       buoy.add(base);
-      const mastHeight = track.id === 'storm' ? 6 : 3.5;
+      const mastHeight = 8;
       const mast = new T.Mesh(
-        new T.CylinderGeometry(0.09, 0.09, mastHeight, 5),
+        new T.CylinderGeometry(0.16, 0.2, mastHeight, 5),
         glowing(color, 0.25),
       );
       mast.position.y = 0.5 + mastHeight / 2;
       buoy.add(mast);
-      const top = new T.Mesh(new T.OctahedronGeometry(0.6), glowing(color, 0.45));
+      const top = new T.Mesh(new T.OctahedronGeometry(1.05), glowing(color, 0.45));
       top.position.y = mastHeight + 0.5;
       buoy.add(top);
+      const pennant = new T.Mesh(
+        new T.BoxGeometry(1.5, 4.5, 0.3),
+        new T.MeshBasicMaterial({ color, toneMapped: false }),
+      );
+      pennant.position.set(-g.tz * side * 0.8, 5.5, g.tx * side * 0.8);
+      pennant.rotation.y = Math.atan2(g.tx, g.tz);
+      buoy.add(pennant);
       gate.add(buoy);
     }
     if (i === 0) {
@@ -166,13 +173,14 @@ export function createWorld(track: Track): World {
         geometry,
         new T.MeshBasicMaterial({ color: 0x07171e, side: T.DoubleSide }),
       );
-      backing.position.set(0, 8 + j * 1.7, -0.04);
-      backing.scale.setScalar(1.2);
+      backing.position.set(0, 11 + j * 2.4, -0.04);
+      backing.scale.setScalar(1.65);
       const arrow = new T.Mesh(
         geometry,
         new T.MeshBasicMaterial({ color: 0xffc65a, side: T.DoubleSide, toneMapped: false }),
       );
-      arrow.position.y = 8 + j * 1.7;
+      arrow.position.y = 11 + j * 2.4;
+      arrow.scale.setScalar(1.4);
       marker.add(backing, arrow);
     }
     gate.add(marker);

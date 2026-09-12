@@ -41,62 +41,55 @@ export interface PickupState {
 
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
-  // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
-  // Ramp-free rows use lap fractions, independent of checkpoint count, with room to use each item.
-  const betweenGates = track.id !== 'palms',
-    lanes = betweenGates ? 3 : 5,
-    rows =
-      track.id === 'storm'
-        ? [0.1125, 0.32, 0.53125, 0.71875, 0.90625]
-        : betweenGates
-          ? [0.09375, 0.28125, 0.46875, 0.65625, 0.84375]
-          : [1, 4, 10, 12, 14],
-    used = new Set<number>();
-  return rows.flatMap((index, row) => {
-    // Gates already fit the navigable water. Avoid placing a row on a ramp deck.
-    for (let offset = 0; offset < (betweenGates ? 1 : track.gates.length); offset++) {
-      const gateIndex = (index + offset) % track.gates.length;
-      if (used.has(gateIndex)) continue;
-      let gate = track.gates[gateIndex];
-      if (betweenGates) {
-        const pointIndex = Math.round(gateIndex * track.points.length),
-          p = track.points[pointIndex],
-          before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
-          after = track.points[(pointIndex + 1) % track.points.length],
-          length = Math.hypot(after.x - before.x, after.z - before.z);
-        gate = fitGateToShore(
-          { ...p, tx: (after.x - before.x) / length, tz: (after.z - before.z) / length, width: 24 },
-          track.land,
-        );
-      }
-      const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
-      const points = Array.from({ length: lanes }, (_, lane) => ({
-        x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
-        z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,
-        row,
-      }));
-      if (
-        points.every(
-          (p) =>
-            gatePointClear(p.x, p.z, track.land) &&
-            !rampSurface(p.x, p.z, track) &&
-            track.ramps.every((ramp) => {
-              const along = (p.x - ramp.x) * ramp.tx + (p.z - ramp.z) * ramp.tz;
-              const side = Math.abs(-(p.x - ramp.x) * ramp.tz + (p.z - ramp.z) * ramp.tx);
-              return (
-                side > ramp.width / 2 + 12 ||
-                along < -ramp.length / 2 - 60 ||
-                along > ramp.length / 2 + 85
-              );
-            }) &&
-            track.obstacles.every((o) => Math.hypot(p.x - o.x, p.z - o.z) > o.radius + 3),
-        )
-      ) {
-        used.add(gateIndex);
-        return points;
-      }
+  // Item rows belong to the route, independently of how many checkpoints it needs.
+  const lanes = track.id === 'palms' ? 5 : 3;
+  const fractions =
+    track.id === 'palms'
+      ? [0.125, 0.25, 0.625, 0.875, 0.9375]
+      : track.id === 'storm'
+        ? [0.17, 0.37, 0.57, 0.77, 0.97]
+        : [0.14, 0.34, 0.54, 0.74, 0.94];
+  return fractions.flatMap((fraction, row) => {
+    const pointIndex = Math.round(fraction * track.points.length),
+      p = track.points[pointIndex],
+      before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
+      after = track.points[(pointIndex + 1) % track.points.length],
+      length = Math.hypot(after.x - before.x, after.z - before.z);
+    const gate = fitGateToShore(
+      {
+        ...p,
+        tx: (after.x - before.x) / length,
+        tz: (after.z - before.z) / length,
+        width: lanes === 5 ? 40 : 24,
+      },
+      track.land,
+    );
+    const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
+    const points = Array.from({ length: lanes }, (_, lane) => ({
+      x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
+      z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,
+      row,
+    }));
+    if (
+      points.every(
+        (p) =>
+          gatePointClear(p.x, p.z, track.land) &&
+          !rampSurface(p.x, p.z, track) &&
+          track.ramps.every((ramp) => {
+            const along = (p.x - ramp.x) * ramp.tx + (p.z - ramp.z) * ramp.tz;
+            const side = Math.abs(-(p.x - ramp.x) * ramp.tz + (p.z - ramp.z) * ramp.tx);
+            return (
+              side > ramp.width / 2 + 12 ||
+              along < -ramp.length / 2 - 60 ||
+              along > ramp.length / 2 + 85
+            );
+          }) &&
+          track.obstacles.every((o) => Math.hypot(p.x - o.x, p.z - o.z) > o.radius + 3),
+      )
+    ) {
+      return points;
     }
-    throw new Error(`No clear pickup row on ${track.id} near gate ${index}`);
+    throw new Error(`No clear pickup row on ${track.id} at route fraction ${fraction}`);
   });
 }
 export function rollItem(position: number, count: number, random = Math.random): number {

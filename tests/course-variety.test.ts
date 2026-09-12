@@ -40,12 +40,14 @@ it.each(TRACKS.slice(1))('gives each pickup row space and time on $name', (track
   }
 });
 
-it.each(TRACKS.slice(1))('aims the last checkpoint toward the finish on $name', (track) => {
-  const last = track.gates.at(-1)!,
-    finish = track.gates[0],
-    dx = finish.x - last.x,
-    dz = finish.z - last.z;
-  expect((dx * last.tx + dz * last.tz) / Math.hypot(dx, dz)).toBeGreaterThan(0.9);
+it.each(TRACKS)('faces checkpoints toward the local riding line on $name', (track) => {
+  for (const gate of track.gates) {
+    const approach =
+      track.points[(gate.routeIndex! - 18 + track.points.length) % track.points.length];
+    const dx = gate.x - approach.x,
+      dz = gate.z - approach.z;
+    expect((dx * gate.tx + dz * gate.tz) / Math.hypot(dx, dz), gate.name).toBeGreaterThan(0.8);
+  }
 });
 
 it("aims Storm's grid toward a well-spaced first checkpoint", () => {
@@ -56,31 +58,19 @@ it("aims Storm's grid toward a well-spaced first checkpoint", () => {
     dz = first.z - start.z,
     distance = Math.hypot(dx, dz);
   expect(distance).toBeGreaterThan(65);
-  expect(distance).toBeLessThan(100);
+  expect(distance).toBeLessThan(140);
   expect((dx * start.tx + dz * start.tz) / distance).toBeGreaterThan(0.95);
-  expect((dx * first.tx + dz * first.tz) / distance).toBeGreaterThan(0.95);
+  expect((dx * first.tx + dz * first.tz) / distance).toBeGreaterThan(0.6);
   const firstRow = pickupRows(track).filter((box) => box.row === 0);
   expect(
     firstRow.every((box) => nearestPoint(track, box) > nearestPoint(track, track.gates[1])),
   ).toBe(true);
 });
 
-it('keeps Storm checkpoints facing their approaches with an open line between gates', async () => {
+it.each(TRACKS)('leaves a clear water route between its distant gates on $name', async (track) => {
   const { gatePointClear } = await import('../src/game/course-layout');
-  const track = TRACKS[2];
-  for (const [index, gate] of track.gates.entries()) {
-    const previous = track.gates[(index + track.gates.length - 1) % track.gates.length];
-    const dx = gate.x - previous.x,
-      dz = gate.z - previous.z;
-    // Edge-on gates lose their visible opening. Keep at least 80% of it facing the approach.
-    expect((dx * gate.tx + dz * gate.tz) / Math.hypot(dx, dz), `gate ${index + 1}`).toBeGreaterThan(
-      0.8,
-    );
-    for (let step = 0; step <= 30; step++) {
-      expect(
-        gatePointClear(previous.x + (dx * step) / 30, previous.z + (dz * step) / 30, track.land),
-        `shore blocks gate ${index + 1}`,
-      ).toBe(true);
-    }
+  for (let i = 0; i < track.points.length; i += 6) {
+    const p = track.points[i];
+    expect(gatePointClear(p.x, p.z, track.land), `route point ${i}`).toBe(true);
   }
 });

@@ -13,7 +13,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { TRACKS, type Track } from './tracks';
+import { checkpointDistance, TRACKS, type Track } from './tracks';
 import {
   aiInput,
   advanceFinishLap,
@@ -610,7 +610,8 @@ export class Engine {
         r.id > 0 &&
         !r.finished &&
         r.recovery.phase === 'riding' &&
-        this.time - r.lastProgress > 18
+        this.time - r.lastProgress >
+          Math.max(18, checkpointDistance(this.track, r.nextGate) / 10 + 8)
       ) {
         recoverRacer(r, this.track, this.visualTime);
         r.lastProgress = this.time;

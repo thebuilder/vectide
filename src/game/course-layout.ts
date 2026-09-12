@@ -59,6 +59,13 @@ const zone = (
 };
 export const COURSE_LAYOUTS = {
   palms: {
+    checkpoints: [
+      { name: 'Start / finish', at: [0, 0], width: 40 },
+      { name: 'Crescent turn', at: [105, -140], width: 48 },
+      { name: 'Reef entrance', at: [170, 15], width: 56 },
+      { name: 'Outer reef', at: [278, 85], width: 56 },
+      { name: 'Lagoon turn', at: [27.5, 167.5], width: 48 },
+    ],
     route: [
       [0, 0],
       [0, -70],
@@ -82,9 +89,26 @@ export const COURSE_LAYOUTS = {
       [0, 30],
     ],
     land: [
-      island('Crescent island', 45, -37, 65, 95, 3.6),
+      {
+        name: 'Crescent island',
+        kind: 'island',
+        x: 60,
+        z: -40,
+        height: 3.6,
+        outline: [
+          [13, -37],
+          [18, -78],
+          [58, -100],
+          [94, -106],
+          [119, -78],
+          [112, -46],
+          [92, -17],
+          [64, 8],
+          [25, 9],
+        ].map(([x, z]) => ({ x, z })),
+      },
       island('Reef headland', 225, -68, 45, 60, 3.1),
-      island('Outer island', 178, 80, 90, 90, 4.2),
+      island('Outer island', 178, 92.5, 90, 115, 4.2),
       island('Lagoon island', 65, 75, 55, 125, 4.5),
       island('West shore', -87.5, 77.5, 37.5, 80.0, 2.7),
       island('Lookout point', 282, -32.5, 50, 62.5, 3.4),
@@ -105,6 +129,13 @@ export const COURSE_LAYOUTS = {
     ],
   },
   harbor: {
+    checkpoints: [
+      { name: 'Start / finish', at: [0, 0], width: 24 },
+      { name: 'Container turn', at: [148.5, -90], width: 44 },
+      { name: 'Harbor mouth', at: [256.5, 78.75], width: 52 },
+      { name: 'Cargo south passage', at: [175, 170], width: 44 },
+      { name: 'West breakwater', at: [-69.75, 63], width: 44 },
+    ],
     route: [
       [0, 0],
       [0, -72],
@@ -147,6 +178,13 @@ export const COURSE_LAYOUTS = {
     rampCenters: [],
   },
   storm: {
+    checkpoints: [
+      { name: 'Start / finish', at: [-36, 0], width: 40 },
+      { name: 'West wave turn', at: [-118, 60], width: 56 },
+      { name: 'Cross-swell reef', at: [32, 106], width: 40 },
+      { name: 'East channel', at: [210, 63], width: 56 },
+      { name: 'Signal north turn', at: [68, -142], width: 56 },
+    ],
     route: [
       [-36, 0],
       [-72, 22],
@@ -168,8 +206,9 @@ export const COURSE_LAYOUTS = {
       [0, -60],
     ],
     land: [
-      island('Signal island', 64, -42, 92, 120, 14, 'rock'),
-      island('East breakwater', 142, 52, 34, 92, 9, 'rock'),
+      island('Signal island', 85, -42, 134, 126, 14, 'rock'),
+      island('East breakwater', 142, 52, 34, 128, 9, 'rock'),
+      island('Cross-swell reef', 36, 147, 42, 44, 6, 'rock'),
       island('Western reef', -45, 78, 32, 44, 6, 'rock'),
       island('South shelter', 92, 206, 106, 32, 9, 'rock'),
       island('Offshore ridge', 260, 40, 56, 148, 18, 'rock'),
@@ -187,7 +226,13 @@ export const COURSE_LAYOUTS = {
   },
 } satisfies Record<
   string,
-  { route: number[][]; land: Landform[]; zones: WaveZone[]; rampCenters: number[][] }
+  {
+    route: number[][];
+    checkpoints: { name: string; at: number[]; width: number }[];
+    land: Landform[];
+    zones: WaveZone[];
+    rampCenters: number[][];
+  }
 >;
 
 /** Collision data exists before the renderer and matches the landmark's local placement. */

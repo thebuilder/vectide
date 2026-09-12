@@ -42,7 +42,7 @@ for (const [index, id] of [
     expect(setup.heading).toBeGreaterThan(0.99);
     await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 2);
     await page.screenshot({ path: `artifacts/${id}-pickup-spacing.png` });
-    await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 8);
+    await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 3);
     await page.screenshot({ path: `artifacts/${id}-course-flow.png` });
     await page.waitForFunction(() => {
       const e = (window as any).__vectide;

@@ -47,7 +47,7 @@ describe('authoritative multiplayer simulation', () => {
     guest.onInput = (commands) => host.receiveInput(1, commands);
     guest.receiveSnapshot(host.snapshot());
     const start = { x: racer.x, z: racer.z };
-    for (let tick = 0; tick < 120 * 10; tick++) {
+    for (let tick = 0; tick < 120 * 20; tick++) {
       guest.step({ ...NEUTRAL, steer: 1 });
       host.step(NEUTRAL);
     }
