@@ -5,6 +5,7 @@ import type { Track } from './tracks';
 export function addLandmarks(parent: T.Group, track: Track): void {
   const gate = track.landmark,
     landmark = new T.Group();
+  landmark.name = track.id === 'palms' ? 'Tower bridge' : 'Course landmark';
   landmark.position.set(gate.x, 0, gate.z);
   landmark.rotation.y = Math.atan2(gate.tx, gate.tz);
   parent.add(landmark);

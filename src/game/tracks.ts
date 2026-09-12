@@ -180,7 +180,13 @@ export const TRACKS: Track[] = definitions.map((d) => {
   const landmark =
     d.id === 'storm'
       ? { x: 260, z: 130, tx: 0, tz: 1, width: 56 }
-      : at(d.id === 'palms' ? 0.42 : 0.46);
+      : at(d.id === 'palms' ? 0.4 : 0.46);
+  if (d.id === 'palms') {
+    const approach = at(0.37);
+    const length = Math.hypot(landmark.x - approach.x, landmark.z - approach.z);
+    landmark.tx = (landmark.x - approach.x) / length;
+    landmark.tz = (landmark.z - approach.z) / length;
+  }
   return {
     ...d,
     wave: d.id === 'palms' ? 0.8 : d.id === 'harbor' ? 0.95 : 1.25,
