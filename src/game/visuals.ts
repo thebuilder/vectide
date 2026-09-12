@@ -357,9 +357,8 @@ export function createWorld(track: Track): World {
       updateWaterPulses(waterMaterial, surface, t);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {
-        const sand = material.name === 'sand-wire';
-        material.color.copy(base.color).multiplyScalar(1 + outlinePulse * (sand ? 0.25 : 2.5));
-        material.opacity = base.opacity + ((sand ? 0.42 : 1) - base.opacity) * outlinePulse;
+        material.color.copy(base.color).multiplyScalar(1 + outlinePulse * 2.5);
+        material.opacity = base.opacity + (1 - base.opacity) * outlinePulse;
       });
       pulseMaterials.forEach(
         (base, material) =>

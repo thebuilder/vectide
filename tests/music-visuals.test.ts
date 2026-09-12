@@ -25,9 +25,9 @@ it('omits bars where skyline geometry occupies their location', () => {
   expect(createMusicVisuals(TRACKS[0], [blocked]).group.children).toHaveLength(0);
 });
 
-it('pulses the authored island wireframes after batching', () => {
-  const world = createWorld(TRACKS[0]),
-    rider = createRacer(TRACKS[0], 0);
+it('pulses the authored rock outlines after batching', () => {
+  const world = createWorld(TRACKS[2]),
+    rider = createRacer(TRACKS[2], 0);
   const materials: LineBasicMaterial[] = [];
   world.group.traverse((o) => {
     if (
@@ -43,10 +43,6 @@ it('pulses the authored island wireframes after batching', () => {
   world.update(1, rider, { low: 1, mid: 1, high: 1 });
   materials.forEach((m, i) => {
     expect(m.opacity).toBeGreaterThan(quiet[i]);
-    if (m.name === 'sand-wire') {
-      expect(m.opacity).toBeLessThanOrEqual(0.42);
-      expect(m.color.r).toBeGreaterThan(m.color.b);
-    }
   });
   world.dispose();
 });

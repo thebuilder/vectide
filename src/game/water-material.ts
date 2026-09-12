@@ -94,11 +94,14 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
         float foam=breaking*smoothstep(.52,.77,broadNoise*.55+ripples*.45);
         color=mix(color,vec3(.16,.44,.38),foam*.42);
         // Shallow-water breakers run toward the actual shoreline and dissolve into broken foam.
+        if(vShore>-.3 && vShore<21.) {
         float shoreBand=smoothstep(-.3,1.,vShore)*(1.-smoothstep(13.,21.,vShore));
         float breaker=pow(max(0.,sin(vShore*.52+uTime*2.1)),6.);
         float wash=(1.-smoothstep(.6,3.5,vShore))*.35;
-        float surf=shoreBand*(breaker*.8+wash)*smoothstep(.28,.68,ripples*.6+broadNoise*.4);
+        float foamGrain=noise(vWorld.xz*2.8+vec2(uTime*.16,0.))*.55+noise(vWorld.xz*7.7)*.45;
+        float surf=shoreBand*(breaker*.85+wash)*smoothstep(.43,.65,foamGrain);
         color=mix(color,vec3(.36,.64,.56),min(.85,surf));
+        }
         color=mix(color,horizon*.23,1.-exp(-distanceToCamera*.0008));
         // Bass lights existing swells; mids color the wave faces and treble catches foam.
         float nearField=1.-smoothstep(65.,135.,distanceToCamera);
