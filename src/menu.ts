@@ -26,6 +26,8 @@ export function setupMenuScreens() {
       .forEach((picker) => (picker.open = false));
     const active = screen === 'home' ? home : setup;
     active.scrollTop = 0;
+    const setupScroll = active.querySelector<HTMLElement>('.setup-scroll');
+    if (setupScroll) setupScroll.scrollTop = 0;
     const target =
       screen === 'home' ? enter : setup.querySelector<HTMLElement>('.course.selected')!;
     target.focus({ preventScroll: true });

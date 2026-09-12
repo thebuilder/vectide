@@ -2,6 +2,7 @@
 #menu {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 0;
   padding: 90px 40px 0;
   overflow: hidden;
@@ -93,12 +94,82 @@
 }
 #race-setup {
   display: flex;
-  align-items: safe end;
+  align-items: stretch;
   padding: 24px 0;
+  overflow: hidden;
 }
 #race-setup .launch {
   margin: auto auto 0;
   padding: 4px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
+}
+.setup-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #86fadd80 #07171e;
+  padding-bottom: 12px;
+}
+#race-setup .launch-row {
+  flex: none;
+  padding: 12px 0 0;
+  border-top: 1px solid #86fadd55;
+  background: #07171ef2;
+}
+#race-setup .course-description {
+  background: #07171ee8;
+  color: #d3e9e0;
+  padding: 12px 16px;
+  font-size: 12px;
+}
+#race-setup .course-heading {
+  color: #d3e9e0;
+}
+#difficulty-description {
+  margin: 0;
+  padding: 10px 16px;
+  color: #d3e9e0;
+  background: #07171ee8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+#race-setup .setup-options {
+  padding: 12px 16px;
+  margin-bottom: 0;
+  background: #07171ee8;
+}
+#help-dialog .help-objective {
+  color: #e5f7ed;
+  font-size: 15px;
+  line-height: 1.6;
+}
+#help-dialog h3 {
+  font-size: 12px;
+  margin: 24px 0 16px;
+  color: #86fadd;
+}
+#help-dialog summary {
+  padding: 14px 0;
+  color: #86fadd;
+  cursor: pointer;
+  min-height: 44px;
+}
+#help-dialog details {
+  border-block: 1px solid #86fadd44;
+  margin: 20px 0;
+}
+#help-dialog #close-help {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+}
+#help-title:focus-visible {
+  outline: 2px solid #86fadd;
+  outline-offset: 6px;
 }
 .setup-heading {
   display: flex;
@@ -226,6 +297,31 @@
   }
   #race-setup {
     align-items: flex-start;
+  }
+  #race-setup .launch {
+    height: 100%;
+    margin: 0 auto;
+  }
+  .setup-heading {
+    margin-bottom: 16px;
+  }
+  .setup-heading h2 {
+    font-size: 34px;
+  }
+  #race-setup .launch-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+  }
+  #race-setup #start {
+    min-width: 180px;
+    min-height: 48px;
+    padding: 12px 20px;
+  }
+  #race-setup .mode-switch button {
+    min-height: 48px;
+    padding: 8px 12px;
   }
 }
 

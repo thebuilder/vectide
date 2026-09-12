@@ -36,8 +36,11 @@ export class Controls {
       this.engine.state === 'finished'
     );
   }
+  private get dialog() {
+    return [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
+  }
   private targets() {
-    const root = document.querySelector('dialog[open]') ?? document;
+    const root = this.dialog ?? document;
     return Array.from(
       root.querySelectorAll<HTMLElement>('button,summary,a[href],input[type=range]'),
     ).filter(
@@ -87,7 +90,7 @@ export class Controls {
     target?.click();
   }
   private back() {
-    const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+    const dialog = this.dialog;
     if (dialog?.id === 'pause-dialog') this.engine.pause();
     else if (dialog?.id === 'results') document.getElementById('result-exit')?.click();
     else if (this.engine.state === 'lobby') document.getElementById('leave-room')?.click();
@@ -95,13 +98,16 @@ export class Controls {
     else if (!dialog && this.engine.state === 'menu') {
       const back = document.getElementById('setup-back');
       if (back && !back.hidden && !back.closest('[inert]')) back.click();
-    } else if (dialog) {
-      dialog.close();
-      document.getElementById('help')?.focus();
-    }
+    } else if (dialog) dialog.close();
   }
   private key = (event: KeyboardEvent) => {
     this.setDevice('keyboard');
+    if (event.code === 'Escape' && this.dialog?.id === 'help-dialog') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.back();
+      return;
+    }
     if (
       !this.navigating ||
       event.altKey ||
@@ -149,7 +155,8 @@ export class Controls {
     const edge = (i: number) => pressed[i] && !this.buttons[i];
     if (pressed.some((p, i) => p && !this.buttons[i]) || pad.axes.some((a) => Math.abs(a) > 0.25))
       this.setDevice('gamepad');
-    if (edge(9) && ['racing', 'freeride', 'countdown', 'paused'].includes(this.engine.state))
+    if (edge(9) && this.dialog?.id === 'help-dialog') this.back();
+    else if (edge(9) && ['racing', 'freeride', 'countdown', 'paused'].includes(this.engine.state))
       this.engine.pause();
     else if (edge(1) && this.engine.state === 'freeride') this.engine.pause();
     else if (this.navigating) {

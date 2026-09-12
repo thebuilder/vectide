@@ -1,6 +1,6 @@
 - [x] Approved cover and metadata (production build and live asset browser test passed)
 - [x] Checkpoints visible in and outside the camera view, with reduced-motion support (205 unit tests; full Storm lap and touch rotation browser checks passed)
-- [ ] First-race guidance, help focus/pause access, short-screen setup and readable HUD
+- [x] First-race guidance, help focus/pause access, short-screen setup and readable HUD (205 unit tests; desktop/portrait/landscape help, controller navigation and driving-tip browser checks passed)
 - [ ] Water, wake, spray and camera visual polish
 - [ ] Finish presentation and replay flow
 - [ ] Full regression, runtime visual/performance checks, review and delivery

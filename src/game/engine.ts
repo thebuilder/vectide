@@ -473,6 +473,7 @@ export class Engine {
     else recoverRacer(this.player, this.track, this.visualTime);
     this.audio.tone(180);
   }
+  readonly drivingInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   readonly touchInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   private input(): Input {
     if (
@@ -666,6 +667,7 @@ export class Engine {
     const rendered = this.racers.map((r) => this.network?.renderRacer(r, dt) ?? r);
     const p = rendered[this.racers.indexOf(this.player)];
     const control = this.input();
+    Object.assign(this.drivingInput, control);
     this.audio.transport(this.state === 'paused', dt);
     this.itemSounds.update(this.network?.items ?? this.items, this.player, this.state === 'racing');
     const bands = this.reducedMotion.matches
