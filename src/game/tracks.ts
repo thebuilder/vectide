@@ -1,6 +1,7 @@
 import { COURSE_LAYOUTS, fitGateToShore, landmarkObstacles, type Landform } from './course-layout';
 import { waveZoneWeight, type WaveZone } from './water';
 import { CatmullRomCurve3, Vector3 } from 'three';
+import { createShoreField, type ShoreField } from './shore';
 
 export interface Point {
   x: number;
@@ -32,6 +33,7 @@ export interface Track {
   horizon: string;
   water: string;
   wave: number;
+  shore?: ShoreField;
   waveZones?: WaveZone[];
   points: Point[];
   gates: Gate[];
@@ -160,6 +162,7 @@ export const TRACKS: Track[] = definitions.map((d) => {
     ...d,
     wave: d.id === 'palms' ? 0.8 : d.id === 'harbor' ? 0.95 : 1.25,
     waveZones: layout.zones,
+    shore: createShoreField(layout.land),
     points,
     gates,
     ramps,

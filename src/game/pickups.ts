@@ -133,6 +133,7 @@ export class Pickups {
     return {
       wave: this.track.wave,
       waveZones: this.track.waveZones,
+      shore: this.track.shore,
       pulses: this.state.effects,
       pulseTime: this.waterTime,
     };

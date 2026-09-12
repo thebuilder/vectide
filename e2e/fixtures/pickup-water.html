@@ -22,6 +22,7 @@
     import { waterHeight, vertexHeight, waterGLSL } from '/src/game/water.ts';
     import { createWaterMaterial, updateWaterPulses } from '/src/game/water-material.ts';
     import { pulseGLSL } from '/src/game/water-pulses.ts';
+    import { shoreGLSL } from '/src/game/shore.ts';
     window.demo = new Engine(document.querySelector('canvas'));
     demo.start('trial');
     demo.items = new Pickups(demo.track, true);
@@ -169,16 +170,21 @@
       return { red, redPixels };
     };
     // Execute the production GPU height formula in a one-pixel target and compare with CPU sampling.
-    window.compareHeights = () => {
+    window.compareHeights = (
+      coordinates = [-116, -108, -100, -92, -84].flatMap((x) =>
+        [-140, -132, -124, -116, -108].map((z) => [x, z]),
+      ),
+      time = 3,
+    ) => {
       const source = createWaterMaterial(demo.track);
-      updateWaterPulses(source, demo.items.surface, 3);
-      source.uniforms.uTime.value = 3;
+      updateWaterPulses(source, demo.items.surface, time);
+      source.uniforms.uTime.value = time;
       const shader = new T.ShaderMaterial({
         uniforms: { ...source.uniforms, uSample: { value: new T.Vector2() } },
         vertexShader: 'void main(){gl_Position=vec4(position.xy,0.,1.);}',
         fragmentShader: `uniform vec2 uSample; uniform float uTime; uniform float uAmplitude;
-      ${waterGLSL(demo.track)} ${pulseGLSL}
-      void main(){float h=heightAt(uSample)*uAmplitude+pulseHeightAt(uSample);
+      ${waterGLSL(demo.track)} ${pulseGLSL} ${shoreGLSL}
+      void main(){float h=coastalHeight(heightAt(uSample)*uAmplitude+pulseHeightAt(uSample),shoreDistanceAt(uSample));
         vec3 encoded=fract((h+16.)/32.*vec3(1.,255.,65025.));
         encoded-=encoded.yzz*vec3(1./255.,1./255.,0.);
         gl_FragColor=vec4(encoded,1.);}`,
@@ -190,15 +196,14 @@
       const camera = new T.Camera(),
         bytes = new Uint8Array(4),
         samples = [];
-      for (const x of [-116, -108, -100, -92, -84])
-        for (const z of [-140, -132, -124, -116, -108]) {
-          shader.uniforms.uSample.value.set(x, z);
-          demo.renderer.setRenderTarget(target);
-          demo.renderer.render(scene, camera);
-          demo.renderer.readRenderTargetPixels(target, 0, 0, 1, 1, bytes);
-          const gpu = (bytes[0] / 255 + bytes[1] / 65025 + bytes[2] / 16581375) * 32 - 16;
-          samples.push({ x, z, gpu, cpu: vertexHeight(x, z, 3, demo.items.surface) });
-        }
+      for (const [x, z] of coordinates) {
+        shader.uniforms.uSample.value.set(x, z);
+        demo.renderer.setRenderTarget(target);
+        demo.renderer.render(scene, camera);
+        demo.renderer.readRenderTargetPixels(target, 0, 0, 1, 1, bytes);
+        const gpu = (bytes[0] / 255 + bytes[1] / 65025 + bytes[2] / 16581375) * 32 - 16;
+        samples.push({ x, z, gpu, cpu: vertexHeight(x, z, time, demo.items.surface) });
+      }
       demo.renderer.setRenderTarget(null);
       target.dispose();
       shader.dispose();

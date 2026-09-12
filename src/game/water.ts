@@ -1,4 +1,5 @@
 import { pulseHeight, type WaterPulse } from './water-pulses';
+import { coastalHeight, shoreDistance, type ShoreField } from './shore';
 // Fixed world-space grid. Physics interpolates the same two triangles as the GPU mesh.
 export const CELL = 4;
 export const WAVES = [
@@ -23,6 +24,7 @@ export interface WaveZone {
 }
 export interface WaterProfile {
   wave: number;
+  shore?: ShoreField;
   waveZones?: readonly WaveZone[];
   pulses?: readonly WaterPulse[];
   pulseTime?: number;
@@ -57,7 +59,10 @@ export function vertexHeight(x: number, z: number, t: number, surface: Surface):
   if (typeof surface !== 'number')
     for (const pulse of surface.pulses ?? [])
       disturbance += pulseHeight(x, z, pulse.age + t - (surface.pulseTime ?? t), pulse);
-  return (h * shelter + swell) * amplitude + Math.max(-2, Math.min(5, disturbance));
+  const height = (h * shelter + swell) * amplitude + Math.max(-2, Math.min(5, disturbance));
+  return typeof surface === 'number'
+    ? height
+    : coastalHeight(height, shoreDistance(x, z, surface.shore), t, amplitude);
 }
 export function waterHeight(x: number, z: number, t: number, surface: Surface): number {
   const gx = Math.floor(x / CELL) * CELL,

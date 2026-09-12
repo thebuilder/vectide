@@ -3,11 +3,25 @@ import type { Track } from './tracks';
 import { MusicWater, musicWaterGLSL } from './music-water';
 import { MAX_WATER_PULSES, pulseGLSL, pulseUniformsGLSL } from './water-pulses';
 import { waterGLSL, type WaterProfile } from './water';
+import { shoreGLSL } from './shore';
 
 export function createWaterMaterial(track: Track, music = new MusicWater()): T.ShaderMaterial {
-  return new T.ShaderMaterial({
+  const field = track.shore;
+  const shore = new T.DataTexture(
+    field?.distance ?? new Float32Array(4).fill(32),
+    field?.width ?? 2,
+    field?.height ?? 2,
+    T.RedFormat,
+    T.FloatType,
+  );
+  shore.needsUpdate = true;
+  const material = new T.ShaderMaterial({
     uniforms: {
       ...music.uniforms,
+      uShore: { value: shore },
+      uShoreBounds: {
+        value: new T.Vector4(field?.x ?? 0, field?.z ?? 0, field?.width ?? 2, field?.height ?? 2),
+      },
       uTime: { value: 0 },
       uPulseCount: { value: 0 },
       uPulses: { value: Array.from({ length: MAX_WATER_PULSES }, () => new T.Vector4()) },
@@ -24,12 +38,15 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
       varying vec3 vWorld;
       varying float vHeight;
       varying float vPulse;
+      varying float vShore;
       ${waterGLSL(track)}
       ${pulseGLSL}
+      ${shoreGLSL}
       void main() {
         vec4 world = modelMatrix * vec4(position, 1.);
         vPulse = pulseHeightAt(world.xz);
-        world.y = heightAt(world.xz) * uAmplitude + vPulse;
+        vShore = shoreDistanceAt(world.xz);
+        world.y = coastalHeight(heightAt(world.xz) * uAmplitude + vPulse, vShore);
         vWorld = world.xyz;
         vHeight = world.y;
         gl_Position = projectionMatrix * viewMatrix * world;
@@ -46,6 +63,7 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
       varying vec3 vWorld;
       varying float vHeight;
       varying float vPulse;
+      varying float vShore;
       float hash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float noise(vec2 p) {
         vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);
@@ -75,6 +93,12 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
         float breaking=max(smoothstep(.82,1.16,vHeight/uAmplitude),smoothstep(.3,1.8,vPulse));
         float foam=breaking*smoothstep(.52,.77,broadNoise*.55+ripples*.45);
         color=mix(color,vec3(.16,.44,.38),foam*.42);
+        // Shallow-water breakers run toward the actual shoreline and dissolve into broken foam.
+        float shoreBand=smoothstep(-.3,1.,vShore)*(1.-smoothstep(13.,21.,vShore));
+        float breaker=pow(max(0.,sin(vShore*.52+uTime*2.1)),6.);
+        float wash=(1.-smoothstep(.6,3.5,vShore))*.35;
+        float surf=shoreBand*(breaker*.8+wash)*smoothstep(.28,.68,ripples*.6+broadNoise*.4);
+        color=mix(color,vec3(.36,.64,.56),min(.85,surf));
         color=mix(color,horizon*.23,1.-exp(-distanceToCamera*.0008));
         // Bass lights existing swells; mids color the wave faces and treble catches foam.
         float nearField=1.-smoothstep(65.,135.,distanceToCamera);
@@ -128,6 +152,8 @@ export function createWaterMaterial(track: Track, music = new MusicWater()): T.S
         gl_FragColor=vec4(color,1.);
       }`,
   });
+  material.addEventListener('dispose', () => shore.dispose());
+  return material;
 }
 
 export function updateWaterPulses(material: T.ShaderMaterial, profile: WaterProfile, time: number) {
