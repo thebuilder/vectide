@@ -33,9 +33,10 @@ it('puts a sustained reef wave train on the normal racing line', () => {
   expect(maxClearance).toBeGreaterThan(2);
 });
 
-it.each([3, 4, 5])(
+it.each(['Crescent turn', 'Reef entrance', 'Outer reef'])(
   'leaves runoff for missile knockback through Palm checkpoint %s',
-  (gateIndex) => {
+  (name) => {
+    const gateIndex = track.gates.findIndex((gate) => gate.name === name);
     const gate = track.gates[gateIndex];
     expect(gate.width).toBeGreaterThanOrEqual(40);
     // Omitting collision response exposes any trajectory that would hit the actual shoreline.
@@ -49,7 +50,7 @@ it.each([3, 4, 5])(
           yaw: Math.atan2(gate.tx, gate.tz),
           vx: gate.tx * 18,
           vz: gate.tz * 18,
-          nextGate: gateIndex + 1,
+          nextGate: (gateIndex + 1) % track.gates.length,
         });
         r.y = waterHeight(r.x, r.z, phase, track) + 0.6;
         const items = new Pickups(track, true);

@@ -6,7 +6,7 @@ import { addDolphinBend, poseDolphin } from './dolphin-pose';
 export function createDolphinModel() {
   const dolphin = new T.Group();
   const skin = new T.MeshStandardMaterial({
-    color: 0x83aeb9,
+    color: 0x93b6bf,
     metalness: 0.08,
     roughness: 0.38,
   });
@@ -17,12 +17,12 @@ export function createDolphinModel() {
       { at: -0.7, width: 0.22, depth: 0.24 },
       { at: -0.2, width: 0.34, depth: 0.34 },
       { at: 0.3, width: 0.37, depth: 0.37 },
-      { at: 0.65, width: 0.3, depth: 0.32, shift: 0.02 },
-      { at: 0.88, width: 0.22, depth: 0.25, shift: 0.035 },
-      { at: 1.03, width: 0.13, depth: 0.15, shift: -0.015 },
+      { at: 0.65, width: 0.32, depth: 0.35, shift: 0.055 },
+      { at: 0.88, width: 0.27, depth: 0.29, shift: 0.08 },
+      { at: 1.03, width: 0.16, depth: 0.17, shift: 0.01 },
       { at: 1.13, width: 0.1, depth: 0.065, shift: -0.095 },
-      { at: 1.43, width: 0.065, depth: 0.045, shift: -0.09 },
-      { at: 1.49, width: 0.02, depth: 0.025, shift: -0.09 },
+      { at: 1.48, width: 0.08, depth: 0.045, shift: -0.09 },
+      { at: 1.57, width: 0.035, depth: 0.025, shift: -0.09 },
     ],
     20,
     'z',
@@ -30,7 +30,7 @@ export function createDolphinModel() {
   const positions = body.getAttribute('position');
   const colors: number[] = [];
   const belly = new T.Color(0xd9e6df),
-    back = new T.Color(0x56818f);
+    back = new T.Color(0x7699a4);
   for (let i = 0; i < positions.count; i++) {
     const color = belly.clone().lerp(back, T.MathUtils.smoothstep(positions.getY(i), -0.2, 0.18));
     colors.push(color.r, color.g, color.b);
@@ -56,10 +56,11 @@ export function createDolphinModel() {
   };
   const dorsalShape = new T.Shape();
   dorsalShape.moveTo(-0.42, 0);
-  dorsalShape.bezierCurveTo(-0.2, 0.16, -0.14, 0.52, 0.19, 0.7);
-  dorsalShape.bezierCurveTo(0.08, 0.38, 0.18, 0.13, 0.4, 0);
+  dorsalShape.bezierCurveTo(-0.25, 0.16, -0.05, 0.4, 0.23, 0.44);
+  dorsalShape.bezierCurveTo(0.1, 0.25, 0.17, 0.09, 0.4, 0);
   dorsalShape.closePath();
   const dorsal = fin(dorsalShape);
+  dorsal.name = 'dorsal-fin';
   dorsal.rotation.y = Math.PI / 2;
   dorsal.position.set(0, 0.24, -0.15);
   dolphin.add(dorsal);
@@ -80,13 +81,13 @@ export function createDolphinModel() {
       new T.SphereGeometry(0.033, 8, 6),
       new T.MeshStandardMaterial({ color: 0x07171e, roughness: 0.2 }),
     );
-    eye.position.set(side * 0.221, 0.045, 0.865);
+    eye.position.set(side * 0.269, 0.065, 0.865);
     dolphin.add(eye);
     const mouth = new T.Line(
       new T.BufferGeometry().setFromPoints([
-        new T.Vector3(side * 0.068, -0.09, 1.42),
+        new T.Vector3(side * 0.078, -0.09, 1.48),
         new T.Vector3(side * 0.103, -0.095, 1.12),
-        new T.Vector3(side * 0.19, -0.08, 0.92),
+        new T.Vector3(side * 0.235, -0.055, 0.92),
       ]),
       new T.LineBasicMaterial({ color: 0x36535d }),
     );
@@ -100,6 +101,7 @@ export function createDolphinModel() {
   tailShape.bezierCurveTo(-0.57, -0.05, -0.25, 0.17, 0, 0.13);
   const tail = fin(tailShape);
   tail.name = 'tail-flukes';
+  tail.scale.x = 1.25;
   tail.rotation.x = Math.PI / 2;
   tail.position.z = -1.35;
   dolphin.add(tail);

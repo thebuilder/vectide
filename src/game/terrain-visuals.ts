@@ -1,7 +1,8 @@
 import * as T from 'three';
 import type { Track } from './tracks';
-import { box, dark, glowing, outlined } from './geometry';
+import { box, dark, glowing } from './geometry';
 import { createPalm } from './palm';
+import { islandGeometry } from './island-geometry';
 
 /** Course-owned outlines are also the visible bank edges. The lower ring forms the shore slope. */
 export function addTerrain(parent: T.Group, track: Track): T.Group[] {
@@ -18,17 +19,13 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
     );
     const positions: number[] = [],
       colors: number[] = [];
-    const sand = new T.Color(
-      land.kind === 'island' ? '#b89c6c' : land.kind === 'dock' ? '#283944' : '#334951',
-    );
-    const top = new T.Color(
-      land.kind === 'island' ? '#284b37' : land.kind === 'dock' ? '#35474b' : '#42636a',
-    );
+    const sand = new T.Color(land.kind === 'dock' ? '#283944' : '#334951');
+    const top = new T.Color(land.kind === 'dock' ? '#35474b' : '#42636a');
     const triangle = (a: number[], b: number[], c: number[], color: T.Color) => {
       positions.push(...a, ...b, ...c);
       for (let i = 0; i < 3; i++) colors.push(color.r, color.g, color.b);
     };
-    for (let i = 0; i < land.outline.length; i++) {
+    for (let i = 0; land.kind !== 'island' && i < land.outline.length; i++) {
       const p = land.outline[i],
         q = land.outline[(i + 1) % land.outline.length];
       const a = [p.x, land.height, p.z],
@@ -58,10 +55,12 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
         triangle(midP, lowQ, lowP, lower);
       }
     }
-    const geo = new T.BufferGeometry();
-    geo.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
-    geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
+    const geo = land.kind === 'island' ? islandGeometry(land, index) : new T.BufferGeometry();
+    if (land.kind !== 'island') {
+      geo.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+    }
     const shore = new T.Mesh(
       geo,
       new T.MeshStandardMaterial({
@@ -76,24 +75,26 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
     );
     shore.name = `Terrain: ${land.name}`;
     parent.add(shore);
-    const wire = new T.LineSegments(
-      new T.WireframeGeometry(geo),
-      new T.LineBasicMaterial({
-        name: land.kind === 'island' ? 'sand-wire' : 'terrain-wire',
-        color: land.kind === 'island' ? 0xb49a70 : track.accent,
-        transparent: true,
-        opacity: 0.12,
-        toneMapped: false,
-      }),
-    );
-    parent.add(wire);
+    if (land.kind !== 'island') {
+      const wire = new T.LineSegments(
+        new T.WireframeGeometry(geo),
+        new T.LineBasicMaterial({
+          name: 'terrain-wire',
+          color: track.accent,
+          transparent: true,
+          opacity: 0.12,
+          toneMapped: false,
+        }),
+      );
+      parent.add(wire);
+    }
     if (land.name === 'Lookout point') {
       const resort = new T.Group();
       resort.name = 'Reef lookout resort';
       resort.position.set(land.x, land.height, land.z);
       resort.rotation.y = -0.25;
       // Fit the entire rotated footprint, including balconies, on its supporting island.
-      resort.scale.setScalar(Math.min(1, (radius * 0.85) / Math.hypot(32, 19.5)));
+      resort.scale.setScalar(Math.min(1, (radius * 0.57) / Math.hypot(32, 19.5)));
       box(resort, 60, 15, 34, 0, 7.5, 0, 0xd8bba0);
       box(resort, 64, 1.5, 38, 0, 15.5, 0, 0x694a47);
       for (let floor = 0; floor < 3; floor++) {
@@ -113,27 +114,42 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
       parent.add(resort);
     }
     if (land.kind === 'island') {
-      for (let n = 0; n < 8; n++) {
+      const ground = new T.Raycaster(new T.Vector3(), new T.Vector3(0, -1, 0));
+      for (let n = 0; n < 6 + (index % 3); n++) {
         const point = land.outline[(n * 3 + index) % land.outline.length];
-        const inset = land.name === 'Lookout point' ? 0.9 : 0.62;
-        const tree = createPalm(9 + (n % 3) * 3, 1.4, (n * 2.4 + index) % 6.28);
-        tree.position.set(
-          land.x + (point.x - land.x) * inset,
-          land.height,
-          land.z + (point.z - land.z) * inset,
-        );
+        const inset = land.name === 'Lookout point' ? 0.82 : 0.5 + (n % 3) * 0.11;
+        const height = 7.5 + ((n * 7 + index * 3) % 9) * 0.55;
+        const tree = createPalm(height, 0.9 + (n % 4) * 0.35, (n * 2.4 + index) % 6.28);
+        const x = land.x + (point.x - land.x) * inset,
+          z = land.z + (point.z - land.z) * inset;
+        ground.ray.origin.set(x, land.height + 20, z);
+        const y = ground.intersectObject(shore)[0]?.point.y;
+        if (y === undefined) throw new Error(`Palm outside ${land.name}`);
+        tree.position.set(x, y, z);
+        tree.userData.land = land.name;
         parent.add(tree);
       }
-      if (land.name !== 'Lookout point') {
-        const height = 9 + (index % 2) * 7;
-        const hill = outlined(
-          new T.ConeGeometry(Math.min(14 + (index % 3) * 6, radius * 0.75), height, 5),
-          track.accent,
-          new T.MeshStandardMaterial({ color: 0x355a3c, flatShading: true, roughness: 1 }),
+      for (let n = 0; n < 6; n++) {
+        const p = land.outline[(n * 3 + index + 2) % land.outline.length];
+        const inset = 0.7 + (n % 3) * 0.06,
+          x = land.x + (p.x - land.x) * inset,
+          z = land.z + (p.z - land.z) * inset;
+        ground.ray.origin.set(x, land.height + 20, z);
+        const y = ground.intersectObject(shore)[0]?.point.y;
+        if (y === undefined) throw new Error(`Rock outside ${land.name}`);
+        const rock = new T.Mesh(
+          new T.DodecahedronGeometry(1, 0),
+          new T.MeshStandardMaterial({
+            color: n % 2 ? 0x304746 : 0x253e3a,
+            flatShading: true,
+            roughness: 1,
+          }),
         );
-        hill.name = `Hill: ${land.name}`;
-        hill.position.set(land.x, land.height + height / 2 - 0.2, land.z);
-        parent.add(hill);
+        rock.name = `Shore rock: ${land.name}`;
+        rock.scale.set(1.6 + (n % 3) * 0.55, 0.4 + (n % 3) * 0.16, 1.2 + (n % 2) * 0.9);
+        rock.position.set(x, y + rock.scale.y * 0.35, z);
+        rock.rotation.y = n * 1.73;
+        parent.add(rock);
       }
     } else if (land.kind === 'dock') {
       const long =

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <title>Coastal terrain inspection</title>
+  <link rel="icon" href="data:," />
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+  <canvas></canvas>
+  <script type="module">
+    import { Engine } from '/src/game/engine.ts';
+    window.demo = new Engine(document.querySelector('canvas'));
+    window.inspectCoast = (index = 0, landIndex = 0, low = false) => {
+      demo.selectTrack(index);
+      demo.intro?.finish();
+      demo.state = 'paused';
+      demo.jets.forEach((j) => (j.visible = false));
+      demo.world.gates.forEach((g) => (g.visible = false));
+      demo.world.ramps.visible = false;
+      const land = demo.track.land[landIndex];
+      const view = { x: land.x - 53, y: low ? 1.8 : 8, z: land.z - 57 };
+      demo.onFrame = (now) => {
+        demo.visualTime = now / 1000;
+        demo.camera.position.set(view.x, view.y, view.z);
+        demo.camTarget.set(land.x, low ? 2.4 : 3, land.z);
+      };
+    };
+    inspectCoast();
+  </script>
+</html>

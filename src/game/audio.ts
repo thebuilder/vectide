@@ -20,6 +20,7 @@ export class RaceAudio {
   readonly music = new Audio();
   private analyser?: AnalyserNode;
   private bins = new Uint8Array(1024);
+  private signal = new Uint8Array(2048);
   private suspended = false;
   private starting?: Promise<void>;
   private song = 0;
@@ -116,6 +117,8 @@ export class RaceAudio {
       time: this.music.currentTime,
       error: this.error,
       bands: { ...this.spectrum.bands },
+      beat: this.spectrum.beat,
+      beatStrength: this.spectrum.beatStrength,
       volumes: this.volumes,
     };
   }
@@ -127,11 +130,13 @@ export class RaceAudio {
       else if (this.enabled) void this.play();
     }
     this.analyser?.getByteFrequencyData(this.bins);
+    this.analyser?.getByteTimeDomainData(this.signal);
     this.spectrum.update(
       this.bins,
       (this.context?.sampleRate ?? 48000) / 2048,
       dt,
-      this.enabled && !this.music.paused,
+      this.enabled && !this.music.paused && this.levels.music > 0,
+      this.signal,
     );
   }
   dispose() {
@@ -187,6 +192,9 @@ export class RaceAudio {
   }
   countdownCue(go = false) {
     if (this.enabled && !this.suspended) this.effects?.countdownCue(go);
+  }
+  finish() {
+    if (this.enabled && !this.suspended) this.effects?.finish();
   }
   tone(frequency: number, duration = 0.14) {
     if (this.enabled && !this.suspended) this.effects?.tone(frequency, duration);

@@ -14,7 +14,7 @@ export class Controls {
     window.addEventListener(
       'pointerdown',
       (event) => {
-        if (event.pointerType === 'touch') this.setDevice('touch');
+        this.setDevice(event.pointerType === 'touch' ? 'touch' : 'keyboard');
       },
       true,
     );
@@ -36,10 +36,15 @@ export class Controls {
       this.engine.state === 'finished'
     );
   }
+  private get dialog() {
+    return [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
+  }
   private targets() {
-    const root = document.querySelector('dialog[open]') ?? document;
+    const root = this.dialog ?? document;
     return Array.from(
-      root.querySelectorAll<HTMLElement>('button,summary,a[href],input[type=range]'),
+      root.querySelectorAll<HTMLElement>(
+        'button,summary,a[href],input:not([type=hidden]),select,textarea',
+      ),
     ).filter(
       (element) =>
         !element.closest('[hidden],[inert]') &&
@@ -63,22 +68,49 @@ export class Controls {
       return;
     }
     const from = current.getBoundingClientRect();
-    const x = from.x + from.width / 2,
-      y = from.y + from.height / 2;
-    const next = targets
-      .filter((e) => e !== current)
+    const candidates = targets
+      .filter((element) => element !== current)
       .map((element) => {
-        const r = element.getBoundingClientRect();
-        const vx = r.x + r.width / 2 - x,
-          vy = r.y + r.height / 2 - y;
-        const forward = vx * dx + vy * dy,
-          side = Math.abs(vx * dy - vy * dx);
-        return { element, forward, score: forward + side * 3 };
+        const rect = element.getBoundingClientRect();
+        const gap =
+          dx > 0
+            ? rect.left - from.right
+            : dx < 0
+              ? from.left - rect.right
+              : dy > 0
+                ? rect.top - from.bottom
+                : from.top - rect.bottom;
+        const overlap = dx
+          ? Math.min(from.bottom, rect.bottom) - Math.max(from.top, rect.top)
+          : Math.min(from.right, rect.right) - Math.max(from.left, rect.left);
+        const side = dx
+          ? Math.abs(rect.top + rect.height / 2 - from.top - from.height / 2)
+          : Math.abs(rect.left + rect.width / 2 - from.left - from.width / 2);
+        return { element, gap, overlap, side };
       })
-      .filter((e) => e.forward > 8)
-      .sort((a, b) => a.score - b.score)[0];
+      // Horizontal movement stays in the row. Vertical movement may enter a staggered row.
+      .filter(({ gap, overlap }) => gap >= -2 && (!dx || overlap > 2));
+    // Finish navigating a scroll panel before moving to its fixed surrounding actions.
+    let panel = current.parentElement;
+    while (
+      panel &&
+      !(
+        panel.scrollHeight > panel.clientHeight &&
+        /auto|scroll/.test(getComputedStyle(panel).overflowY)
+      )
+    ) {
+      panel = panel.parentElement;
+    }
+    const inside = panel ? candidates.filter(({ element }) => panel.contains(element)) : [];
+    const rowCandidates = inside.length ? inside : candidates;
+    const nearest = Math.min(...rowCandidates.map(({ gap }) => gap));
+    const next = rowCandidates
+      // Controls in one row can differ slightly in height and padding.
+      .filter(({ gap }) => gap <= nearest + 12)
+      .sort((a, b) => Number(b.overlap > 0) - Number(a.overlap > 0) || a.side - b.side)[0];
     next?.element.focus();
   }
+
   private activate() {
     const targets = this.targets();
     const target = targets.includes(document.activeElement as HTMLElement)
@@ -87,7 +119,7 @@ export class Controls {
     target?.click();
   }
   private back() {
-    const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+    const dialog = this.dialog;
     if (dialog?.id === 'pause-dialog') this.engine.pause();
     else if (dialog?.id === 'results') document.getElementById('result-exit')?.click();
     else if (this.engine.state === 'lobby') document.getElementById('leave-room')?.click();
@@ -95,20 +127,27 @@ export class Controls {
     else if (!dialog && this.engine.state === 'menu') {
       const back = document.getElementById('setup-back');
       if (back && !back.hidden && !back.closest('[inert]')) back.click();
-    } else if (dialog) {
-      dialog.close();
-      document.getElementById('help')?.focus();
-    }
+    } else if (dialog) dialog.close();
   }
   private key = (event: KeyboardEvent) => {
     this.setDevice('keyboard');
+    if (event.code === 'Escape' && this.dialog?.id === 'help-dialog') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.back();
+      return;
+    }
     if (
       !this.navigating ||
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
       (event.target instanceof HTMLElement &&
-        event.target.matches('input,textarea,select,[contenteditable]'))
+        event.target.matches('input,textarea,select,[contenteditable]') &&
+        !(
+          event.target.matches('input[type=range]') &&
+          ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(event.code)
+        ))
     )
       return;
     if (event.code === 'Escape' && !document.querySelector('dialog[open]')) {
@@ -149,26 +188,23 @@ export class Controls {
     const edge = (i: number) => pressed[i] && !this.buttons[i];
     if (pressed.some((p, i) => p && !this.buttons[i]) || pad.axes.some((a) => Math.abs(a) > 0.25))
       this.setDevice('gamepad');
-    if (edge(9) && ['racing', 'freeride', 'countdown', 'paused'].includes(this.engine.state))
+    if (edge(9) && this.dialog?.id === 'help-dialog') this.back();
+    else if (edge(9) && ['racing', 'freeride', 'countdown', 'paused'].includes(this.engine.state))
       this.engine.pause();
     else if (edge(1) && this.engine.state === 'freeride') this.engine.pause();
     else if (this.navigating) {
       if (edge(0)) this.activate();
       if (edge(1)) this.back();
-      const x = pressed[14]
-        ? -1
-        : pressed[15]
-          ? 1
-          : Math.abs(pad.axes[0] ?? 0) > 0.55
-            ? Math.sign(pad.axes[0])
-            : 0;
-      const y = pressed[12]
-        ? -1
-        : pressed[13]
-          ? 1
-          : Math.abs(pad.axes[1] ?? 0) > 0.55
-            ? Math.sign(pad.axes[1])
-            : 0;
+      const horizontal = Number(pressed[15]) - Number(pressed[14]);
+      const vertical = Number(pressed[13]) - Number(pressed[12]);
+      const stickX = pad.axes[0] ?? 0;
+      const stickY = pad.axes[1] ?? 0;
+      const x =
+        horizontal ||
+        (!vertical && Math.abs(stickX) > 0.55 && Math.abs(stickX) >= Math.abs(stickY)
+          ? Math.sign(stickX)
+          : 0);
+      const y = vertical || (!horizontal && !x && Math.abs(stickY) > 0.55 ? Math.sign(stickY) : 0);
       const direction = x ? `${x},0` : y ? `0,${y}` : '';
       if (direction && (direction !== this.direction || now >= this.repeatAt)) {
         this.move(x ? x : 0, x ? 0 : y);

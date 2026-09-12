@@ -44,13 +44,14 @@ export function createMusicVisuals(track: Track, skyline: T.Box3[] = []) {
   }
   return {
     group,
-    update(bands: Spectrum) {
+    update(bands: Spectrum, beat = 0) {
       bars.forEach((bar, i) => {
         const level = i % 3 === 0 ? bands.low : i % 3 === 1 ? bands.mid : bands.high;
         const height = 5 + level * (18 + Math.sin(i * 2.1) ** 2 * 32);
         bar.scale.y = height;
         bar.position.y = height / 2;
-        (bar.material as T.MeshStandardMaterial).emissiveIntensity = 0.35 + level * 0.9;
+        (bar.material as T.MeshStandardMaterial).emissiveIntensity =
+          0.35 + level * 0.9 + beat * 0.2;
       });
     },
   };

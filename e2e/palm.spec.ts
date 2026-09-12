@@ -25,11 +25,11 @@ test('Palm has a clear early bend and a rideable wave section through a full ren
     const engine = (window as any).__testEngine;
     engine.input = () => aiInput(engine.player, engine.track, engine.racers);
   });
-  await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 4);
+  await page.waitForFunction(() => (window as any).__vectide.player.nextGate === 2);
   await page.screenshot({ path: 'artifacts/palm-early-bend.png' });
   await page.waitForFunction(() => {
     const state = (window as any).__vectide;
-    return state.player.nextGate === 9 && state.player.wet === 0;
+    return state.player.nextGate === 3 && state.player.x > 250 && state.player.wet === 0;
   });
   await page.screenshot({ path: 'artifacts/palm-restored-waves.png' });
   await expect(page.locator('#results')).toBeVisible({ timeout: 45000 });

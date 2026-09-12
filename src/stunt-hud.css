@@ -1,0 +1,29 @@
+#stunt-hud {
+  position: fixed;
+  z-index: 4;
+  top: 28%;
+  left: 5%;
+  width: 90%;
+  pointer-events: none;
+  text-align: center;
+  text-wrap: balance;
+  font:
+    italic 900 clamp(2rem, 6vw, 5rem) / 1 'Roboto',
+    sans-serif;
+  letter-spacing: -0.035em;
+  color: var(--phosphor);
+  -webkit-text-stroke: 1px var(--void);
+  text-shadow:
+    3px 3px 0 var(--signal),
+    0 3px 12px var(--void);
+  opacity: 0;
+}
+
+@media (max-height: 500px) {
+  #stunt-hud {
+    top: 24%;
+    left: 18%;
+    width: 64%;
+    font-size: clamp(1.5rem, 4.5vw, 3rem);
+  }
+}

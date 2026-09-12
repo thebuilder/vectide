@@ -62,13 +62,13 @@ it.each(TRACKS)(
 it('recovery allows immediate throttle without advancing checkpoints or setting an eligible record', () => {
   const track = TRACKS[0],
     r = createRacer(track, 0);
-  r.nextGate = 5;
-  r.passed = 5;
+  r.nextGate = track.gates.length - 1;
+  r.passed = r.nextGate;
   recoverRacer(r, track, 2);
-  expect(r.x).toBe(track.gates[4].x);
-  expect(r.z).toBe(track.gates[4].z);
-  expect(r.nextGate).toBe(5);
-  expect(r.passed).toBe(5);
+  expect(r.x).toBe(track.gates.at(-2)!.x);
+  expect(r.z).toBe(track.gates.at(-2)!.z);
+  expect(r.nextGate).toBe(track.gates.length - 1);
+  expect(r.passed).toBe(track.gates.length - 1);
   expect(r.recovered).toBe(true);
   const before = { x: r.x, z: r.z };
   stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, 2, 1 / 120);

@@ -1,12 +1,15 @@
 import { COURSE_LAYOUTS, fitGateToShore, landmarkObstacles, type Landform } from './course-layout';
 import { waveZoneWeight, type WaveZone } from './water';
 import { CatmullRomCurve3, Vector3 } from 'three';
+import { createShoreField, type ShoreField } from './shore';
 
 export interface Point {
   x: number;
   z: number;
 }
 export interface Gate extends Point {
+  name?: string;
+  routeIndex?: number;
   tx: number;
   tz: number;
   width: number;
@@ -32,6 +35,7 @@ export interface Track {
   horizon: string;
   water: string;
   wave: number;
+  shore?: ShoreField;
   waveZones?: WaveZone[];
   points: Point[];
   gates: Gate[];
@@ -52,7 +56,7 @@ const definitions = [
     sea: 'ROLLING',
     accent: '#86fadd',
     sky: '#080a20',
-    horizon: '#ad385e',
+    horizon: '#812b48',
     water: '#073438',
     wave: 1.35,
   },
@@ -114,15 +118,43 @@ export const TRACKS: Track[] = definitions.map((d) => {
               : 32;
     return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
-  // Storm starts toward the western loop and places its weave checkpoint before the turn.
-  const gateFractions =
-    d.id === 'storm'
-      ? [
-          0, 0.085, 0.14, 0.205, 0.25, 0.29, 0.35, 0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125,
-          0.875, 0.9375,
-        ]
-      : Array.from({ length: 16 }, (_, i) => i / 16);
-  const gates = gateFractions.map((fraction) => fitGateToShore(at(fraction), layout.land));
+  // Checkpoints guard route choices; the centerline remains independent of gate count.
+  const gates = layout.checkpoints.map(({ name, at: [x, z], width }, index) => {
+    const routeIndex = points.reduce(
+      (best, p, i) =>
+        Math.hypot(p.x - x, p.z - z) < Math.hypot(points[best].x - x, points[best].z - z)
+          ? i
+          : best,
+      0,
+    );
+    const center = at(routeIndex / points.length);
+    const exit = points[(routeIndex + 28) % points.length];
+    const heading = Math.atan2(center.tx, center.tz);
+    const exitHeading = Math.atan2(exit.x - center.x, exit.z - center.z);
+    const turn = Math.atan2(Math.sin(exitHeading - heading), Math.cos(exitHeading - heading));
+    // Face into the next water leg; aiming across the full sector can point through an island.
+    // Keep the opening broad on approach and preserve the finish channel's grid heading.
+    const approach = points[(routeIndex - 18 + points.length) % points.length];
+    const approachHeading = Math.atan2(center.x - approach.x, center.z - approach.z);
+    const approachTurn = Math.atan2(
+      Math.sin(heading - approachHeading),
+      Math.cos(heading - approachHeading),
+    );
+    const adjustment = Math.max(-Math.PI / 12, Math.min(Math.PI / 12, turn));
+    const angle =
+      index === 0
+        ? heading
+        : approachHeading +
+          Math.max(-Math.PI / 6, Math.min(Math.PI / 6, approachTurn + adjustment));
+    return {
+      ...fitGateToShore(
+        { ...center, tx: Math.sin(angle), tz: Math.cos(angle), width },
+        layout.land,
+      ),
+      name,
+      routeIndex,
+    };
+  });
   const ramps: Ramp[] = layout.rampCenters.map(([x, z, tx = -1, tz = 0]) => {
     const early = d.id === 'palms' && tz === -1;
     const ramp = {
@@ -131,41 +163,41 @@ export const TRACKS: Track[] = definitions.map((d) => {
       tx,
       tz,
       width: early ? 9 : 12,
-      length: d.id === 'palms' && !early ? 40 : 20,
+      length: d.id === 'palms' && !early ? 16 : 20,
       baseHeight: -4.2,
-      height: d.id === 'palms' && !early ? 9.5 : 7,
+      height: d.id === 'palms' && !early ? 7.2 : 7,
     };
-    const target = gates
-      .map((gate, index) => ({
-        index,
-        along: (gate.x - x) * ramp.tx + (gate.z - z) * ramp.tz,
-        side: Math.abs(-(gate.x - x) * ramp.tz + (gate.z - z) * ramp.tx),
-        gate,
-      }))
-      .filter(
-        (v) =>
-          v.along > ramp.length / 2 &&
-          v.along < 210 &&
-          v.side < v.gate.width / 2 - 2 &&
-          v.gate.tx * ramp.tx + v.gate.tz * ramp.tz > 0.5,
-      )
-      .sort((a, b) => a.along - b.along)[0];
-    return { ...ramp, targetGate: target?.index };
+    const rampIndex = points.reduce(
+      (best, p, i) =>
+        Math.hypot(p.x - x, p.z - z) < Math.hypot(points[best].x - x, points[best].z - z)
+          ? i
+          : best,
+      0,
+    );
+    const next = gates.findIndex((gate) => gate.routeIndex > rampIndex);
+    return { ...ramp, targetGate: next < 0 ? 0 : next };
   });
   const landmark =
     d.id === 'storm'
       ? { x: 260, z: 130, tx: 0, tz: 1, width: 56 }
-      : at(d.id === 'palms' ? 0.42 : 0.46);
+      : at(d.id === 'palms' ? 0.4 : 0.46);
+  if (d.id === 'palms') {
+    const approach = at(0.37);
+    const length = Math.hypot(landmark.x - approach.x, landmark.z - approach.z);
+    landmark.tx = (landmark.x - approach.x) / length;
+    landmark.tz = (landmark.z - approach.z) / length;
+  }
   return {
     ...d,
     wave: d.id === 'palms' ? 0.8 : d.id === 'harbor' ? 0.95 : 1.25,
     waveZones: layout.zones,
+    shore: createShoreField(layout.land),
     points,
     gates,
     ramps,
     land: layout.land,
     landmark,
-    dolphin: at(0.22),
+    dolphin: at(d.id === 'harbor' ? 0.2 : 0.22),
     obstacles: landmarkObstacles(d.id, landmark),
     length: curve.getLength(),
   };
@@ -186,4 +218,17 @@ export function nearestPoint(track: Track, p: Point): number {
     }
   });
   return nearest;
+}
+
+/** Arc length of the route section that ends at this checkpoint. */
+export function checkpointDistance(track: Track, next: number): number {
+  const gate = track.gates[next],
+    previous = track.gates[(next - 1 + track.gates.length) % track.gates.length];
+  const end = gate.routeIndex ?? nearestPoint(track, gate),
+    start = previous.routeIndex ?? nearestPoint(track, previous);
+  return (
+    (((end - start + track.points.length) % track.points.length || track.points.length) *
+      track.length) /
+    track.points.length
+  );
 }

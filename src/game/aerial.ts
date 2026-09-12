@@ -2,66 +2,76 @@ import type { Input, Racer } from './physics';
 import { beginRecovery } from './recovery';
 
 export interface AerialState {
-  trick: 'none' | 'flip' | 'spin';
-  progress: number;
-  direction: number;
+  armed: boolean;
+  dive: number;
   pitch: number;
   yaw: number;
+  pitchVelocity: number;
+  yawVelocity: number;
   held: boolean;
   charge: number;
-  selected: number;
-  queued: number;
+  queued: boolean;
   buffer: number;
-  pending: string;
+  landings: number;
   message: string;
   messageTime: number;
 }
 export function createAerialState(): AerialState {
   return {
-    trick: 'none',
-    progress: 0,
-    direction: 1,
+    armed: false,
+    dive: 0,
     pitch: 0,
     yaw: 0,
+    pitchVelocity: 0,
+    yawVelocity: 0,
     held: false,
     charge: 0,
-    selected: 0,
-    queued: 0,
+    queued: false,
     buffer: 0,
-    pending: '',
+    landings: 0,
     message: '',
     messageTime: 0,
   };
 }
-/** Clear only takeoff intent; pausing must not release a queued trick. */
+const wrap = (v: number) => Math.atan2(Math.sin(v), Math.cos(v));
+const TAU = Math.PI * 2;
+export const STUNT_MESSAGE_SECONDS = 2;
+/** Clear only takeoff intent; pausing must not release a queued stunt. */
 export function cancelTrickSetup(r: Racer): void {
-  Object.assign(r.air, { held: false, charge: 0, selected: 0, queued: 0, buffer: 0 });
+  Object.assign(r.air, { held: false, charge: 0, queued: false, buffer: 0 });
 }
-/** Load while supported, then release within 300 ms of takeoff. */
+/** Input accelerates rotation; centering settles only within 25 degrees of alignment. */
+function turnVelocity(velocity: number, input: number, rotation: number, dt: number): number {
+  if (Math.abs(input) > 0.12) {
+    const target = input * 6.8;
+    // Bounded torque carries the current spin through counter-input before reversing.
+    const acceleration = 22 * Math.abs(input) * dt;
+    return velocity + Math.max(-acceleration, Math.min(acceleration, target - velocity));
+  }
+  const error = wrap(rotation);
+  if (Math.abs(error) < 0.44) return velocity + (-error * 70 - velocity * 17) * dt;
+  return velocity * Math.exp(-dt * 8);
+}
+/** Load while supported, release near takeoff, then control the whole flight. */
 export function stepAerial(r: Racer, input: Input, clearance: number, dt: number): void {
   const air = r.air,
-    request = input.trick ?? 0;
+    request = !!input.trick;
   air.messageTime = Math.max(0, air.messageTime - dt);
   air.buffer = Math.max(0, air.buffer - dt);
-  if (!air.buffer) air.queued = 0;
-  const eligible =
-    r.recovery.phase === 'riding' && !r.finished && air.trick === 'none' && !air.pending;
+  if (!air.buffer) air.queued = false;
+  const eligible = r.recovery.phase === 'riding' && !r.finished && !air.armed;
   if (!eligible) cancelTrickSetup(r);
   else {
-    if (request) {
-      if (r.wet > 0 || r.onRamp || air.charge > 0) {
-        air.charge = Math.min(1, air.charge + dt);
-        air.selected = request;
-      }
-    } else if (air.held) {
+    if (request && (r.wet > 0 || r.onRamp || air.charge > 0))
+      air.charge = Math.min(1, air.charge + dt);
+    else if (!request && air.held) {
       if (air.charge >= 0.12) {
-        air.queued = air.selected;
+        air.queued = true;
         air.buffer = 0.3;
       }
       air.charge = 0;
-      air.selected = 0;
     }
-    air.held = request !== 0;
+    air.held = request;
     if (
       air.queued &&
       r.body.airtime > 0.025 &&
@@ -70,37 +80,73 @@ export function stepAerial(r: Racer, input: Input, clearance: number, dt: number
       !r.onRamp &&
       r.wet === 0
     ) {
-      const selected = air.queued;
-      air.trick = Math.abs(selected) === 1 ? 'flip' : 'spin';
-      air.direction = selected < 0 ? -1 : 1;
-      air.progress = 0;
+      air.armed = true;
       cancelTrickSetup(r);
     }
     if (r.body.airtime >= 0.4) cancelTrickSetup(r);
   }
-  if (air.trick === 'none') return;
-  air.progress = Math.min(1, air.progress + dt / (air.trick === 'flip' ? 1.25 : 1.05));
-  const eased = air.progress * air.progress * (3 - 2 * air.progress);
-  const rotation = eased * Math.PI * 2 * air.direction;
-  air.pitch = air.trick === 'flip' ? rotation : 0;
-  air.yaw = air.trick === 'spin' ? rotation : 0;
-  if (air.progress === 1) {
-    air.pending = air.trick === 'flip' ? 'FLIP LANDED' : 'SPIN LANDED';
-    air.trick = 'none';
-    air.pitch = 0;
-    air.yaw = 0;
-  }
+  if (!air.armed || r.wet > 0 || r.onRamp || r.recovery.phase !== 'riding') return;
+  // Normalize diagonal input so a stick and digital keys share the same rotation budget.
+  const magnitude = Math.max(1, Math.hypot(input.lean, input.steer));
+  air.pitchVelocity = turnVelocity(
+    air.pitchVelocity,
+    input.lean / magnitude,
+    air.pitch + r.pitch,
+    dt,
+  );
+  air.yawVelocity = turnVelocity(air.yawVelocity, input.steer / magnitude, air.yaw, dt);
+  air.pitch += air.pitchVelocity * dt;
+  air.yaw += air.yawVelocity * dt;
 }
-export function landAerial(r: Racer, entryVelocity: number): void {
+function rotationLabel(turns: number, name: string): string {
+  return `${turns === 1 ? '' : turns === 2 ? 'DOUBLE ' : turns === 3 ? 'TRIPLE ' : `${turns} `}${name}`;
+}
+export interface LandingSurface {
+  slopeX: number;
+  slopeZ: number;
+  velocity: number;
+}
+
+export function landAerial(
+  r: Racer,
+  entryVelocity: number,
+  surface: LandingSurface = { slopeX: 0, slopeZ: 0, velocity: 0 },
+): void {
   const air = r.air;
-  const failed = air.trick !== 'none' && air.progress > 0.06 && air.progress < 0.94;
-  const severe = entryVelocity < -16 && Math.abs(r.pitch) > 1;
-  if (failed || severe) {
-    r.pitch = Math.atan2(Math.sin(r.pitch + air.pitch), Math.cos(r.pitch + air.pitch));
-    r.yaw += air.yaw;
-    beginRecovery(r);
-  } else {
-    if (air.pending === 'FLIP LANDED' && !r.finished && r.recovery.phase === 'riding') {
+  const armed = air.armed;
+  const flips = Math.floor((Math.abs(air.pitch) + 0.06) / TAU);
+  // A saved landing within 45 degrees still names the intended rotation.
+  const namedFlips = Math.floor((Math.abs(air.pitch) + Math.PI / 4) / TAU);
+  const spinDegrees = Math.floor((Math.abs(air.yaw) + Math.PI / 4) / Math.PI) * 180;
+  const rotation = Math.max(Math.abs(air.pitch), Math.abs(air.yaw));
+  // The visible landing orientation becomes the physical hull orientation, even for
+  // unfinished tricks. Preserve world momentum so an angled spin skids into its new heading.
+  r.pitch = wrap(r.pitch + air.pitch);
+  r.yaw = wrap(r.yaw + air.yaw);
+  const fx = Math.sin(r.yaw),
+    fz = Math.cos(r.yaw);
+  const pitchError = wrap(r.pitch - Math.atan(surface.slopeX * fx + surface.slopeZ * fz));
+  const rollError = wrap(r.roll - Math.atan(surface.slopeX * fz - surface.slopeZ * fx));
+  const tilt = Math.acos(Math.max(-1, Math.min(1, Math.cos(pitchError) * Math.cos(rollError))));
+  const impact = Math.max(
+    0,
+    (surface.velocity + r.vx * surface.slopeX + r.vz * surface.slopeZ - entryVelocity) /
+      Math.hypot(1, surface.slopeX, surface.slopeZ),
+  );
+  const unsafe = tilt > Math.PI / 2 || (tilt > 1.15 && impact > 7) || (tilt > 0.9 && impact > 16);
+  if (unsafe) beginRecovery(r);
+  else {
+    if (armed) {
+      const speed = Math.hypot(r.vx, r.vz);
+      const sideways = speed > 0.1 ? Math.abs((r.vx * fz - r.vz * fx) / speed) : 0;
+      const scrub = Math.min(
+        0.18,
+        ((1 - Math.cos(tilt)) * 0.25 + sideways * 0.05) * Math.min(1.5, Math.max(0.25, impact / 8)),
+      );
+      r.vx *= 1 - scrub;
+      r.vz *= 1 - scrub;
+    }
+    if (flips > 0 && !r.finished && r.recovery.phase === 'riding') {
       const speed = Math.hypot(r.vx, r.vz);
       // A small landing reward follows existing momentum; it cannot turn or launch the ski.
       if (speed > 1) {
@@ -109,11 +155,24 @@ export function landAerial(r: Racer, entryVelocity: number): void {
         r.vz *= (speed + gain) / speed;
       }
     }
-    air.message = air.pending;
-    air.messageTime = air.pending ? 1.8 : 0;
+    if (armed) {
+      const labels = [
+        namedFlips ? rotationLabel(namedFlips, air.pitch < 0 ? 'FRONTFLIP' : 'BACKFLIP') : '',
+        spinDegrees ? `${spinDegrees} SPIN${spinDegrees >= 1080 ? '!' : ''}` : '',
+      ].filter(Boolean);
+      air.message = labels.length
+        ? `${labels.join(' + ')} LANDED`
+        : rotation > Math.PI
+          ? 'STUNT LANDED'
+          : '';
+      air.messageTime = air.message ? STUNT_MESSAGE_SECONDS : 0;
+      if (air.message) air.landings++;
+    }
   }
-  air.trick = 'none';
+  air.armed = false;
   air.pitch = 0;
   air.yaw = 0;
-  air.pending = '';
+  air.pitchVelocity = 0;
+  air.yawVelocity = 0;
+  cancelTrickSetup(r);
 }

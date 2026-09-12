@@ -7,12 +7,12 @@ it('supports the keel on a solid ramp without generating water spray', () => {
     ramp = track.ramps[0],
     r = createRacer(track, 0);
   Object.assign(r, {
-    x: ramp.x + ramp.tx * 10,
-    z: ramp.z + ramp.tz * 10,
-    y: ramp.baseHeight + (10 / ramp.length + 0.5) * ramp.height + 0.52,
+    x: ramp.x + ramp.tx * (ramp.length * 0.25),
+    z: ramp.z + ramp.tz * (ramp.length * 0.25),
+    y: ramp.baseHeight + (0.25 + 0.5) * ramp.height + 0.52,
     yaw: Math.atan2(ramp.tx, ramp.tz),
-    vx: ramp.tx * 15,
-    vz: ramp.tz * 15,
+    vx: ramp.tx * 8,
+    vz: ramp.tz * 8,
   });
   const spray = new VoxelSpray();
   let contacts = 0;
@@ -50,8 +50,8 @@ it.each([-1, 1])('bounces a rider off ramp side %s without lifting them onto the
       sx = -ramp.tz * side,
       sz = ramp.tx * side;
     Object.assign(r, {
-      x: ramp.x + ramp.tx * 12 + sx * (ramp.width / 2 + 1),
-      z: ramp.z + ramp.tz * 12 + sz * (ramp.width / 2 + 1),
+      x: ramp.x + ramp.tx * (ramp.length * 0.3) + sx * (ramp.width / 2 + 1),
+      z: ramp.z + ramp.tz * (ramp.length * 0.3) + sz * (ramp.width / 2 + 1),
       y: 0.5,
       vx: -sx * 20,
       vz: -sz * 20,

@@ -9,8 +9,8 @@ it.each([-1, 1])('rejects side %s contact already inside the hull-width boundary
     sz = ramp.tx * side;
   // A glancing approach or another racer can put the hull inside the expanded wall first.
   Object.assign(r, {
-    x: ramp.x + ramp.tx * 12 + sx * (ramp.width / 2 + 0.2),
-    z: ramp.z + ramp.tz * 12 + sz * (ramp.width / 2 + 0.2),
+    x: ramp.x + ramp.tx * (ramp.length * 0.3) + sx * (ramp.width / 2 + 0.2),
+    z: ramp.z + ramp.tz * (ramp.length * 0.3) + sz * (ramp.width / 2 + 0.2),
     y: 0.5,
     vx: -sx * 20,
     vz: -sz * 20,
@@ -29,8 +29,13 @@ it('a descending rider can still land on the deck from above', () => {
   const track = { ...TRACKS[0], wave: 0, obstacles: [] },
     ramp = track.ramps[0],
     r = createRacer(track, 0);
-  const top = ramp.baseHeight + (12 / ramp.length + 0.5) * ramp.height;
-  Object.assign(r, { x: ramp.x + ramp.tx * 12, z: ramp.z + ramp.tz * 12, y: top + 0.6, vy: -30 });
+  const top = ramp.baseHeight + (0.3 + 0.5) * ramp.height;
+  Object.assign(r, {
+    x: ramp.x + ramp.tx * (ramp.length * 0.3),
+    z: ramp.z + ramp.tz * (ramp.length * 0.3),
+    y: top + 0.6,
+    vy: -30,
+  });
   const before = { x: r.x, z: r.z };
   stepRacer(r, { throttle: 0, steer: 0, brake: 0, lean: 0 }, track, 0, 1 / 120);
   expect(r.onRamp).toBe(true);

@@ -325,5 +325,10 @@ export function interpolateRacer(
     yaw: a.yaw + angle(b.yaw - a.yaw) * alpha,
     pitch: a.pitch + angle(b.pitch - a.pitch) * alpha,
     roll: a.roll + angle(b.roll - a.roll) * alpha,
+    air: {
+      ...b.air,
+      pitch: a.air.pitch + angle(b.air.pitch - a.air.pitch) * alpha,
+      yaw: a.air.yaw + angle(b.air.yaw - a.air.yaw) * alpha,
+    },
   };
 }

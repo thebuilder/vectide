@@ -47,7 +47,7 @@ describe('authoritative multiplayer simulation', () => {
     guest.onInput = (commands) => host.receiveInput(1, commands);
     guest.receiveSnapshot(host.snapshot());
     const start = { x: racer.x, z: racer.z };
-    for (let tick = 0; tick < 120 * 10; tick++) {
+    for (let tick = 0; tick < 120 * 20; tick++) {
       guest.step({ ...NEUTRAL, steer: 1 });
       host.step(NEUTRAL);
     }
@@ -203,9 +203,17 @@ describe('network boundaries and smoothing', () => {
     b.vx = 20;
     a.yaw = Math.PI - 0.1;
     b.yaw = -Math.PI + 0.1;
+    a.air.armed = b.air.armed = true;
+    a.air.pitch = Math.PI * 4 - 0.1;
+    b.air.pitch = Math.PI * 4 + 0.1;
+    a.air.yaw = 0.5;
+    b.air.yaw = 0.8;
     const mid = interpolateRacer(a, b, 10, 20, 15);
     expect(mid.x).toBeCloseTo(2);
     expect(mid.yaw).toBeCloseTo(Math.PI);
+    expect(mid.air.pitch).toBeCloseTo(Math.PI * 4);
+    expect(mid.air.yaw).toBeCloseTo(0.65);
+    expect(mid.air).not.toBe(b.air);
     expect(interpolateRacer(a, b, 10, 20, 1000).x).toBe(6);
     b.x = 100;
     expect(interpolateRacer(a, b, 10, 20, 15).x).toBe(100);
@@ -235,3 +243,27 @@ it.each(TRACKS)(
     expect(guest.snapshot()).toEqual(before);
   },
 );
+
+it('round-trips continuous stunt rotation and diving state through a real snapshot', () => {
+  const host = new NetworkRace(TRACKS[0], members.slice(0, 2), 0, true);
+  Object.assign(host.racers[1].air, {
+    armed: true,
+    pitch: 9.5,
+    yaw: -7.2,
+    pitchVelocity: -6.1,
+    yawVelocity: 2.4,
+    dive: 0.35,
+    landings: 3,
+    message: '1080 SPIN! LANDED',
+    messageTime: 1.7,
+  });
+  const message = parseMessage(
+    encodeMessage({ type: 'snapshot', race: 1, state: host.snapshot() }),
+  );
+  expect(message?.type).toBe('snapshot');
+  if (message?.type !== 'snapshot') throw Error('Snapshot rejected');
+  expect(message.state.racers[1].air).toEqual(host.racers[1].air);
+  const guest = new NetworkRace(TRACKS[0], members.slice(0, 2), 1, false);
+  guest.receiveSnapshot(message.state);
+  expect(guest.player.air).toEqual(host.racers[1].air);
+});

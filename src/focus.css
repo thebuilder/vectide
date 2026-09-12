@@ -1,0 +1,34 @@
+/* A solid ring stays readable throughout the slower halo pulse. */
+:is(button, summary, a[href], input, select, textarea):focus-visible,
+body[data-input='gamepad'] :is(button, summary, a[href], input, select, textarea):focus {
+  outline: 3px solid #e9fff8;
+  outline-offset: -3px;
+  box-shadow:
+    inset 0 0 0 5px var(--void),
+    0 0 0 2px var(--phosphor),
+    0 0 22px #86fadd80;
+  animation: focus-pulse 1600ms ease-in-out infinite;
+}
+
+@keyframes focus-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 5px var(--void),
+      0 0 0 2px var(--phosphor),
+      0 0 12px #86fadd55;
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 5px var(--void),
+      0 0 0 3px var(--phosphor),
+      0 0 26px #86faddaa;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(button, summary, a[href], input, select, textarea):focus-visible,
+  body[data-input='gamepad'] :is(button, summary, a[href], input, select, textarea):focus {
+    animation: none;
+  }
+}

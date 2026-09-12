@@ -25,7 +25,7 @@ describe('race pickups', () => {
   it('places the Palm reef row after the waves and before the jump straight', () => {
     const reef = track.waveZones!.find((zone) => zone.name === 'Reef wave channel')!;
     const straight = track.waveZones!.find((zone) => zone.name === 'Jump straight')!;
-    for (const box of pickupRows(track).filter((box) => box.row === 2)) {
+    for (const box of pickupRows(track).filter((box) => box.row === 3)) {
       expect(waveZoneWeight(box.x, box.z, reef)).toBeLessThan(0.1);
       expect(box.z).toBeGreaterThan(reef.z);
       expect(box.z).toBeLessThan(straight.z);
@@ -83,7 +83,7 @@ describe('race pickups', () => {
     off.use(r, true);
     expect(off.state.effects).toHaveLength(0);
   });
-  it('direct torpedo hits detonate and shockwaves lift and push racers once', () => {
+  it('direct torpedo hits detonate and shockwaves shove contacting racers once', () => {
     const { items, racers } = setup(),
       r = racers[0],
       victim = racers[1];
@@ -91,11 +91,11 @@ describe('race pickups', () => {
     items.use(r, true);
     for (let i = 0; i < 12; i++) items.step(1 / 120, 0, racers);
     expect(items.state.effects[0].kind).toBe(4);
-    expect(victim.vy).toBeGreaterThan(0);
+    expect(victim.vy).toBe(0);
     expect(victim.vz).toBeGreaterThan(0);
-    const vy = victim.vy;
+    const vz = victim.vz;
     items.step(1 / 120, 0, racers);
-    expect(victim.vy).toBe(vy);
+    expect(victim.vz).toBe(vz);
   });
   it('seeking torpedoes turn toward a racer ahead', () => {
     const { items, racers } = setup();
@@ -123,9 +123,10 @@ describe('race pickups', () => {
     items.use(r, true);
     const wave = items.state.effects[0];
     expect(wave.yaw).toBeCloseTo(Math.PI);
-    Object.assign(racers[1], { x: wave.x, z: wave.z - wakeTravel(0.5), vy: 0 });
+    Object.assign(racers[1], { x: wave.x, z: wave.z - wakeTravel(0.5), vy: 0, vz: 0 });
     items.step(0.5, 0, racers);
-    expect(racers[1].vy).toBeGreaterThan(0);
+    expect(racers[1].vz).toBe(0);
+    expect(racers[1].vy).toBe(0);
   });
   it('boosts increase speed, expire, and only wake boost sheds waves', () => {
     for (const item of [4, 5]) {
@@ -203,7 +204,7 @@ it('awards leader items for every roll, including tied HUD leaders and solo race
       const racers = Array.from({ length: count }, (_, i) => createRacer(track, i));
       const collector = racers.at(-1)!,
         box = items.boxes[0];
-      for (const r of racers) Object.assign(r, { passed: 5, nextGate: 10, x: -1000, z: -1000 });
+      for (const r of racers) Object.assign(r, box, { passed: 1, nextGate: 1, y: 50 });
       Object.assign(collector, box, { y: waterHeight(box.x, box.z, 0, track) + 1 });
       expect(racePosition(collector, racers, track)).toBe(1);
       items.step(1 / 120, 0, racers);
@@ -335,4 +336,18 @@ it('a fast torpedo still detects direct contact between simulation positions', (
   items.state.effects = [torpedo];
   items.step(0.2, 0, racers);
   expect(torpedo.kind).toBe(4);
+});
+
+it('spaces Palm rows around the course with only one on the final approach', async () => {
+  const { nearestPoint } = await import('../src/game/tracks');
+  const centers = pickupRows(track).filter((box, i) => i % 5 === 2);
+  const positions = centers.map((box) => nearestPoint(track, box));
+  for (const [i, index] of positions.entries()) {
+    const next = positions[(i + 1) % positions.length];
+    expect(
+      (((next - index + track.points.length) % track.points.length) * track.length) /
+        track.points.length,
+    ).toBeGreaterThan(120);
+  }
+  expect(positions.filter((index) => index / track.points.length > 0.8)).toHaveLength(1);
 });

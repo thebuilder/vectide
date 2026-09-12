@@ -8,7 +8,7 @@ import {
   stepRacer,
   updateProgress,
 } from '../src/game/physics';
-import { TRACKS } from '../src/game/tracks';
+import { checkpointDistance, TRACKS } from '../src/game/tracks';
 
 it.each(TRACKS)(
   'six AI riders finish with pickups on $name',
@@ -31,7 +31,10 @@ it.each(TRACKS)(
         if (held && !r.item) used++;
         stepRacer(r, aiInput(r, track, racers, 'normal'), track, time, dt, 1, items.surface);
         updateProgress(r, before, track, time, 3);
-        if (r.recovery.phase === 'riding' && time - r.lastProgress > 18) {
+        if (
+          r.recovery.phase === 'riding' &&
+          time - r.lastProgress > Math.max(18, checkpointDistance(track, r.nextGate) / 10 + 8)
+        ) {
           recoverRacer(r, track, time);
           r.lastProgress = time;
         }

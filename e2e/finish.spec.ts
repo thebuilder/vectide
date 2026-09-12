@@ -9,6 +9,7 @@ test('final split leads into animated results while autopilot keeps riding', asy
       body: (await response.text()) + '\nwindow.__testEngine = engine;',
     });
   });
+  await page.addInitScript(() => localStorage.setItem('vectide:best:v8:palms:trial', '65'));
   await page.goto('/');
   await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
@@ -34,6 +35,10 @@ test('final split leads into animated results while autopilot keeps riding', asy
   await expect(page.locator('#lap-split')).toContainText('LAP 1');
   await expect(page.locator('#results')).not.toBeVisible();
   await expect(page.locator('#results')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('#best-result')).toContainText('FASTER');
+  expect(
+    await page.evaluate(() => Number(localStorage.getItem('vectide:best:v8:palms:trial'))),
+  ).toBeLessThan(61);
   const before = await page.evaluate(() => (window as any).__vectide);
   await page.waitForTimeout(1000);
   const after = await page.evaluate(() => (window as any).__vectide);

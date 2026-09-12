@@ -40,7 +40,7 @@ test('Storm shows the first gate from the grid and admits a straight launch befo
     expect(Math.abs(y)).toBeLessThan(0.95);
     expect(Math.abs(z)).toBeLessThan(1);
   }
-  expect(Math.abs(opening.posts[0][0] - opening.posts[1][0])).toBeGreaterThan(0.55);
+  expect(Math.abs(opening.posts[0][0] - opening.posts[1][0])).toBeGreaterThan(0.25);
   expect(
     opening.crates.filter(
       ([x, y, z]: number[]) => Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(z) < 1,

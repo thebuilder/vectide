@@ -1,20 +1,6 @@
-# Water racing revision
-
-- [x] Shared localized water field and surface parity checks
-- [x] Fixed-step rider loading, deep carving and landing compression
-- [x] Tropical Palm course and ramp chain
-- [x] Distinct Port and Storm layouts with matching authored collision data
-- [x] Air tricks, failed landing, fall-off and remount
-- [x] Keyboard, gamepad and four-button touch integration
-- [x] AI complete-race and difficulty verification
-- [x] Browser visual and interaction verification, documentation
-
-## Verification — 2026-09-09
-
-- `pnpm check`: 104 tests passed across 20 files.
-- `pnpm build` and `pnpm format:check`: passed. Vite retains its Three.js chunk-size advisory.
-- Browser suite: 13 initial passes; two tests interrupted by live reload passed when rerun after edits settled.
-- Browser screenshots inspected for Palm opening rollers/ramp and detached swimming rider. Actual keyboard input exercised falling, swimming and remounting with no page errors.
-- Touch driving and simulated gamepad lifecycle passed browser tests. Physical phone/gamepad trick gestures remain untested.
-- Restored spectrum bars with terrain clearance, reduced mountain repetition, added Palm opening rollers, optional small ramp, turn chevrons and shoreline-aware gate placement.
-- Final refinements: hold/release takeoff tricks, clean-flip speed reward, bank-dependent foot placement, sand-colored beat wires, and updated controls/help.
+- [x] Approved cover and metadata (production build and live asset browser test passed)
+- [x] Checkpoints visible in and outside the camera view, with reduced-motion support (205 unit tests; full Storm lap and touch rotation browser checks passed)
+- [x] First-race guidance, help focus/pause access, short-screen setup and readable HUD (205 unit tests; desktop/portrait/landscape help, controller navigation and driving-tip browser checks passed)
+- [x] Water, wake, spray and camera visual polish (filled broken foam and fuller angular spray after user feedback; 210 unit tests; three-course Chromium captures and phone-sized WebKit rendering passed)
+- [x] Finish presentation and replay flow (camera/reduced-motion unit checks, actual finish/replay and saved-best comparison, rendered audio sting passed)
+- [x] Full regression, runtime visual/performance checks and independent review (52 Chromium cases covered across full and focused runs, 12 local WebRTC tests, 4 WebKit cases, build/format; physical-device and separate-network limits documented)

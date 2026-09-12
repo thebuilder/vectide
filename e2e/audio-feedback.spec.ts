@@ -263,3 +263,23 @@ test('foreground cues remain audible against each course soundtrack at the defau
   }
   console.log('Default mix RMS:', mix);
 });
+
+test('finish sting renders with a bounded peak and decays to silence', async ({ page }) => {
+  await page.goto('/');
+  const cue = await page.evaluate(async () => {
+    const path = '/src/game/sound-effects.ts',
+      { SoundEffects } = await import(path);
+    const context = new OfflineAudioContext(1, 72000, 48000);
+    new SoundEffects(context, context.destination).finish();
+    const samples = (await context.startRendering()).getChannelData(0);
+    return {
+      peak: samples.reduce((p, v) => Math.max(p, Math.abs(v)), 0),
+      energy: samples.reduce((n, v) => n + v * v, 0),
+      tail: samples.slice(60000).reduce((n, v) => n + Math.abs(v), 0),
+    };
+  });
+  expect(cue.peak).toBeGreaterThan(0.03);
+  expect(cue.peak).toBeLessThan(0.5);
+  expect(cue.energy).toBeGreaterThan(1);
+  expect(cue.tail).toBe(0);
+});

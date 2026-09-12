@@ -1,3 +1,6 @@
+import { PHYSICS_STEP, RacerPresentation } from './racer-presentation';
+import { RideCamera } from './ride-camera';
+import { Wake } from './wake';
 import { PickupVisuals } from './pickup-visuals';
 import { Pickups } from './pickups';
 import { NetworkRace } from '../multiplayer/race';
@@ -10,7 +13,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { TRACKS, type Track } from './tracks';
+import { checkpointDistance, TRACKS, type Track } from './tracks';
 import {
   aiInput,
   advanceFinishLap,
@@ -56,9 +59,21 @@ export class Engine {
   private bloom: UnrealBloomPass;
   private world: World;
   private jets: T.Group[] = [];
+  private rideCamera = new RideCamera();
+  private presentation = new RacerPresentation();
+  private wake = new Wake();
   private spray = new VoxelSpray();
   private pickupVisuals = new PickupVisuals();
   private cameraAnchor = new T.Vector3();
+  private guideTarget = new T.Vector3();
+  get checkpointTarget() {
+    const gate = this.world.gates[this.player.nextGate];
+    if (gate) {
+      this.guideTarget.copy(gate.position);
+      this.guideTarget.y += 6.5;
+    }
+    return this.guideTarget;
+  }
   readonly audio = new RaceAudio();
   private itemSounds = new ItemSoundEvents(this.audio);
   track = TRACKS[0];
@@ -146,7 +161,7 @@ export class Engine {
     fill.position.set(-500, 250, -350);
     this.scene.add(fill);
     this.world = createWorld(this.track);
-    this.scene.add(this.world.group, this.spray.object, this.pickupVisuals.group);
+    this.scene.add(this.world.group, this.spray.object, this.wake.object, this.pickupVisuals.group);
     this.pickupVisuals.onSplash = (x, y, z, strength) => this.spray.burst(x, y, z, strength);
     this.pickupVisuals.onExplosion = (x, y, z) => {
       this.spray.burst(x, y, z);
@@ -220,6 +235,9 @@ export class Engine {
   };
   private resetRacers(menu = this.state === 'menu') {
     this.spray.clear();
+    this.wake.clear();
+    this.rideCamera.clear();
+    this.presentation.clear();
     this.jets.forEach((j) => {
       this.scene.remove(j);
       const materials = new Set<T.Material>();
@@ -433,6 +451,9 @@ export class Engine {
   menu() {
     this.camera.clearViewOffset();
     this.spray.clear();
+    this.wake.clear();
+    this.rideCamera.clear();
+    this.presentation.clear();
     this.audio.setScene('title');
     this.state = 'menu';
     this.items = new Pickups(this.track, false);
@@ -461,9 +482,13 @@ export class Engine {
   reset() {
     if (this.state !== 'racing' && this.state !== 'freeride') return;
     if (this.network) this.network.requestReset();
-    else recoverRacer(this.player, this.track, this.visualTime);
+    else {
+      recoverRacer(this.player, this.track, this.visualTime);
+      this.presentation.clear();
+    }
     this.audio.tone(180);
   }
+  readonly drivingInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   readonly touchInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   private input(): Input {
     if (
@@ -501,17 +526,7 @@ export class Engine {
         1,
       ),
       use: this.itemRequested || !!touch?.use || !!key('KeyQ') || !!pad?.buttons[4]?.pressed,
-      trick:
-        touch?.trick ||
-        (key('KeyE') || pad?.buttons[5]?.pressed
-          ? Math.abs(axis) > 0.3
-            ? -Math.sign(axis) * 2
-            : key('KeyA', 'ArrowLeft')
-              ? 2
-              : key('KeyD', 'ArrowRight')
-                ? -2
-                : 1
-          : 0),
+      trick: Number(!!touch?.trick || !!key('KeyE') || !!pad?.buttons[5]?.pressed),
     };
   }
   get riderPose() {
@@ -595,7 +610,8 @@ export class Engine {
         r.id > 0 &&
         !r.finished &&
         r.recovery.phase === 'riding' &&
-        this.time - r.lastProgress > 18
+        this.time - r.lastProgress >
+          Math.max(18, checkpointDistance(this.track, r.nextGate) / 10 + 8)
       ) {
         recoverRacer(r, this.track, this.visualTime);
         r.lastProgress = this.time;
@@ -649,24 +665,49 @@ export class Engine {
       this.state === 'finished'
     ) {
       this.accumulator += dt;
-      while (this.accumulator >= 1 / 120) {
-        this.tick(1 / 120);
-        this.accumulator -= 1 / 120;
+      while (this.accumulator >= PHYSICS_STEP) {
+        if (!this.network && (this.state === 'racing' || this.state === 'finished'))
+          this.presentation.capture(this.racers);
+        this.tick(PHYSICS_STEP);
+        this.accumulator -= PHYSICS_STEP;
       }
     }
-    const rendered = this.racers.map((r) => this.network?.renderRacer(r, dt) ?? r);
+    const interpolate =
+      !this.network &&
+      this.presentation.ready &&
+      ['racing', 'finished', 'paused'].includes(this.state);
+    const alpha = this.accumulator / PHYSICS_STEP;
+    const renderTime = interpolate ? this.visualTime - (1 - alpha) * PHYSICS_STEP : this.visualTime;
+    const rendered = this.racers.map(
+      (r) =>
+        this.network?.renderRacer(r, dt) ?? (interpolate ? this.presentation.render(r, alpha) : r),
+    );
     const p = rendered[this.racers.indexOf(this.player)];
     const control = this.input();
+    Object.assign(this.drivingInput, control);
     this.audio.transport(this.state === 'paused', dt);
     this.itemSounds.update(this.network?.items ?? this.items, this.player, this.state === 'racing');
     const bands = this.reducedMotion.matches
       ? { low: 0, mid: 0, high: 0 }
       : this.audio.spectrum.bands;
     const itemSurface = (this.network?.items ?? this.items).surface;
-    this.world.update(this.visualTime, p, bands, itemSurface);
+    const music =
+      this.audio.enabled && this.audio.volumes.music > 0 && this.state !== 'paused'
+        ? this.audio.spectrum
+        : undefined;
+    this.world.update(
+      renderTime,
+      p,
+      bands,
+      itemSurface,
+      this.reducedMotion.matches,
+      music,
+      rendered,
+    );
+    this.wake.reactToMusic(bands, dt, !this.reducedMotion.matches);
     this.pickupVisuals.update(
       this.network?.items ?? this.items,
-      this.visualTime,
+      renderTime,
       !this.track.practiceRadius &&
         ['countdown', 'racing', 'paused', 'finished'].includes(this.state),
       bands.low,
@@ -705,7 +746,7 @@ export class Engine {
       const portrait = this.camera.aspect < 1;
       const a =
         (portrait ? 1.4 : 1.72) +
-        (this.reducedMotion.matches ? 0 : Math.sin(this.visualTime * 0.1) * 0.06);
+        (this.reducedMotion.matches ? 0 : Math.sin(renderTime * 0.1) * 0.06);
       // Leave the menu's left column clear. Portrait looks farther ahead from above,
       // placing the rider in the open water below the buttons while retaining the sunset.
       const offset = portrait ? 2.6 : this.camera.aspect * 3.2;
@@ -721,11 +762,16 @@ export class Engine {
       this.camera.position.lerp(desired, this.reducedMotion.matches ? 1 : 1 - Math.exp(-dt * 2));
       this.camTarget.set(x + Math.sin(a) * lead, p.y + 1, z + Math.cos(a) * lead);
     } else if (this.state !== 'lobby') {
-      const speed = Math.hypot(p.vx, p.vz),
+      const framing = this.rideCamera.update(
+          this.state === 'paused' ? 0 : dt,
+          p,
+          this.state === 'finished',
+          this.reducedMotion.matches,
+        ),
         desired = new T.Vector3(
-          p.x - Math.sin(p.yaw) * 7.2,
-          p.y + 2.9,
-          p.z - Math.cos(p.yaw) * 7.2,
+          p.x - Math.sin(p.yaw + framing.yawOffset) * framing.distance,
+          p.y + framing.height,
+          p.z - Math.cos(p.yaw + framing.yawOffset) * framing.distance,
         );
       this.camera.position.x += p.x - this.cameraAnchor.x;
       this.camera.position.z += p.z - this.cameraAnchor.z;
@@ -734,21 +780,28 @@ export class Engine {
       this.camera.position.lerp(desired, 1 - Math.exp(-dt * 8));
       this.camera.position.y = Math.max(
         this.camera.position.y,
-        waterHeight(this.camera.position.x, this.camera.position.z, this.visualTime, itemSurface) +
-          0.8,
+        waterHeight(this.camera.position.x, this.camera.position.z, renderTime, itemSurface) + 0.8,
       );
       this.camTarget.lerp(
         new T.Vector3(p.x + Math.sin(p.yaw) * 4, p.y + 0.6, p.z + Math.cos(p.yaw) * 4),
         1 - Math.exp(-dt * 9),
       );
-      this.camera.fov +=
-        (58 + Math.min(speed / 32, 1) * 5 - this.camera.fov) * (1 - Math.exp(-dt * 2));
+      this.camera.fov += (framing.fov - this.camera.fov) * (1 - Math.exp(-dt * 2));
       this.camera.updateProjectionMatrix();
     }
     this.cameraAnchor.set(p.x, p.y, p.z);
     this.camera.lookAt(this.camTarget);
-    if (this.state === 'racing' || this.state === 'finished' || this.lobby)
-      this.spray.update(dt, this.racers, this.track, this.visualTime, itemSurface);
+    this.world.gates.forEach((gate) => {
+      const marker = gate.getObjectByName('next')!;
+      marker.rotation.y = Math.atan2(
+        this.camera.position.x - gate.position.x,
+        this.camera.position.z - gate.position.z,
+      );
+    });
+    if (this.state === 'racing' || this.state === 'finished' || this.lobby) {
+      this.spray.update(dt, rendered, this.track, renderTime, itemSurface);
+      this.wake.update(rendered, renderTime, itemSurface);
+    }
     this.audio.update(
       Math.hypot(p.vx, p.vz),
       p.finished ? 0.65 : control.throttle * (1 - control.brake),
@@ -768,6 +821,7 @@ export class Engine {
     this.frameId = requestAnimationFrame(this.frame);
   };
   dispose() {
+    this.wake.dispose();
     cancelAnimationFrame(this.frameId);
     this.intro?.finish();
     window.removeEventListener('resize', this.resize);

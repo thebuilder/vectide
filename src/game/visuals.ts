@@ -1,5 +1,6 @@
 import * as T from 'three';
-import type { Spectrum } from './spectrum';
+import type { MusicSpectrum, Spectrum } from './spectrum';
+import { MusicWater } from './music-water';
 import { batchStatic } from './batch';
 import { CELL, waterHeight, type WaterProfile } from './water';
 import { createWaterMaterial, updateWaterPulses } from './water-material';
@@ -19,7 +20,15 @@ export interface World {
   gates: T.Group[];
   ramps: T.Group;
   turbines: T.Group[];
-  update: (t: number, player: Racer, bands?: Spectrum, surface?: WaterProfile) => void;
+  update: (
+    t: number,
+    player: Racer,
+    bands?: Spectrum,
+    surface?: WaterProfile,
+    reducedMotion?: boolean,
+    music?: MusicSpectrum,
+    racers?: readonly Racer[],
+  ) => void;
   dispose: () => void;
 }
 export function createWorld(track: Track): World {
@@ -52,17 +61,19 @@ export function createWorld(track: Track): World {
       vertexShader:
         'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:
-        'varying vec2 vUv; uniform float storm;void main(){if(vUv.y<.48&&mod(vUv.y,.065)<.013)discard;vec3 c=mix(vec3(1.,.08,.32),vec3(1.,.66,.27),vUv.y);gl_FragColor=vec4(mix(c,vec3(.5,.67,.76),storm),1.);}',
+        'varying vec2 vUv; uniform float storm;void main(){if(vUv.y<.48&&mod(vUv.y,.065)<.013)discard;vec3 c=mix(vec3(.95,.025,.07),vec3(1.,.32,.075),vUv.y);gl_FragColor=vec4(mix(c,vec3(.5,.67,.76),storm),1.);}',
     }),
   );
   sun.position.set(2300, 360, 500);
   sun.lookAt(0, 0, 0);
   group.add(sun);
-  const waterMaterial = createWaterMaterial(track);
+  const musicWater = new MusicWater();
+  const waterMaterial = createWaterMaterial(track, musicWater);
   const waterGeo = new T.PlaneGeometry(1536, 1536, 1536 / CELL, 1536 / CELL);
   waterGeo.rotateX(-Math.PI / 2);
   const water = new T.Mesh(waterGeo, waterMaterial);
   water.frustumCulled = false;
+  water.renderOrder = -1;
   group.add(water);
   const farWater = new T.Mesh(
     new T.PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2),
@@ -82,16 +93,23 @@ export function createWorld(track: Track): World {
       const base = outlined(new T.CylinderGeometry(0.55, 1.1, 0.9, 6), color);
       base.position.y = 0.5;
       buoy.add(base);
-      const mastHeight = track.id === 'storm' ? 6 : 3.5;
+      const mastHeight = 8;
       const mast = new T.Mesh(
-        new T.CylinderGeometry(0.09, 0.09, mastHeight, 5),
+        new T.CylinderGeometry(0.16, 0.2, mastHeight, 5),
         glowing(color, 0.25),
       );
       mast.position.y = 0.5 + mastHeight / 2;
       buoy.add(mast);
-      const top = new T.Mesh(new T.OctahedronGeometry(0.6), glowing(color, 0.45));
+      const top = new T.Mesh(new T.OctahedronGeometry(1.05), glowing(color, 0.45));
       top.position.y = mastHeight + 0.5;
       buoy.add(top);
+      const pennant = new T.Mesh(
+        new T.BoxGeometry(1.5, 4.5, 0.3),
+        new T.MeshBasicMaterial({ color, toneMapped: false }),
+      );
+      pennant.position.set(-g.tz * side * 0.8, 5.5, g.tx * side * 0.8);
+      pennant.rotation.y = Math.atan2(g.tx, g.tz);
+      buoy.add(pennant);
       gate.add(buoy);
     }
     if (i === 0) {
@@ -141,10 +159,30 @@ export function createWorld(track: Track): World {
     }
     const marker = new T.Group();
     marker.name = 'next';
-    const arrow = new T.Mesh(new T.ConeGeometry(1.2, 2, 3), glowing(0xffbc57, 0.35));
-    arrow.rotation.x = Math.PI;
-    arrow.position.y = 8;
-    marker.add(arrow);
+    const chevron = new T.Shape();
+    chevron.moveTo(-1.8, 1);
+    chevron.lineTo(-1.8, 0.2);
+    chevron.lineTo(0, -1);
+    chevron.lineTo(1.8, 0.2);
+    chevron.lineTo(1.8, 1);
+    chevron.lineTo(0, -0.15);
+    chevron.closePath();
+    const geometry = new T.ShapeGeometry(chevron);
+    for (let j = 0; j < 2; j++) {
+      const backing = new T.Mesh(
+        geometry,
+        new T.MeshBasicMaterial({ color: 0x07171e, side: T.DoubleSide }),
+      );
+      backing.position.set(0, 11 + j * 2.4, -0.04);
+      backing.scale.setScalar(1.65);
+      const arrow = new T.Mesh(
+        geometry,
+        new T.MeshBasicMaterial({ color: 0xffc65a, side: T.DoubleSide, toneMapped: false }),
+      );
+      arrow.position.y = 11 + j * 2.4;
+      arrow.scale.setScalar(1.4);
+      marker.add(backing, arrow);
+    }
     gate.add(marker);
     gates.push(gate);
     group.add(gate);
@@ -178,6 +216,9 @@ export function createWorld(track: Track): World {
     ramp.rotation.y = Math.atan2(r.tx, r.tz);
     ramp.position.set(r.x, r.baseHeight, r.z);
     ramps.add(ramp);
+    const markings = glowing(0xffbc57);
+    // Draw after the water so its depth hides submerged portions of the glowing strips.
+    markings.transparent = true;
     for (let i = 0; i < 5; i++) {
       const mark = box(
         ramp,
@@ -188,7 +229,7 @@ export function createWorld(track: Track): World {
         h * (i / 5),
         -l + (r.length * i) / 5,
         0xffbc57,
-        glowing(0xffbc57),
+        markings,
       );
       mark.rotation.x = -Math.atan2(h, r.length);
     }
@@ -294,6 +335,7 @@ export function createWorld(track: Track): World {
   group.add(passing.group);
   batchStatic(ramps, []);
   batchStatic(group, [water, ramps, ...gates, ...turbines, passing.group, musicVisuals.group]);
+  if ('waterEffects' in passing) group.add(passing.waterEffects);
   const pulseMaterials = new Map<T.MeshStandardMaterial, number>();
   const outlines = new Map<T.LineBasicMaterial, { color: T.Color; opacity: number }>();
   group.traverse((object) => {
@@ -317,22 +359,31 @@ export function createWorld(track: Track): World {
     gates,
     ramps,
     turbines,
-    update(t, player, bands = { low: 0, mid: 0, high: 0 }, surface = track) {
+    update(
+      t,
+      player,
+      bands = { low: 0, mid: 0, high: 0 },
+      surface = track,
+      reducedMotion = false,
+      music,
+      racers = [player],
+    ) {
+      musicWater.update(t, music, !reducedMotion);
       updateWaterPulses(waterMaterial, surface, t);
       const outlinePulse = Math.min(1, bands.low * 0.75 + bands.mid * 0.2 + bands.high * 0.15);
       outlines.forEach((base, material) => {
-        const sand = material.name === 'sand-wire';
-        material.color.copy(base.color).multiplyScalar(1 + outlinePulse * (sand ? 0.25 : 2.5));
-        material.opacity = base.opacity + ((sand ? 0.42 : 1) - base.opacity) * outlinePulse;
+        material.color.copy(base.color).multiplyScalar(1 + outlinePulse * 2.5);
+        material.opacity = base.opacity + (1 - base.opacity) * outlinePulse;
       });
       pulseMaterials.forEach(
         (base, material) =>
           (material.emissiveIntensity = base * (1 + bands.low * 0.5 + bands.high * 0.15)),
       );
-      musicVisuals.update(bands);
+      musicVisuals.update(bands, reducedMotion ? 0 : (music?.beatStrength ?? 0));
       sun.scale.setScalar(1 + bands.low * 0.035);
       waterMaterial.uniforms.uMusic.value.set(bands.low, bands.mid, bands.high);
-      passing.update(t, player);
+      if ('waterEffects' in passing) passing.update(t, player, racers, surface);
+      else passing.update(t);
       waterMaterial.uniforms.uTime.value = t;
       water.position.x = Math.floor(player.x / CELL) * CELL;
       water.position.z = Math.floor(player.z / CELL) * CELL;
@@ -345,7 +396,9 @@ export function createWorld(track: Track): World {
             buoy.position.y =
               waterHeight(p.x + buoy.position.x, p.z + buoy.position.z, t, surface) - g.position.y;
           });
-        g.getObjectByName('next')!.visible = i === player.nextGate;
+        const marker = g.getObjectByName('next')!;
+        marker.visible = i !== 0 && i === player.nextGate;
+        marker.position.y = reducedMotion ? 0 : (Math.sin(t * 4) + 1) * 0.5;
       });
       turbines.forEach((r, i) => (r.rotation.z = t * 0.3 + i));
     },

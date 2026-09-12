@@ -5,7 +5,7 @@ import { collideTerrain } from './terrain-collision';
 import { createRiderLoad, stepRiderLoad, type RiderLoad } from './rider-load';
 import { collideRampWalls } from './ramp-collision';
 import { waterHeight, type WaterProfile } from './water';
-import { nearestPoint, routePoint, type Track, type Gate } from './tracks';
+import { checkpointDistance, nearestPoint, routePoint, type Track, type Gate } from './tracks';
 export interface Input {
   throttle: number;
   steer: number;
@@ -134,25 +134,55 @@ export function stepRacer(
     fz = Math.cos(r.yaw),
     rx = fz,
     rz = -fx;
+  r.air.dive *= Math.exp(-dt * 3);
+  if (
+    !r.air.armed &&
+    r.body.airtime > 0.12 &&
+    input.lean < -0.3 &&
+    r.pitch < -0.12 &&
+    r.pitch > -0.8 &&
+    r.vy < -1 &&
+    speed > 8
+  )
+    r.air.dive = Math.max(r.air.dive, clamp(-r.pitch / 0.45, 0, 1) * clamp(speed / 20, 0, 1));
   let force = 0,
     front = 0,
     back = 0,
     left = 0,
     right = 0,
     contacts = 0;
+  const stunt = r.air.armed;
+  const contactYaw = r.yaw + r.air.yaw,
+    contactPitch = r.pitch + r.air.pitch;
   for (const along of [-1.55, 1.55])
     for (const side of [-0.62, 0.62]) {
-      const x = r.x + fx * along + rx * side,
-        z = r.z + fz * along + rz * side;
-      const localY = r.y + Math.sin(r.pitch) * along + Math.sin(r.roll) * side;
+      // During a stunt, sample the rotated hull that is actually being drawn.
+      const longitudinal = stunt
+        ? along * Math.cos(contactPitch) - side * Math.sin(r.roll) * Math.sin(contactPitch)
+        : along;
+      const lateral = stunt ? side * Math.cos(r.roll) : side;
+      const x = r.x + Math.sin(contactYaw) * longitudinal + Math.cos(contactYaw) * lateral,
+        z = r.z + Math.cos(contactYaw) * longitudinal - Math.sin(contactYaw) * lateral;
+      const localY =
+        r.y +
+        Math.sin(contactPitch) * along +
+        Math.sin(r.roll) * side * (stunt ? Math.cos(contactPitch) : 1);
       const h = waterHeight(x, z, t, surface),
         waterV = (waterHeight(x, z, t + 0.025, surface) - h) / 0.025;
       const immersion = h + 0.48 + Math.min(speed / 120, 0.2) - localY;
-      const pointV = r.vy + r.pitchVelocity * along + r.rollVelocity * side;
+      const pointV = stunt
+        ? r.vy +
+          (Math.cos(contactPitch) * along - Math.sin(r.roll) * side * Math.sin(contactPitch)) *
+            (r.pitchVelocity + r.air.pitchVelocity) +
+          Math.cos(r.roll) * side * Math.cos(contactPitch) * r.rollVelocity
+        : r.vy + r.pitchVelocity * along + r.rollVelocity * side;
       const spring =
         immersion > -0.12
           ? clamp(
-              immersion * (30 + Math.max(0, immersion - 0.6) * 22) - (pointV - waterV) * 4.2,
+              immersion * (30 + Math.max(0, immersion - 0.6) * 22) -
+                // A nose-first entry pierces the surface before buoyancy arrests its descent.
+                // Keep the spring and full upward damping so the hull always resurfaces.
+                (pointV - waterV) * 4.2 * (pointV < waterV ? 1 - r.air.dive * 0.8 : 1),
               0,
               110,
             )
@@ -172,27 +202,16 @@ export function stepRacer(
       (waterHeight(r.x, r.z + 1.5, t, surface) - waterHeight(r.x, r.z - 1.5, t, surface)) / 3;
   r.wet = contacts / 4;
   if (r.wet === 0 && !r.onRamp) r.body.airtime += dt;
-  else {
-    if (wasAirborne) landAerial(r, entryVelocity);
-    if (wasAirborne && !r.onRamp) {
-      // Judge entry against the moving face, including the water crossed by forward motion.
-      const impact = Math.max(
-        0,
-        (surfaceV + r.vx * slopeX + r.vz * slopeZ - entryVelocity) / Math.hypot(1, slopeX, slopeZ),
-      );
-      r.body.impact = Math.min(16, impact);
-      const mismatch = Math.abs(r.pitch - Math.atan(slopeX * fx + slopeZ * fz));
-      const scrub = clamp((impact - 2) * (0.009 + Math.min(mismatch, 1) * 0.018), 0, 0.28);
-      r.vx *= 1 - scrub;
-      r.vz *= 1 - scrub;
-    }
-    r.body.airtime = 0;
-  }
+  else r.body.airtime = 0;
   r.vy += (force - 9.81) * dt;
   r.y += r.vy * dt;
   const targetBank = -r.body.side * 0.82;
   r.pitchVelocity +=
-    ((front - back) * 0.19 - r.pitchVelocity * 2.8 - r.pitch * 2.5 + r.body.fore * 4.8) * dt;
+    ((front - back) * 0.19 -
+      r.pitchVelocity * 2.8 -
+      r.pitch * 2.5 +
+      r.body.fore * (stunt ? 0 : 4.8)) *
+    dt;
   r.rollVelocity += ((right - left) * 0.25 + (targetBank - r.roll) * 15 - r.rollVelocity * 5) * dt;
   r.pitch = clamp(r.pitch + r.pitchVelocity * dt, -1.15, 1.15);
   r.roll = clamp(r.roll + r.rollVelocity * dt, -0.9, 0.9);
@@ -213,6 +232,7 @@ export function stepRacer(
   const drag =
     (0.037 * forward * Math.abs(forward) * response * (0.35 + 0.65 * input.throttle) +
       input.brake * forward * 1.8 +
+      r.air.dive * clamp((height + 0.25 - r.y) / 0.75, 0, 1) * forward * 1.4 +
       (1 - input.throttle) * forward * (0.08 + 0.8 * clamp((8 - speed) / 6, 0, 1))) *
     grip;
   const sideDrag = lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * grip;
@@ -256,10 +276,35 @@ export function stepRacer(
     r.pitch += (rampPitch - r.pitch) * (1 - Math.exp(-dt * 14));
     r.pitchVelocity = 0;
     r.roll *= Math.exp(-dt * 12);
-    if (wasAirborne) landAerial(r, entryVelocity);
     r.body.airtime = 0;
     r.onRamp = true;
     r.wet = 0;
+  }
+  // Resolve the supporting surface once. At a water/deck boundary the rigid deck
+  // wins; grading before this point can punish the same touchdown twice.
+  if ((wasAirborne || r.air.armed) && (r.wet > 0 || r.onRamp)) {
+    const landingSurface =
+      r.onRamp && deck
+        ? {
+            slopeX: (deck.ramp.tx * deck.ramp.height) / deck.ramp.length,
+            slopeZ: (deck.ramp.tz * deck.ramp.height) / deck.ramp.length,
+            velocity: 0,
+          }
+        : { slopeX, slopeZ, velocity: surfaceV };
+    landAerial(r, entryVelocity, landingSurface);
+    if (!r.onRamp) {
+      const impact = Math.max(
+        0,
+        (surfaceV + r.vx * slopeX + r.vz * slopeZ - entryVelocity) / Math.hypot(1, slopeX, slopeZ),
+      );
+      r.body.impact = Math.min(16, impact);
+      const mismatch = Math.abs(
+        r.pitch - Math.atan(slopeX * Math.sin(r.yaw) + slopeZ * Math.cos(r.yaw)),
+      );
+      const scrub = clamp((impact - 2) * (0.009 + Math.min(mismatch, 1) * 0.018), 0, 0.28);
+      r.vx *= 1 - scrub;
+      r.vz *= 1 - scrub;
+    }
   }
   collideTerrain(r, track);
   for (const o of track.obstacles) {
@@ -362,9 +407,20 @@ export function advanceFinishLap(r: Racer, previous: { x: number; z: number }, t
   }
 }
 export function raceProgress(r: Racer, track: Track): number {
-  const g = track.gates[r.nextGate];
-  return r.passed - Math.min(Math.hypot(g.x - r.x, g.z - r.z) / 120, 0.99);
+  const gate = track.gates[r.nextGate],
+    next = gate.routeIndex ?? nearestPoint(track, gate),
+    pointGap = (next - nearestPoint(track, r) + track.points.length) % track.points.length,
+    remaining =
+      ((pointGap > track.points.length / 2 ? pointGap - track.points.length : pointGap) *
+        track.length) /
+      track.points.length;
+  // Position keeps changing on long sections, and catch-up keeps its original lap-distance scale.
+  return (
+    ((r.passed - clamp(remaining / checkpointDistance(track, r.nextGate), 0, 0.99)) * 16) /
+    track.gates.length
+  );
 }
+
 /** Ties share a position, matching the number shown in the race HUD. */
 export function racePosition(player: Racer, racers: Racer[], track: Track): number {
   return (
@@ -391,15 +447,19 @@ export function aiInput(
 ): Input {
   const nearest = nearestPoint(track, r),
     speed = Math.hypot(r.vx, r.vz);
-  let target = routePoint(track, nearest + Math.max(4, speed * 0.45));
-  const gate = track.gates[r.nextGate],
-    distance = Math.hypot(gate.x - r.x, gate.z - r.z);
+  let target = routePoint(track, nearest + Math.max(4, speed * 0.7));
+  const gate = track.gates[r.nextGate];
   const gateSide = (r.x - gate.x) * gate.tx + (r.z - gate.z) * gate.tz;
-  if (gateSide > 5) r.approachingGate = true;
+  const beyondGate =
+    (nearest - (gate.routeIndex ?? nearestPoint(track, gate)) + track.points.length) %
+    track.points.length;
+  // Distant bends can already lie behind a gate's infinite plane. Retry only after reaching it.
+  if (gateSide > 5 && (beyondGate * track.length) / track.points.length < 80)
+    r.approachingGate = true;
   if (r.approachingGate) {
     target = { x: gate.x - gate.tx * 40, z: gate.z - gate.tz * 40 };
     if (Math.hypot(target.x - r.x, target.z - r.z) < 8) r.approachingGate = false;
-  } else if (distance < 90) target = gate;
+  } else if (Math.hypot(gate.x - r.x, gate.z - r.z) < 40) target = gate;
   let desired = Math.atan2(target.x - r.x, target.z - r.z),
     avoidance = 0;
   for (const other of racers) {
@@ -437,9 +497,7 @@ export function recoverRacer(r: Racer, track: Track, time: number): void {
   r.x = start ? start.x : g.x;
   r.z = start ? start.z : g.z;
   r.y = waterHeight(r.x, r.z, time, track) + 0.6;
-  r.yaw = start
-    ? start.yaw
-    : Math.atan2(track.gates[r.nextGate].x - g.x, track.gates[r.nextGate].z - g.z);
+  r.yaw = start ? start.yaw : Math.atan2(g.tx, g.tz);
   r.onRamp = false;
   r.wet = 1;
   r.steer = 0;

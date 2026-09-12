@@ -3,6 +3,7 @@ import { angle, clamp, racePosition, rampSurface, type Racer } from './physics';
 import type { Track } from './tracks';
 import { waterHeight, type WaterProfile } from './water';
 import { wakeFront, wakeWidth } from './water-pulses';
+import { createTorpedoCollider, segmentCircleHit, TORPEDO_DEPTH } from './projectile-collision';
 
 export const ITEMS = [
   { name: 'EMPTY', icon: '◇', description: 'Ride through a pickup', color: '#86fadd' },
@@ -41,62 +42,55 @@ export interface PickupState {
 
 export function pickupRows(track: Track): Pickup[] {
   if (track.practiceRadius) return [];
-  // Palm's reef row rewards clearing the waves, ahead of the long jump straight.
-  // Ramp-free rows use lap fractions, independent of checkpoint count, with room to use each item.
-  const betweenGates = track.id !== 'palms',
-    lanes = betweenGates ? 3 : 5,
-    rows =
-      track.id === 'storm'
-        ? [0.1125, 0.32, 0.53125, 0.71875, 0.90625]
-        : betweenGates
-          ? [0.09375, 0.28125, 0.46875, 0.65625, 0.84375]
-          : [1, 4, 10, 12, 14],
-    used = new Set<number>();
-  return rows.flatMap((index, row) => {
-    // Gates already fit the navigable water. Avoid placing a row on a ramp deck.
-    for (let offset = 0; offset < (betweenGates ? 1 : track.gates.length); offset++) {
-      const gateIndex = (index + offset) % track.gates.length;
-      if (used.has(gateIndex)) continue;
-      let gate = track.gates[gateIndex];
-      if (betweenGates) {
-        const pointIndex = Math.round(gateIndex * track.points.length),
-          p = track.points[pointIndex],
-          before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
-          after = track.points[(pointIndex + 1) % track.points.length],
-          length = Math.hypot(after.x - before.x, after.z - before.z);
-        gate = fitGateToShore(
-          { ...p, tx: (after.x - before.x) / length, tz: (after.z - before.z) / length, width: 24 },
-          track.land,
-        );
-      }
-      const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
-      const points = Array.from({ length: lanes }, (_, lane) => ({
-        x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
-        z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,
-        row,
-      }));
-      if (
-        points.every(
-          (p) =>
-            gatePointClear(p.x, p.z, track.land) &&
-            !rampSurface(p.x, p.z, track) &&
-            track.ramps.every((ramp) => {
-              const along = (p.x - ramp.x) * ramp.tx + (p.z - ramp.z) * ramp.tz;
-              const side = Math.abs(-(p.x - ramp.x) * ramp.tz + (p.z - ramp.z) * ramp.tx);
-              return (
-                side > ramp.width / 2 + 12 ||
-                along < -ramp.length / 2 - 60 ||
-                along > ramp.length / 2 + 85
-              );
-            }) &&
-            track.obstacles.every((o) => Math.hypot(p.x - o.x, p.z - o.z) > o.radius + 3),
-        )
-      ) {
-        used.add(gateIndex);
-        return points;
-      }
+  // Item rows belong to the route, independently of how many checkpoints it needs.
+  const lanes = track.id === 'palms' ? 5 : 3;
+  const fractions =
+    track.id === 'palms'
+      ? [0.125, 0.25, 0.45, 0.625, 0.875]
+      : track.id === 'storm'
+        ? [0.17, 0.37, 0.57, 0.77, 0.97]
+        : [0.14, 0.34, 0.54, 0.74, 0.94];
+  return fractions.flatMap((fraction, row) => {
+    const pointIndex = Math.round(fraction * track.points.length),
+      p = track.points[pointIndex],
+      before = track.points[(pointIndex - 1 + track.points.length) % track.points.length],
+      after = track.points[(pointIndex + 1) % track.points.length],
+      length = Math.hypot(after.x - before.x, after.z - before.z);
+    const gate = fitGateToShore(
+      {
+        ...p,
+        tx: (after.x - before.x) / length,
+        tz: (after.z - before.z) / length,
+        width: lanes === 5 ? 40 : 24,
+      },
+      track.land,
+    );
+    const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
+    const points = Array.from({ length: lanes }, (_, lane) => ({
+      x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
+      z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,
+      row,
+    }));
+    if (
+      points.every(
+        (p) =>
+          gatePointClear(p.x, p.z, track.land) &&
+          !rampSurface(p.x, p.z, track) &&
+          track.ramps.every((ramp) => {
+            const along = (p.x - ramp.x) * ramp.tx + (p.z - ramp.z) * ramp.tz;
+            const side = Math.abs(-(p.x - ramp.x) * ramp.tz + (p.z - ramp.z) * ramp.tx);
+            return (
+              side > ramp.width / 2 + 12 ||
+              along < -ramp.length / 2 - 60 ||
+              along > ramp.length / 2 + 85
+            );
+          }) &&
+          track.obstacles.every((o) => Math.hypot(p.x - o.x, p.z - o.z) > o.radius + 3),
+      )
+    ) {
+      return points;
     }
-    throw new Error(`No clear pickup row on ${track.id} near gate ${index}`);
+    throw new Error(`No clear pickup row on ${track.id} at route fraction ${fraction}`);
   });
 }
 export function rollItem(position: number, count: number, random = Math.random): number {
@@ -117,7 +111,7 @@ export function projectileHeight(
   surface: WaterProfile,
   age = effect.age,
 ): number {
-  if (effect.kind !== 3) return -0.35;
+  if (effect.kind !== 3) return TORPEDO_DEPTH;
   const sea = waterHeight(effect.x, effect.z, time, surface) + 0.7;
   if (!effect.launch || age >= MINE_TOSS_SECONDS) return sea;
   const progress = clamp(age / MINE_TOSS_SECONDS, 0, 1);
@@ -133,10 +127,12 @@ export class Pickups {
     return {
       wave: this.track.wave,
       waveZones: this.track.waveZones,
+      shore: this.track.shore,
       pulses: this.state.effects,
       pulseTime: this.waterTime,
     };
   }
+  private readonly torpedoContact: ReturnType<typeof createTorpedoCollider>;
   private nextId = 1;
   private wakeClock = new Map<number, number>();
   constructor(
@@ -144,6 +140,7 @@ export class Pickups {
     readonly enabled: boolean,
     private random = Math.random,
   ) {
+    this.torpedoContact = createTorpedoCollider(track);
     this.boxes = enabled ? pickupRows(track) : [];
     this.state = { cooldowns: this.boxes.map(() => 0), effects: [] };
   }
@@ -206,6 +203,8 @@ export class Pickups {
       } else this.wakeClock.set(r.id, next);
     }
     for (const effect of [...this.state.effects]) {
+      // A wake only shoves nearby hulls at release. Its travelling crest is ordinary water.
+      if (effect.kind === 5 && effect.age === 0) this.wave(effect, active);
       effect.age += dt;
       if (effect.kind === 5 && effect.launch) {
         const release = Math.min(dt, Math.max(0, 0.3 - (effect.age - dt)));
@@ -213,7 +212,7 @@ export class Pickups {
         effect.z += effect.launch.vz * release;
       }
       if (effect.kind <= 3) this.projectile(effect, dt, time, active);
-      else this.wave(effect, active, time);
+      else if (effect.kind === 4) this.wave(effect, active);
     }
     this.state.effects = this.state.effects.filter(
       (e) => e.age < (e.kind === 3 ? 18 : e.kind === 4 ? 1.1 : e.kind === 5 ? 2 : 4),
@@ -244,32 +243,38 @@ export class Pickups {
       e.z += e.launch.vz * flight;
     }
     if (e.kind === 3 && e.age < 0.65) return;
-    const hit = racers.some((r) => {
+    const from = { x: oldX, z: oldZ };
+    let contact = e.kind === 3 ? null : this.torpedoContact(from, e);
+    for (const r of racers) {
       if (
         (r.id === e.owner && e.kind !== 3) ||
         Math.abs(r.y - projectileHeight(e, time, this.surface)) > (e.kind === 3 ? 4 : 1.25)
       )
-        return false;
-      const dx = e.x - oldX,
-        dz = e.z - oldZ;
-      const t = clamp(((r.x - oldX) * dx + (r.z - oldZ) * dz) / (dx * dx + dz * dz || 1), 0, 1);
-      return Math.hypot(r.x - oldX - dx * t, r.z - oldZ - dz * t) < (e.kind === 3 ? 3.5 : 1.3);
-    });
+        continue;
+      const hit = segmentCircleHit(from, e, r, e.kind === 3 ? 3.5 : 1.3);
+      if (hit !== null) contact = Math.min(contact ?? 1, hit);
+    }
     if (
-      hit ||
-      !gatePointClear(e.x, e.z, this.track.land) ||
-      this.track.obstacles.some((o) => Math.hypot(e.x - o.x, e.z - o.z) < o.radius + 1)
-    ) {
+      e.kind === 3 &&
+      (!gatePointClear(e.x, e.z, this.track.land) ||
+        this.track.obstacles.some((o) => Math.hypot(e.x - o.x, e.z - o.z) < o.radius + 1))
+    )
+      contact = Math.min(contact ?? 1, 1);
+    if (contact !== null) {
+      e.x = oldX + (e.x - oldX) * contact;
+      e.z = oldZ + (e.z - oldZ) * contact;
       e.kind = 4;
       delete e.launch;
       e.age = 0;
       e.hit = 0;
     }
   }
-  private wave(e: ItemEffect, racers: Racer[], time: number) {
+  private wave(e: ItemEffect, racers: Racer[]) {
     for (const r of racers) {
       if (e.hit & (1 << r.id) || (e.kind === 5 && r.id === e.owner)) continue;
-      if (Math.abs(r.y - waterHeight(r.x, r.z, time, this.surface)) > 5) continue;
+      // The initial wake shove and travelling explosion shockwave require hull contact.
+      // Buoyancy owns vertical lift; neither can kick an airborne or ramp-supported rider.
+      if (r.wet === 0 || r.onRamp) continue;
       const dx = r.x - e.x,
         dz = r.z - e.z;
       const d = Math.hypot(dx, dz);
@@ -287,9 +292,6 @@ export class Pickups {
       const nz = e.kind === 4 ? dz / (d || 1) : Math.cos(e.yaw);
       r.vx += nx * 12 * power;
       r.vz += nz * 12 * power;
-      r.vy = Math.max(r.vy, 6 * power);
-      r.y += 0.25;
-      r.onRamp = false;
       r.rollVelocity += clamp(side || nx, -1, 1) * power;
     }
   }

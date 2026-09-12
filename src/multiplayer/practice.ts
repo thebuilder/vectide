@@ -10,6 +10,7 @@ export const PRACTICE: Track = {
   wave: 0.8,
   waveZones: [],
   land: [],
+  shore: undefined,
   obstacles: [],
   gates: [
     { x: 0, z: -45, tx: 0, tz: 1, width: 32 },
