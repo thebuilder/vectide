@@ -55,3 +55,34 @@ it.each(TRACKS)('enters the submerged slope without a vertical snap on $name', (
     expect(ramp.baseHeight).toBeLessThan(-4);
   }
 });
+
+it('leaves each straight ramp quickly and settles before reaching the next one', () => {
+  const track = TRACKS[0];
+  for (const ramp of track.ramps.filter((r) => r.tx === -1)) {
+    const r = createRacer(track, 0);
+    Object.assign(r, {
+      x: ramp.x - ramp.tx * 18,
+      z: ramp.z - ramp.tz * 18,
+      yaw: Math.atan2(ramp.tx, ramp.tz),
+      vx: ramp.tx * 22,
+      vz: ramp.tz * 22,
+    });
+    r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
+    let deckTime = 0,
+      airborne = false,
+      landed = false;
+    for (let i = 0; i < 120 * 4; i++) {
+      stepRacer(r, { throttle: 1, steer: 0, brake: 0, lean: 0 }, track, i / 120, 1 / 120);
+      if (r.onRamp) deckTime += 1 / 120;
+      if (deckTime > 0 && !r.onRamp && r.wet === 0) airborne = true;
+      if (airborne && r.wet > 0) {
+        landed = true;
+        break;
+      }
+    }
+    expect(deckTime).toBeGreaterThan(0.15);
+    expect(deckTime).toBeLessThan(0.7);
+    expect(landed).toBe(true);
+    expect(Math.hypot(r.x - ramp.x, r.z - ramp.z)).toBeLessThan(80);
+  }
+});

@@ -133,9 +133,9 @@ export const TRACKS: Track[] = definitions.map((d) => {
       tx,
       tz,
       width: early ? 9 : 12,
-      length: d.id === 'palms' && !early ? 40 : 20,
+      length: d.id === 'palms' && !early ? 16 : 20,
       baseHeight: -4.2,
-      height: d.id === 'palms' && !early ? 9.5 : 7,
+      height: d.id === 'palms' && !early ? 7.2 : 7,
     };
     const target = gates
       .map((gate, index) => ({

@@ -35,3 +35,19 @@ it('shuts off when the rider is thrown from the craft', () => {
   for (let i = 0; i < 60; i++) exhaust.update(racer, 1 / 60, 1);
   expect(exhaust.group.visible).toBe(false);
 });
+
+it('reduces the plume in flight, including boost, and restores it after contact', () => {
+  const exhaust = new JetExhaust(),
+    r = createRacer(TRACKS[0], 0);
+  Object.assign(r, { vz: 28, boost: 2, boostPower: 2.8, wet: 1 });
+  for (let i = 0; i < 60; i++) exhaust.update(r, 1 / 60, 1);
+  const powered = exhaust.group.scale.clone();
+  r.wet = 0;
+  r.onRamp = false;
+  for (let i = 0; i < 24; i++) exhaust.update(r, 1 / 60, 1);
+  expect(exhaust.group.scale.z).toBeLessThan(powered.z * 0.15);
+  expect(exhaust.group.scale.x).toBeLessThan(powered.x * 0.3);
+  r.onRamp = true;
+  for (let i = 0; i < 30; i++) exhaust.update(r, 1 / 60, 1);
+  expect(exhaust.group.scale.z).toBeGreaterThan(powered.z * 0.85);
+});
