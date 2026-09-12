@@ -1,30 +1,28 @@
-# Showcase polish verification — 12 September 2026
+# Racing polish verification, 12 September 2026
 
-Branch `feat/showcase-polish` started from `origin/main` f960c15.
+Branch `feat/showcase-polish` includes current `origin/main` f960c15.
 
 ## Delivered behavior
 
-- The approved 1672×940 artwork is `public/og.png`, with matching social metadata and an asset test. The obsolete procedural cover generator is removed.
-- Amber camera-facing double chevrons bob above the active gate. A backed HUD badge projects toward the gate and clips to safe screen bounds, including gates behind the camera. Touch portrait/landscape and reduced motion are covered.
-- Current-device driving tips progress after successful inputs and remember dismissal. Help opens at its heading, advanced controls are collapsed, and pause exposes Controls. Start Race stays visible while compact setup options scroll; difficulty explains opponent pace.
-- Darker teal water, restrained highlights and a burgundy Palm horizon follow the artwork. The initial two-line wake was rejected by the user and replaced with a filled, irregular foam trail plus fuller angular spray. Old foam fades after takeoff, with no connection across the airborne path. Landing compression and the finish camera beat respect reduced motion.
-- Finishing plays a short sting, preserves autopilot/splits, reports the saved-best delta, and retains immediate replay. Recovered runs remain excluded from records.
+- The approved 1672×940 promotional artwork replaces the social preview, with matching metadata. The obsolete procedural cover generator is removed.
+- Each course has five named gates including start/finish. Islands, reefs and breakwaters guard shortcuts. Gates angle into the next water section while retaining broad approaches. Eight-meter masts, pink/cyan pennants and larger amber chevrons improve distance visibility. Off-screen directions remain within phone portrait/landscape bounds. The checkpoint distance box is removed.
+- Mobile setup keeps Start Race visible while course options scroll. Current-device driving tips remember progress, help starts at its heading, and Controls is available from pause.
+- Faceted islands, slender palms, coastal surf, fuller foam wakes and carving spray follow the approved art direction. Music adds gentle highlights to existing water and foam. Dolphin pods approach from offshore and make short staggered breaches beside the rider.
+- Riders control flips and spins throughout flight with rotational momentum. Reversing a full spin takes about 0.3 seconds to brake. Landing uses hull attitude and relative impact; successful tricks display animated names. Straight ramps are shorter, submerged markings remain under water, and airborne exhaust shrinks to a compact glow.
+- Interpolated craft and rider poses smooth rendering between physics steps. Lap splits show pace changes. Finish feedback preserves autopilot and recovered-run record exclusion. Weapon shoves require water contact and nearby targets at release.
+- Route-based ranking, AI missed-gate detection and recovery timing support the longer checkpoint sections. Item rows remain independent of gate count. Protocol version 22 and course record keys prevent mixing incompatible physics or old lap records.
 
-## Evidence
+## Final verification
 
-- `pnpm check`: 210 tests across 38 files, including complete three-lap six-rider simulations on every course, pickup races, twelve-rider simulation, wave agreement, wake expiry/discontinuities/capacity, and camera motion.
-- `pnpm build` and `pnpm format:check`: pass. Vite retains its existing large Three.js chunk advisory.
-- Chromium suite: all 52 cases covered successfully across the full run and focused reruns. The final broad run passed 51; its remaining navigation lap completed in 84 seconds under random weapon traffic and failed an unrelated 75-second pace limit. That navigation test now uses time trial and passed its full lap and every-frame bounds checks. The separate course-variety tests retain six-rider races with pickups and pass on all courses.
-- Final fuller-foam change: all seven focused Chromium cases pass (three-course rendering/performance, full Palm lap with airborne section, three weapon-water/splash checks). Captured motion includes acceleration, sustained turns, airborne intervals and four landings.
-- Local WebRTC: all 12 browser tests pass, covering two rendered racers, twelve connected racers, room capacity, late joins, practice, item ownership, finish/replay, host departure, connection errors, invitations and protocol mismatches.
-- WebKit: three touch setup/rotation cases and a phone-sized rendering case pass. This is desktop WebKit with mobile emulation, not a physical iPhone.
-- Native Chromium/Metal at 1280×800: approximately 16.7 ms median / 16.8 ms p95 on each course with six racers and about 630–1,200 active spray fragments. The hardware profile asserts p95 below 34 ms. These measurements do not establish physical-phone performance.
-- Independent code review identified redundant wake sampling/allocation. Indexed geometry now computes four unique vertices per point (maximum 3,456 samples), uses direct typed-array writes, and retains one wake draw call. The reviewer rechecked the final filled-band topology, airborne gaps and spray changes and reported no remaining required issue.
+- `pnpm check`: 314 tests across 48 files pass, including full six-rider three-lap simulations on all courses, pickup races, twelve-rider multiplayer simulation, gate admission/recovery, landing physics, water contact, dolphins and rendering interpolation.
+- `pnpm build`: passes with the existing large Three.js chunk advisory. Formatting and `git diff --check` pass.
+- Seventeen distinct final native Chromium checks pass: full rendered laps on all courses, complete Storm guidance and phone rotation, four ramp rendering rates from 60 to 240 Hz, Storm's opening, wave flips/diving, two-client WebRTC driving, three version mismatch cases and replicated stunt controls.
+- One Harbor run was interrupted by a Vite source reload returning it to the menu. Holding source steady and rerunning Harbor passed; the same run also passed Palm's full rendered lap.
+- Inspected actual distant gate renders on all courses and a course overview containing the physical land outlines, gates and simulated racing lines. All nine course/difficulty simulations completed without a missed-gate retry.
+- Independent reviews covered the implemented slices, including the final sparse-checkpoint AI and ranking math. No required findings remain.
 
-Existing test assumptions were corrected: Storm's starting heading is checked against its actual gate tangent, description matching ignores capitalization, and the frozen weapon fixture distinguishes one-shot audio from the continuous water loop and resumes its audio bus before detonation.
+Earlier slice verification also covered desktop WebKit phone setup/rotation, the full local WebRTC suite, onboarding, music, coastal water, trick text, mapped controls and weapon contact. Detailed evidence is retained in the other task documents and ignored `artifacts/` captures. These checks were run during implementation rather than repeated as one final broad suite.
 
-Captures are retained in ignored `artifacts/`, including `foam-straight.png`, `foam-carving.png`, `foam-in-motion.webm`, course renders and phone checkpoint/setup images. The capture uses the real renderer, physics and AI driver; it is silent.
+## External checks
 
-## Remaining external checks
-
-Physical-phone performance and feel, a hardware controller, first-time human playtesting, headphone/speaker balance, and separate-device/network WebRTC behavior were not verified here. Production deployment and form submission are outside this change. The cover is promotional artwork, not a gameplay screenshot.
+Physical-phone performance and feel, hardware controllers, headphone/speaker balance and separate-device/network WebRTC were not verified here. Production deployment and external form submission were not performed. The cover is promotional artwork, not a gameplay screenshot.
