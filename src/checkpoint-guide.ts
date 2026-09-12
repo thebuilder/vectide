@@ -94,20 +94,70 @@ export function projectCheckpoint(
 const viewFrustum = new Frustum();
 const viewProjection = new Matrix4();
 const gateCenter = new Vector3();
+const nearCorner = new Vector3();
+const gateCorners = Array.from({ length: 8 }, () => new Vector3());
+// A quad clipped by six planes has at most ten vertices. Reuse both buffers per frame.
+const clipA = Array.from({ length: 12 }, () => new Vector3());
+const clipB = Array.from({ length: 12 }, () => new Vector3());
+const gateFaces = [
+  [0, 1, 3, 2],
+  [4, 6, 7, 5],
+  [0, 2, 6, 4],
+  [1, 5, 7, 3],
+  [0, 4, 5, 1],
+  [2, 3, 7, 6],
+];
 
-/** Include the opening and both posts, so approaching a wide gate does not summon an arrow. */
+/** Clip the opening and posts themselves, including side-on and pitched camera views. */
 export function checkpointInView(gate: Gate, target: Vector3, camera: PerspectiveCamera) {
   const halfWidth = gate.width / 2 + 1.5;
   gateCenter.set(target.x, target.y - 1.5, target.z);
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   viewFrustum.setFromProjectionMatrix(viewProjection);
-  // Project the oriented opening, post height and depth onto each camera clipping plane.
-  return viewFrustum.planes.every((plane) => {
-    const n = plane.normal;
-    const radius =
-      halfWidth * Math.abs(-gate.tz * n.x + gate.tx * n.z) +
-      Math.abs(gate.tx * n.x + gate.tz * n.z) +
-      5 * Math.abs(n.y);
-    return plane.distanceToPoint(gateCenter) + radius >= 0;
-  });
+  for (let i = 0; i < 8; i++) {
+    const side = (i & 1 ? 1 : -1) * halfWidth;
+    const up = (i & 2 ? 1 : -1) * 5;
+    const depth = i & 4 ? 1 : -1;
+    gateCorners[i].set(
+      gateCenter.x - gate.tz * side + gate.tx * depth,
+      gateCenter.y + up,
+      gateCenter.z + gate.tx * side + gate.tz * depth,
+    );
+  }
+  for (const face of gateFaces) {
+    let input = clipA,
+      output = clipB,
+      count = 4;
+    for (let i = 0; i < count; i++) input[i].copy(gateCorners[face[i]]);
+    for (const plane of viewFrustum.planes) {
+      let written = 0;
+      let previous = input[count - 1];
+      let previousDistance = plane.distanceToPoint(previous);
+      for (let i = 0; i < count; i++) {
+        const point = input[i];
+        const distance = plane.distanceToPoint(point);
+        if (distance >= 0 !== previousDistance >= 0) {
+          output[written++]
+            .copy(previous)
+            .lerp(point, previousDistance / (previousDistance - distance));
+        }
+        if (distance >= 0) output[written++].copy(point);
+        previous = point;
+        previousDistance = distance;
+      }
+      count = written;
+      if (!count) break;
+      const swap = input;
+      input = output;
+      output = swap;
+    }
+    if (count) return true;
+  }
+  // Handle the remaining containment case: the entire view lies inside the gate volume.
+  nearCorner.set(-1, -1, -1).unproject(camera).sub(gateCenter);
+  return (
+    Math.abs(-gate.tz * nearCorner.x + gate.tx * nearCorner.z) <= halfWidth &&
+    Math.abs(nearCorner.y) <= 5 &&
+    Math.abs(gate.tx * nearCorner.x + gate.tz * nearCorner.z) <= 1
+  );
 }

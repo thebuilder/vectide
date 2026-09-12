@@ -119,3 +119,20 @@ it('shows guidance when a diagonal gate is wholly outside the viewport', () => {
   }
   expect(checkpointInView(gate, new Vector3(gate.x, 6.5, gate.z), camera)).toBe(false);
 });
+
+it('does not mistake a pitched view past the side of a gate for a visible opening', () => {
+  const camera = new PerspectiveCamera(60, 1.6, 0.1, 6000);
+  camera.lookAt(0, -5, -17);
+  camera.updateMatrixWorld();
+  const gate = { x: -27, z: -20, tx: 0.608761429, tz: -0.7933533403, width: 46 };
+  expect(checkpointInView(gate, new Vector3(-27, -3.5, -20), camera)).toBe(false);
+});
+
+it('recognizes a close gate opening that contains the entire camera view', () => {
+  const camera = new PerspectiveCamera(60, 1.6, 0.1, 0.5);
+  camera.position.set(0, 5, 0);
+  camera.lookAt(0, 5, -1);
+  camera.updateMatrixWorld();
+  const gate = { x: 0, z: 0, tx: 0, tz: 1, width: 40 };
+  expect(checkpointInView(gate, new Vector3(0, 6.5, 0), camera)).toBe(true);
+});

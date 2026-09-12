@@ -14,7 +14,7 @@ The showcase work shipped in PR #9. Branch `feat/quiet-racing-feedback` starts f
 
 ## Final verification
 
-- `pnpm check`: 339 tests across 50 files pass, including full six-rider three-lap simulations on all courses, pickup races, twelve-rider multiplayer simulation, gate admission/recovery, landing physics, water contact, dolphins and rendering interpolation.
+- `pnpm check`: 341 tests across 50 files pass, including full six-rider three-lap simulations on all courses, pickup races, twelve-rider multiplayer simulation, gate admission/recovery, landing physics, water contact, dolphins and rendering interpolation.
 - `pnpm build`: passes with the existing large Three.js chunk advisory. Formatting and `git diff --check` pass.
 - Seventeen distinct native Chromium checks passed for the checkpoint redesign: full rendered laps on all courses, complete Storm guidance and phone rotation, four ramp rendering rates from 60 to 240 Hz, Storm's opening, wave flips/diving, two-client WebRTC driving, three version mismatch cases and replicated stunt controls.
 - One Harbor run was interrupted by a Vite source reload returning it to the menu. Holding source steady and rerunning Harbor passed; the same run also passed Palm's full rendered lap.
@@ -46,8 +46,8 @@ Earlier slice verification also covered desktop WebKit phone setup/rotation, the
 
 - Touch driving tips stay hidden, so automatic throttle and follow-on coaching require no dismissal. Touch controls remain explained in the help dialog.
 - Removed the rider-down and climbing-back-on status messages. A yellow, unboxed WIPEOUT now uses the same brief animation as landed tricks. Recovery physics and rider animation are unchanged. The popup expires automatically, freezes with a paused local race, respects reduced motion, and resets correctly between runs.
-- Direction guidance stays hidden while the next gate opening or posts are in the camera viewport, including near approaches and targets outside the reserved HUD margins. The oriented gate volume avoids false visibility around diagonal gates. Offscreen and behind-camera guidance remains available, including the finish gate after the opening grid.
-- All 339 tests and the production build pass. Thirteen distinct native browser cases pass across a complete Storm lap, visible/offscreen gate views, phone rotation, touch startup/help, stunt/wipeout feedback, pause/restart, and real local WebRTC guest-only wipeout delivery and expiry. Desktop and phone wipeout renders were inspected. A diagonal visibility regression caught during review was reproduced and corrected.
+- Direction guidance stays hidden while the next gate opening or posts are in the camera viewport, including near approaches and targets outside the reserved HUD margins. Exact clipping of the oriented gate faces avoids false visibility around diagonal gates and pitched, side-on views. Offscreen and behind-camera guidance remains available, including the finish gate after the opening grid.
+- All 341 tests and the production build pass. Thirteen distinct native browser cases pass across a complete Storm lap, visible/offscreen gate views, phone rotation, touch startup/help, stunt/wipeout feedback, pause/restart, and real local WebRTC guest-only wipeout delivery and expiry. Desktop and phone wipeout renders were inspected. Both diagonal and pitched-camera visibility regressions caught during review were reproduced and corrected; final independent review found no further issues.
 
 ## External checks
 
