@@ -13,8 +13,8 @@ test('metadata, fixed soundtrack, difficulty toggle, and GO countdown', async ({
   const image = await page.request.get('/og.png');
   expect(image.ok()).toBe(true);
   const data = await image.body();
-  expect(data.readUInt32BE(16)).toBe(1200);
-  expect(data.readUInt32BE(20)).toBe(630);
+  expect(data.readUInt32BE(16)).toBe(1672);
+  expect(data.readUInt32BE(20)).toBe(940);
   await page.getByRole('button', { name: 'Expert', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Expert', exact: true })).toHaveAttribute(
     'aria-pressed',
