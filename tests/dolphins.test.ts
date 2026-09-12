@@ -3,14 +3,14 @@ import { createDolphins } from '../src/game/dolphins';
 import { TRACKS } from '../src/game/tracks';
 import { polygonContact } from '../src/game/hull-contact';
 import { waterHeight } from '../src/game/water';
-import { createRacer } from '../src/game/physics';
+import { aiInput, createRacer, stepRacer } from '../src/game/physics';
 it('breaches on approach, departs, and resets for another lap or race', () => {
   const track = TRACKS[0],
     pod = createDolphins(track),
     r = createRacer(track, 0);
   pod.update(0, r);
   expect(pod.group.children.every((a) => !a.visible)).toBe(true);
-  Object.assign(r, track.dolphin);
+  Object.assign(r, track.dolphin, { vx: track.dolphin.tx * 20, vz: track.dolphin.tz * 20 });
   r.lap = 1;
   pod.update(10, r);
   pod.update(11, r);
@@ -27,20 +27,43 @@ it('breaches on approach, departs, and resets for another lap or race', () => {
 });
 
 it.each(TRACKS.filter((track) => track.id !== 'storm'))(
-  'keeps breaching dolphins clear of the racing line and shore on $name',
+  'makes short, staggered breaches beside a moving rider, clear of shore on $name',
   (track) => {
     const pod = createDolphins(track),
       r = createRacer(track, 0);
-    Object.assign(r, track.dolphin);
+    Object.assign(r, track.dolphin, { vx: track.dolphin.tx * 20, vz: track.dolphin.tz * 20 });
+    r.yaw = Math.atan2(track.dolphin.tx, track.dolphin.tz);
+    r.y = waterHeight(r.x, r.z, 0, track) + 0.6;
+    r.nextGate =
+      (track.gates.reduce(
+        (closest, g, i) =>
+          Math.hypot(g.x - r.x, g.z - r.z) <
+          Math.hypot(track.gates[closest].x - r.x, track.gates[closest].z - r.z)
+            ? i
+            : closest,
+        0,
+      ) +
+        1) %
+      track.gates.length;
     pod.update(0, r);
-    for (let frame = 0; frame < 4 * 60; frame++) {
+    const initial = pod.group.children.map((animal) => animal.position.clone());
+    const firstBreach = [-1, -1, -1];
+    const airFrames = [0, 0, 0];
+    const longestBreach = [0, 0, 0];
+    for (let frame = 0; frame < 6 * 60; frame++) {
       const t = frame / 60;
+      stepRacer(r, aiInput(r, track, [r]), track, t, 1 / 60);
       pod.update(t, r);
-      for (const animal of pod.group.children) {
+      for (const [i, animal] of pod.group.children.entries()) {
         const { x, y, z } = animal.position;
+        if (animal.visible && y > waterHeight(x, z, t, track)) {
+          if (firstBreach[i] < 0) firstBreach[i] = frame;
+          longestBreach[i] = Math.max(longestBreach[i], ++airFrames[i]);
+        } else airFrames[i] = 0;
         if (!animal.visible || y < waterHeight(x, z, t, track) - 1) continue;
-        const clearance = Math.min(...track.points.map((p) => Math.hypot(x - p.x, z - p.z)));
-        expect(clearance).toBeGreaterThan(12);
+        const clearance = Math.hypot(x - r.x, z - r.z);
+        expect(clearance).toBeGreaterThan(6);
+        expect(clearance).toBeLessThan(40);
         const bounds = [
           { x: x - 2, z: z - 2 },
           { x: x + 2, z: z - 2 },
@@ -51,6 +74,12 @@ it.each(TRACKS.filter((track) => track.id !== 'storm'))(
           expect(polygonContact(bounds, land.outline), land.name).toBeNull();
       }
     }
+    expect(firstBreach.every((frame) => frame >= 0)).toBe(true);
+    expect(Math.max(...firstBreach) - Math.min(...firstBreach)).toBeGreaterThan(24);
+    expect(longestBreach.every((frames) => frames > 5 && frames < 72)).toBe(true);
+    pod.group.children.forEach((animal, i) => {
+      expect(animal.position.distanceTo(initial[i])).toBeGreaterThan(50);
+    });
   },
 );
 
@@ -79,6 +108,11 @@ it('arches the spine through the jump without sharing pose state or moving fins 
     expect((part as InstanceType<typeof Mesh>).morphTargetInfluences).toEqual(
       other.morphTargetInfluences,
     );
+  // A one-second breach must complete the same bend cycle as the original slower pose.
+  const slowPose = other.morphTargetInfluences!.slice();
+  poseDolphin(diving, 1.8 / 2.5, 1);
+  other.morphTargetInfluences!.forEach((weight, i) => expect(weight).toBeCloseTo(slowPose[i]));
+  expect(center(other, 0).y).toBeLessThan(-0.3);
   const before = center(body, 0);
   poseDolphin(rising, 0.2);
   expect(center(body, 0).distanceTo(before)).toBe(0);

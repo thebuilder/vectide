@@ -33,12 +33,12 @@ export function addDolphinBend(model: T.Group) {
   }
 }
 
-export function poseDolphin(model: T.Group, age: number) {
-  const phase = Math.min(Math.max(age / 2.5, 0), 1);
-  const swimming = T.MathUtils.smoothstep(age, 2.5, 3);
+export function poseDolphin(model: T.Group, age: number, duration = 2.5) {
+  const phase = Math.min(Math.max(age / duration, 0), 1);
+  const swimming = T.MathUtils.smoothstep(age, duration, duration + 0.3);
   const bend =
-    (1 - swimming) * (0.65 * Math.cos(phase * Math.PI) - 0.55 * Math.sin(phase * Math.PI)) +
-    swimming * Math.sin((age - 2.5) * 9 - Math.PI / 2) * 0.3;
+    (1 - swimming) * (0.85 * Math.cos(phase * Math.PI) - 0.7 * Math.sin(phase * Math.PI)) +
+    swimming * Math.sin((age - duration) * 9 - Math.PI / 2) * 0.3;
   for (const part of model.children) {
     if (!(part instanceof T.Mesh || part instanceof T.Line)) continue;
     // Line.copy does not copy morph weights, so cloned mouths initialize them once.
