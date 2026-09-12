@@ -124,8 +124,8 @@ it('does not mistake a pitched view past the side of a gate for a visible openin
   const camera = new PerspectiveCamera(60, 1.6, 0.1, 6000);
   camera.lookAt(0, -5, -17);
   camera.updateMatrixWorld();
-  const gate = { x: -27, z: -20, tx: 0.608761429, tz: -0.7933533403, width: 46 };
-  expect(checkpointInView(gate, new Vector3(-27, -3.5, -20), camera)).toBe(false);
+  const gate = { x: -30, z: -20, tx: 0.608761429, tz: -0.7933533403, width: 46 };
+  expect(checkpointInView(gate, new Vector3(-30, -3.5, -20), camera)).toBe(false);
 });
 
 it('recognizes a close gate opening that contains the entire camera view', () => {

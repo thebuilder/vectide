@@ -1,5 +1,6 @@
 import { Frustum, Matrix4, PerspectiveCamera, Vector3 } from 'three';
 import type { Gate } from './game/tracks';
+import { CHECKPOINT_POST_REACH, CHECKPOINT_POST_DEPTH } from './game/checkpoint-model';
 import type { Engine } from './game/engine';
 
 export interface GuideBounds {
@@ -110,14 +111,14 @@ const gateFaces = [
 
 /** Clip the opening and posts themselves, including side-on and pitched camera views. */
 export function checkpointInView(gate: Gate, target: Vector3, camera: PerspectiveCamera) {
-  const halfWidth = gate.width / 2 + 1.5;
+  const halfWidth = gate.width / 2 + CHECKPOINT_POST_REACH;
   gateCenter.set(target.x, target.y - 1.5, target.z);
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   viewFrustum.setFromProjectionMatrix(viewProjection);
   for (let i = 0; i < 8; i++) {
     const side = (i & 1 ? 1 : -1) * halfWidth;
     const up = (i & 2 ? 1 : -1) * 5;
-    const depth = i & 4 ? 1 : -1;
+    const depth = (i & 4 ? 1 : -1) * CHECKPOINT_POST_DEPTH;
     gateCorners[i].set(
       gateCenter.x - gate.tz * side + gate.tx * depth,
       gateCenter.y + up,
@@ -158,6 +159,6 @@ export function checkpointInView(gate: Gate, target: Vector3, camera: Perspectiv
   return (
     Math.abs(-gate.tz * nearCorner.x + gate.tx * nearCorner.z) <= halfWidth &&
     Math.abs(nearCorner.y) <= 5 &&
-    Math.abs(gate.tx * nearCorner.x + gate.tz * nearCorner.z) <= 1
+    Math.abs(gate.tx * nearCorner.x + gate.tz * nearCorner.z) <= CHECKPOINT_POST_DEPTH
   );
 }
