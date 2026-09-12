@@ -10,7 +10,6 @@ const STORAGE = 'vectide:driving-tips:v1';
 const bindings = {
   keyboard: ['W / ↑', 'A D / ← →', 'S / SPACE', 'HOLD E'],
   gamepad: ['RT', 'LEFT STICK', 'LT', 'HOLD RB'],
-  touch: ['AUTO THROTTLE', 'SLIDE STICK', 'BRAKE', 'HOLD JUMP'],
 };
 
 /** Tips follow successful actions, and are remembered separately for each input device. */
@@ -54,6 +53,10 @@ export class RideCoach {
   update(s: Snapshot, input: Input) {
     const device = this.device,
       p = s.player;
+    if (device === 'touch') {
+      this.element.hidden = true;
+      return;
+    }
     let progress = this.progress[device] ?? 0;
     if (s.state === 'finished') this.save(device, progress | ACCELERATE | GATES | BRAKE);
     if (
@@ -95,7 +98,7 @@ export class RideCoach {
           : 'LEAN / STEER'
         : bindings[device][step];
     this.text.textContent = [
-      device === 'touch' ? 'Slide the stick to steer' : 'Hold to accelerate',
+      'Hold to accelerate',
       'Steer between both glowing buoys',
       'Brake before a tight turn',
       p.air.armed ? 'Hold to rotate; release to settle' : 'Optional stunt: release at takeoff',

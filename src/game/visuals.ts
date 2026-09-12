@@ -13,6 +13,7 @@ import { createDolphins } from './dolphins';
 import { createCargoBoat } from './cargo-boat';
 import { createMusicVisuals } from './music-visuals';
 import { addLandmarks } from './landmarks';
+import { createCheckpointPost } from './checkpoint-model';
 export interface World {
   group: T.Group;
   water: T.Mesh;
@@ -81,37 +82,19 @@ export function createWorld(track: Track): World {
   );
   farWater.position.y = -4;
   group.add(farWater);
+  const checkpointPosts: ReturnType<typeof createCheckpointPost>[][] = [];
   // The course is marked along both banks, leaving the middle open for racing lines.
   (track.practiceRadius ? [] : track.gates).forEach((g, i) => {
     const gate = new T.Group();
     gate.position.set(g.x, 0, g.z);
-    for (const side of [-1, 1]) {
-      const buoy = new T.Group();
-      buoy.name = 'buoy';
-      buoy.position.set(((-g.tz * g.width) / 2) * side, 0, ((g.tx * g.width) / 2) * side);
-      const color = side < 0 ? 0xff5b82 : 0x86fadd;
-      const base = outlined(new T.CylinderGeometry(0.55, 1.1, 0.9, 6), color);
-      base.position.y = 0.5;
-      buoy.add(base);
-      const mastHeight = 8;
-      const mast = new T.Mesh(
-        new T.CylinderGeometry(0.16, 0.2, mastHeight, 5),
-        glowing(color, 0.25),
-      );
-      mast.position.y = 0.5 + mastHeight / 2;
-      buoy.add(mast);
-      const top = new T.Mesh(new T.OctahedronGeometry(1.05), glowing(color, 0.45));
-      top.position.y = mastHeight + 0.5;
-      buoy.add(top);
-      const pennant = new T.Mesh(
-        new T.BoxGeometry(1.5, 4.5, 0.3),
-        new T.MeshBasicMaterial({ color, toneMapped: false }),
-      );
-      pennant.position.set(-g.tz * side * 0.8, 5.5, g.tx * side * 0.8);
-      pennant.rotation.y = Math.atan2(g.tx, g.tz);
-      buoy.add(pennant);
-      gate.add(buoy);
-    }
+    const posts = [-1, 1].map((side) => {
+      const post = createCheckpointPost(side < 0 ? 0xff5b82 : 0x86fadd);
+      post.group.position.set(((-g.tz * g.width) / 2) * side, 0, ((g.tx * g.width) / 2) * side);
+      post.group.rotation.y = Math.atan2(-g.tx * side, -g.tz * side);
+      gate.add(post.group);
+      return post;
+    });
+    checkpointPosts.push(posts);
     if (i === 0) {
       const bar = box(
         gate,
@@ -396,6 +379,10 @@ export function createWorld(track: Track): World {
             buoy.position.y =
               waterHeight(p.x + buoy.position.x, p.z + buoy.position.z, t, surface) - g.position.y;
           });
+        const active = g.visible && i === player.nextGate;
+        checkpointPosts[i].forEach((post) =>
+          post.update(t, active, music?.beatStrength ?? 0, reducedMotion),
+        );
         const marker = g.getObjectByName('next')!;
         marker.visible = i !== 0 && i === player.nextGate;
         marker.position.y = reducedMotion ? 0 : (Math.sin(t * 4) + 1) * 0.5;

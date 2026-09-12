@@ -34,6 +34,9 @@ for (const track of [0, 1, 2]) {
       let active = 0,
         shape = 0,
         wake = 0,
+        checkpointPulse = 0,
+        checkpointMotion = 0,
+        inactiveCheckpointMotion = 0,
         previous = performance.now();
       for (let i = 0; i < 600; i++) {
         const now = await new Promise<number>((r) => requestAnimationFrame(r));
@@ -47,6 +50,20 @@ for (const track of [0, 1, 2]) {
           ...Array.from(uniforms.uMusicWaveform.value as Float32Array).map(Math.abs),
         );
         wake = Math.max(wake, e.wake.object.material.uniforms.uMusic.value.x);
+        const post = e.world.gates[e.player.nextGate].getObjectByName('buoy');
+        checkpointPulse = Math.max(
+          checkpointPulse,
+          post.getObjectByName('beacon-ring').scale.x - 1,
+        );
+        checkpointMotion = Math.max(
+          checkpointMotion,
+          Math.abs(post.getObjectByName('flag').geometry.getAttribute('position').getZ(20)),
+        );
+        const following = e.world.gates[(e.player.nextGate + 1) % e.world.gates.length];
+        inactiveCheckpointMotion = Math.max(
+          inactiveCheckpointMotion,
+          Math.abs(following.getObjectByName('beacon-ring').rotation.y),
+        );
       }
       frames.sort((a, b) => a - b);
       return {
@@ -54,6 +71,9 @@ for (const track of [0, 1, 2]) {
         active,
         shape,
         wake,
+        checkpointPulse,
+        checkpointMotion,
+        inactiveCheckpointMotion,
         p95: frames[Math.floor(frames.length * 0.95)],
         song: e.audio.status.song,
       };
@@ -64,6 +84,9 @@ for (const track of [0, 1, 2]) {
     expect(result.active).toBeGreaterThan(0);
     expect(result.shape).toBeGreaterThan(0.03);
     expect(result.wake).toBeGreaterThan(0.1);
+    expect(result.checkpointPulse).toBeGreaterThan(0.05);
+    expect(result.checkpointMotion).toBeGreaterThan(0.05);
+    expect(result.inactiveCheckpointMotion).toBe(0);
     if (process.env.PLAYWRIGHT_GPU) expect(result.p95).toBeLessThan(34);
     await page.screenshot({ path: `artifacts/music-surface-${track}.png` });
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -73,11 +96,24 @@ for (const track of [0, 1, 2]) {
           const e = (window as any).__testEngine;
           return (
             e.world.waterMaterial.uniforms.uMusicGlint.value === 0 &&
-            e.wake.object.material.uniforms.uMusic.value.length() === 0
+            e.wake.object.material.uniforms.uMusic.value.length() === 0 &&
+            e.world.gates[e.player.nextGate].getObjectByName('beacon-ring').rotation.y === 0 &&
+            e.world.gates[e.player.nextGate].getObjectByName('beacon-ring').scale.x === 1
           );
         }),
       )
       .toBe(true);
+    expect(
+      await page.evaluate(async () => {
+        const e = (window as any).__testEngine;
+        const vertices = e.world.gates[e.player.nextGate]
+          .getObjectByName('flag')
+          .geometry.getAttribute('position');
+        const still = Array.from(vertices.array);
+        for (let i = 0; i < 15; i++) await new Promise(requestAnimationFrame);
+        return still.every((value, i) => value === vertices.array[i]);
+      }),
+    ).toBe(true);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.locator('#pause').click();
     await expect
@@ -97,7 +133,8 @@ for (const track of [0, 1, 2]) {
           return (
             e.world.waterMaterial.uniforms.uMusicGlint.value === 0 &&
             e.audio.spectrum.bands.low < 0.01 &&
-            e.wake.object.material.uniforms.uMusic.value.length() < 0.02
+            e.wake.object.material.uniforms.uMusic.value.length() < 0.02 &&
+            e.world.gates[e.player.nextGate].getObjectByName('beacon-ring').scale.x === 1
           );
         }),
       )

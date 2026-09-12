@@ -861,6 +861,35 @@ test('continuous flip controls and rendered rotation reach the other racer', asy
     await expect(guest.locator('#stunt-hud')).toHaveText('1080 SPIN!');
     await expect(guest.locator('#stunt-hud')).toBeVisible();
     await expect(host.locator('#stunt-hud')).not.toHaveText('1080 SPIN!');
+    await host.evaluate(async () => {
+      const e = (window as any).__testEngine,
+        r = e.racers[1];
+      const path = '/src/game/water.ts',
+        { waterHeight } = await import(path);
+      Object.assign(r, {
+        y: waterHeight(r.x, r.z, e.visualTime, e.track) + 0.9,
+        vy: -8,
+        wet: 0,
+        onRamp: false,
+        pitch: 0,
+        roll: 0,
+        pitchVelocity: 0,
+        rollVelocity: 0,
+      });
+      r.body.airtime = 0.3;
+      Object.assign(r.air, {
+        armed: true,
+        pitch: Math.PI,
+        yaw: 0,
+        pitchVelocity: 0,
+        yawVelocity: 0,
+      });
+    });
+    await expect(guest.locator('#stunt-hud')).toHaveText('WIPEOUT');
+    await expect(guest.locator('#stunt-hud')).toBeVisible();
+    await expect(guest.locator('#stunt-hud')).toHaveCSS('color', 'rgb(255, 198, 90)');
+    await expect(host.locator('#stunt-hud')).not.toHaveText('WIPEOUT');
+    await expect(guest.locator('#stunt-hud')).toBeHidden();
     expect(errors).toEqual([]);
   } finally {
     await hostContext.close();

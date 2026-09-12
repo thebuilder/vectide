@@ -131,7 +131,11 @@ const pickupHud = new PickupHud($('item-hud'));
 const checkpointGuide = new CheckpointGuide($('checkpoint'));
 engine.onFrame = (now) => {
   controls.poll(now);
-  stuntHud.update(engine.player, ['racing', 'freeride', 'paused'].includes(engine.state));
+  stuntHud.update(
+    engine.player,
+    ['racing', 'freeride', 'paused'].includes(engine.state),
+    engine.simulationTime,
+  );
   pickupHud.update(
     engine.player,
     (engine.network?.items ?? engine.items).enabled && ['racing', 'paused'].includes(engine.state),
@@ -341,19 +345,14 @@ engine.onUpdate = (s) => {
       ? 'AIRBORNE'
       : s.track.sea + ' WATER';
   $('track-name').textContent = s.track.name;
-  const recovery = s.player.recovery.phase;
   $('notice').textContent =
-    recovery !== 'riding'
-      ? recovery === 'remounting'
-        ? 'CLIMBING BACK ON'
-        : 'RIDER DOWN'
-      : s.missed
-        ? document.body.dataset.input === 'touch'
-          ? 'MISSED GATE · TURN BACK OR TAP RESET'
-          : document.body.dataset.input === 'gamepad'
-            ? 'MISSED GATE · TURN BACK OR PRESS X'
-            : 'MISSED GATE · TURN BACK OR PRESS R'
-        : '';
+    s.player.recovery.phase === 'riding' && s.missed
+      ? document.body.dataset.input === 'touch'
+        ? 'MISSED GATE · TURN BACK OR TAP RESET'
+        : document.body.dataset.input === 'gamepad'
+          ? 'MISSED GATE · TURN BACK OR PRESS X'
+          : 'MISSED GATE · TURN BACK OR PRESS R'
+      : '';
   const go = s.state === 'racing' && s.time < 0.75;
   $('countdown').hidden = s.state !== 'countdown' && !go;
   $('countdown').textContent = go ? 'GO!' : String(Math.max(1, Math.ceil(s.countdown)));

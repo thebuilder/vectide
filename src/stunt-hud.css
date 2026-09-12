@@ -27,3 +27,10 @@
     font-size: clamp(1.5rem, 4.5vw, 3rem);
   }
 }
+
+#stunt-hud[data-kind='wipeout'] {
+  color: #ffc65a;
+  text-shadow:
+    3px 3px 0 #85500c,
+    0 3px 12px var(--void);
+}
