@@ -10,27 +10,16 @@ export interface GuideBounds {
 
 export class CheckpointGuide {
   private direction: HTMLElement;
-  private label: HTMLElement;
-  private gate: HTMLElement;
-  private distance: HTMLElement;
-  private lastGate = -1;
-  private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   state: ReturnType<typeof projectCheckpoint> | undefined;
 
   constructor(private element: HTMLElement) {
     this.direction = element.querySelector('#direction')!;
-    this.label = element.querySelector('#gate-bearing')!;
-    this.gate = element.querySelector('#gate')!;
-    this.distance = element.querySelector('#distance')!;
   }
 
   render(engine: Engine) {
     const shown = ['countdown', 'racing'].includes(engine.state) && !engine.track.practiceRadius;
     this.element.hidden = !shown;
-    if (!shown) {
-      this.lastGate = -1;
-      return;
-    }
+    if (!shown) return;
     const width = innerWidth,
       height = innerHeight;
     const touch = document.body.dataset.input === 'touch';
@@ -47,7 +36,7 @@ export class CheckpointGuide {
     this.element.style.top = `${guide.y}px`;
     this.element.dataset.outside = String(guide.outside);
     this.direction.style.transform = `rotate(${guide.angle}rad)`;
-    this.label.textContent = guide.behind
+    const bearing = guide.behind
       ? 'TURN BACK'
       : guide.outside
         ? guide.x < bounds.left + 1
@@ -56,23 +45,7 @@ export class CheckpointGuide {
             ? 'TURN RIGHT'
             : 'AHEAD'
         : 'NEXT GATE';
-    this.gate.textContent = String(engine.player.nextGate + 1).padStart(2, '0');
-    const gate = engine.track.gates[engine.player.nextGate];
-    this.distance.textContent = `${Math.round(Math.hypot(gate.x - engine.player.x, gate.z - engine.player.z))} M`;
-    if (engine.player.nextGate !== this.lastGate) {
-      if (this.lastGate !== -1 && !this.reducedMotion.matches)
-        this.element.animate(
-          [
-            { borderColor: '#eafff7', backgroundColor: '#173d37' },
-            { borderColor: '#ffc65a', backgroundColor: '#07171ef2' },
-          ],
-          {
-            duration: 320,
-            easing: 'ease-out',
-          },
-        );
-      this.lastGate = engine.player.nextGate;
-    }
+    this.element.setAttribute('aria-label', `${bearing}, gate ${engine.player.nextGate + 1}`);
   }
 }
 

@@ -77,7 +77,7 @@ test.describe('touch checkpoint guidance', () => {
       const g = e.track.gates[e.player.nextGate];
       e.player.yaw = Math.atan2(g.x - e.player.x, g.z - e.player.z) + Math.PI;
     });
-    await expect(page.locator('#gate-bearing')).toHaveText('TURN BACK');
+    await expect(page.locator('#checkpoint')).toHaveAttribute('aria-label', /TURN BACK/);
     for (const viewport of [
       { width: 390, height: 844 },
       { width: 844, height: 390 },
@@ -97,7 +97,7 @@ test.describe('touch checkpoint guidance', () => {
         .toBe(true);
       const box = await page.locator('#checkpoint').boundingBox();
       expect(box!.y + box!.height).toBeLessThan(viewport.height - 100);
-      await expect(page.locator('#gate')).toHaveText(/\d{2}/);
+      await expect(page.locator('#direction')).toBeVisible();
       expect(await page.locator('#direction svg').evaluate((el) => el.getAnimations().length)).toBe(
         0,
       );
