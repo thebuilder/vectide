@@ -207,6 +207,8 @@ export class Pickups {
       } else this.wakeClock.set(r.id, next);
     }
     for (const effect of [...this.state.effects]) {
+      // A wake only shoves nearby hulls at release. Its travelling crest is ordinary water.
+      if (effect.kind === 5 && effect.age === 0) this.wave(effect, active);
       effect.age += dt;
       if (effect.kind === 5 && effect.launch) {
         const release = Math.min(dt, Math.max(0, 0.3 - (effect.age - dt)));
@@ -214,7 +216,7 @@ export class Pickups {
         effect.z += effect.launch.vz * release;
       }
       if (effect.kind <= 3) this.projectile(effect, dt, time, active);
-      else this.wave(effect, active);
+      else if (effect.kind === 4) this.wave(effect, active);
     }
     this.state.effects = this.state.effects.filter(
       (e) => e.age < (e.kind === 3 ? 18 : e.kind === 4 ? 1.1 : e.kind === 5 ? 2 : 4),
@@ -270,8 +272,8 @@ export class Pickups {
   private wave(e: ItemEffect, racers: Racer[]) {
     for (const r of racers) {
       if (e.hit & (1 << r.id) || (e.kind === 5 && r.id === e.owner)) continue;
-      // Buoyancy owns water contact and vertical lift. A crest transfers its shove only
-      // while it touches the hull; proximity below an airborne rider is not a hit.
+      // The initial wake shove and travelling explosion shockwave require hull contact.
+      // Buoyancy owns vertical lift; neither can kick an airborne or ramp-supported rider.
       if (r.wet === 0 || r.onRamp) continue;
       const dx = r.x - e.x,
         dz = r.z - e.z;

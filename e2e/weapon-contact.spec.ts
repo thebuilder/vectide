@@ -1,14 +1,18 @@
 import { expect, test } from '@playwright/test';
 
-for (const kind of [4, 5])
-  test(`weapon crest ${kind} shoves at water contact and lifts through buoyancy`, async ({
+for (const scenario of [
+  { kind: 4, distance: 12, hits: 1 },
+  { kind: 5, distance: 12, hits: 0 },
+  { kind: 5, distance: 2, hits: 1 },
+])
+  test(`weapon crest ${scenario.kind} at ${scenario.distance}m keeps the shove separate from buoyancy`, async ({
     page,
   }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/e2e/fixtures/coast.html');
     await page.waitForFunction(() => !!(window as any).demo);
-    await page.evaluate(async (kind) => {
+    await page.evaluate(async ({ kind, distance }) => {
       const e = (window as any).demo;
       e.onFrame = () => {};
       e.start('race');
@@ -33,7 +37,7 @@ for (const kind of [4, 5])
         wet: 1,
       });
       e.items.state.effects = [
-        { id: 900, kind, owner: 1, x: r.x, z: r.z - 12, yaw: 0, age: 0, hit: 0 },
+        { id: 900, kind, owner: 1, x: r.x, z: r.z - distance, yaw: 0, age: 0, hit: 0 },
       ];
       e.cameraAnchor.set(r.x, r.y, r.z);
       e.camera.position.set(r.x - 5, r.y + 3, r.z - 8);
@@ -56,16 +60,18 @@ for (const kind of [4, 5])
         if (r.wet === 0 && !r.onRamp) result.airFrames++;
         result.maxLift = Math.max(result.maxLift, r.y - result.initialY);
       };
-    }, kind);
+    }, scenario);
     await page.waitForFunction(() => (window as any).demo.time > 3);
     const result = await page.evaluate(() => (window as any).contactResult);
-    console.log(kind, result);
-    expect(result.hits).toHaveLength(1);
-    expect(result.hits[0].push).toBeGreaterThan(6);
-    expect(result.hits[0].wet).toBeGreaterThan(0);
-    expect(result.hits[0].onRamp).toBe(false);
-    expect(result.hits[0].verticalKick).toBe(0);
-    expect(result.hits[0].heightSnap).toBe(0);
+    console.log(scenario, result);
+    if (scenario.hits) {
+      expect(result.hits).toHaveLength(1);
+      expect(result.hits[0].push).toBeGreaterThan(6);
+      expect(result.hits[0].wet).toBeGreaterThan(0);
+      expect(result.hits[0].onRamp).toBe(false);
+      expect(result.hits[0].verticalKick).toBe(0);
+      expect(result.hits[0].heightSnap).toBe(0);
+    } else expect(result.hits).toHaveLength(0);
     expect(result.airFrames).toBeGreaterThan(5);
     expect(result.maxLift).toBeGreaterThan(1);
     expect(errors).toEqual([]);

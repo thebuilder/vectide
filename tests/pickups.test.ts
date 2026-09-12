@@ -123,9 +123,9 @@ describe('race pickups', () => {
     items.use(r, true);
     const wave = items.state.effects[0];
     expect(wave.yaw).toBeCloseTo(Math.PI);
-    Object.assign(racers[1], { x: wave.x, z: wave.z - wakeTravel(0.5), vy: 0 });
+    Object.assign(racers[1], { x: wave.x, z: wave.z - wakeTravel(0.5), vy: 0, vz: 0 });
     items.step(0.5, 0, racers);
-    expect(racers[1].vz).toBeLessThan(0);
+    expect(racers[1].vz).toBe(0);
     expect(racers[1].vy).toBe(0);
   });
   it('boosts increase speed, expire, and only wake boost sheds waves', () => {
