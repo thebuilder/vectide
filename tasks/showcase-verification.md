@@ -35,6 +35,13 @@ Earlier slice verification also covered desktop WebKit phone setup/rotation, the
 - Normal and seeking torpedoes now collide along their traveled segment with ramp slopes, island shores, docks and obstacle supports. The earliest contact creates the existing explosion, spray and raised water wave. Fully submerged ramp noses remain passable until their slope reaches the torpedo.
 - All 336 tests pass, including thin-obstacle tunneling, first-contact ordering and ramp side/rear regressions. The production build passes. Eleven native browser checks pass: a full Palm lap, six keyboard-fired scenery explosions, multiplayer item ownership and three protocol mismatch cases. Actual ramp, tower and shore explosion renders were inspected. Independent review found no required issues.
 
+## Keyboard and gamepad menu follow-up
+
+- Left/Right now stay in the current row; Up/Down enter the nearest row. Scrolling options retain navigation until the panel boundary instead of losing focus to fixed actions. Analog sticks use their dominant direction.
+- Gamepads can reach multiplayer text fields, and keyboard users can leave volume sliders vertically while retaining native Left/Right/Home/End value controls. Typing and text-cursor movement retain their native behavior.
+- A shared focus style adds a solid inner ring with a slow cyan halo pulse. The inner ring remains visible at clipped panel edges, and reduced motion retains a steady highlight.
+- All 336 tests, the production build and fourteen native browser checks pass. Browser checks cover desktop row boundaries, gamepad form navigation and analog direction, keyboard sliders, phone portrait/landscape scrolling, animated/reduced-motion focus, pause controls and driving tips. Independent review found no required issues. Gamepad inputs were simulated through the browser API; physical controller feel remains unverified.
+
 ## External checks
 
 Physical-phone performance and feel, hardware controllers, headphone/speaker balance and separate-device/network WebRTC were not verified here. Production deployment and external form submission were not performed. The cover is promotional artwork, not a gameplay screenshot.

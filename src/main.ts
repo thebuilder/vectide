@@ -18,6 +18,7 @@ import { Controls } from './controls';
 import './style.css';
 import './multiplayer/style.css';
 import './menu.css';
+import './focus.css';
 import './checkpoint-guide.css';
 import { setupMenuScreens } from './menu';
 import { Engine, type Mode, type Snapshot } from './game/engine';

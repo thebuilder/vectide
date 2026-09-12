@@ -21,11 +21,6 @@
   font: inherit;
   font-size: 16px;
 }
-#online-dialog input:focus-visible,
-#online-dialog select:focus-visible {
-  outline: 2px solid var(--phosphor);
-  outline-offset: 3px;
-}
 #room-code,
 #join-code {
   letter-spacing: 4px;

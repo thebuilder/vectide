@@ -44,11 +44,6 @@ button {
   font: inherit;
   cursor: pointer;
 }
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid #d9ffef;
-  outline-offset: 5px;
-}
 button {
   border: 0;
   border-radius: 0;
@@ -610,10 +605,6 @@ dialog p {
   accent-color: var(--phosphor);
   cursor: pointer;
 }
-.pause-volume input:focus-visible {
-  outline: 2px solid var(--phosphor);
-  outline-offset: 2px;
-}
 dialog dl {
   display: grid;
   grid-template-columns: 120px 1fr;
@@ -856,10 +847,6 @@ dialog dd {
   background: #86fadd;
   color: #071b19;
 }
-.difficulty-toggle button:focus-visible {
-  outline: 2px solid #eefbf5;
-  outline-offset: 3px;
-}
 #countdown.go {
   color: #86fadd;
   text-shadow: 0 0 28px #86fadd66;
@@ -898,11 +885,6 @@ dialog dd {
     transition: none;
     transform: none;
   }
-}
-
-body[data-input='gamepad'] :is(button, summary, a):focus {
-  outline: 2px solid #86fadd;
-  outline-offset: 5px;
 }
 
 #touch-controls {
