@@ -10,6 +10,67 @@ import { waterHeight, waveZoneWeight } from '../src/game/water';
 const port = TRACKS[1];
 const storm = TRACKS[2];
 
+it('blocks the premature Port finish shortcut while keeping the last checkpoint visible', () => {
+  const from = port.gates.find((gate) => gate.name === 'Southwest basin')!;
+  const last = port.gates.find((gate) => gate.name === 'West breakwater')!;
+  const finish = port.gates[0];
+  const world = new Group();
+  addTerrain(world, port);
+  world.updateMatrixWorld(true);
+  const meshes: Mesh[] = [];
+  world.traverse((object) => {
+    if (object instanceof Mesh) meshes.push(object);
+  });
+  for (const approach of [from, { x: 20, z: 130 }]) {
+    for (const side of [-finish.width / 2, 0, finish.width / 2]) {
+      const target = {
+        x: finish.x - finish.tz * side,
+        z: finish.z + finish.tx * side,
+      };
+      const blocked = Array.from({ length: 101 }, (_, i) => i / 100).some(
+        (t) =>
+          !gatePointClear(
+            approach.x + (target.x - approach.x) * t,
+            approach.z + (target.z - approach.z) * t,
+            port.land,
+          ),
+      );
+      expect(blocked, `shortcut to finish lane ${side}`).toBe(true);
+    }
+    for (const side of [-1, 1]) {
+      const eye = new Vector3(approach.x, 4, approach.z);
+      const target = new Vector3(
+        last.x - (last.tz * last.width * side) / 2,
+        8.75,
+        last.z + (last.tx * last.width * side) / 2,
+      );
+      const distance = eye.distanceTo(target);
+      expect(
+        new Raycaster(eye, target.sub(eye).normalize(), 0, distance).intersectObjects(
+          meshes,
+          false,
+        ),
+        `last checkpoint flag ${side}`,
+      ).toEqual([]);
+    }
+  }
+  // Leave a full riding corridor around the divider and onward to the finish.
+  for (const [start, end] of [
+    [from, last],
+    [last, finish],
+  ]) {
+    const distance = Math.hypot(end.x - start.x, end.z - start.z);
+    for (let step = 0; step <= Math.ceil(distance); step++) {
+      const t = step / Math.ceil(distance);
+      for (const side of [-5, 0, 5]) {
+        const x = start.x + (end.x - start.x) * t - ((end.z - start.z) / distance) * side;
+        const z = start.z + (end.z - start.z) * t + ((end.x - start.x) / distance) * side;
+        expect(gatePointClear(x, z, port.land), `required route at ${x}, ${z}`).toBe(true);
+      }
+    }
+  }
+});
+
 it('closes the false straight-ahead channel beyond the Port inner-basin gate', () => {
   const gate = port.gates.find((gate) => gate.name === 'Inner basin')!;
   for (const side of [-8, 0, 8]) {

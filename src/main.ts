@@ -354,7 +354,7 @@ engine.onUpdate = (s) => {
 engine.onFinish = (s) => {
   engine.audio.finish();
   const best = Math.min(...s.player.laps),
-    courseVersion = s.track.id === 'storm' ? 'v16' : s.track.id === 'harbor' ? 'v13' : 'v12',
+    courseVersion = s.track.id === 'storm' ? 'v16' : s.track.id === 'harbor' ? 'v14' : 'v12',
     key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;

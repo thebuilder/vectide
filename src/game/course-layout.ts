@@ -203,7 +203,7 @@ export const COURSE_LAYOUTS = {
       },
       {
         name: 'Cargo terminal turn board',
-        at: [228, 132],
+        at: [232, 198],
         facing: [0, -1],
         direction: 'right',
         baseHeight: 3,
@@ -251,6 +251,7 @@ export const COURSE_LAYOUTS = {
       dock('Outer breakwater', 297, 105.75, 20.25, 135),
       // Close the false straight-ahead passage after the Inner basin checkpoint.
       dock('Inner basin cross-quay', 139.05, 73, 41.25, 26.3),
+      { ...dock('Finish approach divider', 12, 70, 60, 24), height: 6 },
     ],
     zones: [
       zone('Entrance channel', 0, -31.5, 0, 1, 162, 76.5, 0.92, 0),
