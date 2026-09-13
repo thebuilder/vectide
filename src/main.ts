@@ -42,7 +42,6 @@ app.innerHTML = `
   <div class="launch"><div class="setup-scroll"><div class="setup-heading"><button id="setup-back" class="quiet" aria-label="Back to main menu" title="Back to main menu"><svg width="34" height="28" viewBox="0 0 34 28" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M29 14H6M16 4 6 14l10 10"/></svg></button><h2>Set your course.</h2></div>
     <div class="course-heading"><span>SELECT COURSE</span><span id="course-number">01 / 03</span></div>
     <div class="courses">${courseCards('data-track')}</div>
-    <div class="course-description"><span id="description">${TRACKS[0].description}</span><span id="lap-estimate">~1 MIN / LAP</span></div>
     <div class="setup-options">
       <div class="setup-option"><span id="difficulty-heading">DIFFICULTY</span><div class="difficulty-toggle" role="group" aria-labelledby="difficulty-heading" aria-describedby="difficulty-description">${['easy', 'normal', 'expert'].map((d) => `<button type="button" data-difficulty="${d}" aria-pressed="${d === 'normal'}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div></div>
       <div class="setup-option"><span id="pickups-heading">PICKUPS</span><button id="pickups-toggle" class="pickup-toggle" aria-labelledby="pickups-heading pickups-toggle" aria-pressed="true">ON</button></div>
@@ -166,8 +165,6 @@ document.querySelectorAll<HTMLButtonElement>('[data-track]').forEach((button) =>
       b.classList.toggle('selected', active);
       b.setAttribute('aria-pressed', String(active));
     });
-    $('description').textContent = TRACKS[selectedTrack].description;
-    $('lap-estimate').textContent = '~1 MIN / LAP';
     $('course-number').textContent = `0${selectedTrack + 1} / 03`;
   }),
 );

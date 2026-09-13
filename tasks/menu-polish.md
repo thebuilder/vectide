@@ -15,7 +15,7 @@ The race HUD was left out of this menu pass. Continuously moving difficulty and 
 
 ## Responsive behavior
 
-Desktop and portrait tablet use three course cards. Phone and short landscape screens use compact rows, with setup options scrolling inside the menu and race launch controls remaining available. Short portrait screens omit the course description to make room for settings. Short landscape screens use smaller card rows. Mobile navigation through the complete setup remains covered by the existing browser tests.
+Desktop and portrait tablet use three course cards. Phone and short landscape screens use compact rows, with setup options scrolling inside the menu and race launch controls remaining available. The course description and lap-time estimate are omitted; the course cards lead directly into settings. Short landscape screens use smaller card rows. Mobile navigation through the complete setup remains covered by the existing browser tests.
 
 ## Verification
 
