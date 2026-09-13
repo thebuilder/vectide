@@ -25,3 +25,11 @@ Desktop and portrait tablet use three course cards. Phone and short landscape sc
 - Independent code review completed; its tablet route visibility finding was corrected.
 - No dependencies were added. The existing Three.js bundle-size advisory remains.
 - Touch and gamepad checks use browser emulation; physical devices and production deployment were not tested.
+
+## Navigation follow-up
+
+Removed the decorative `/ 01` beside the logo. Back and Leave room now use the same large, borderless neon arrow with accessible names and native tooltips. Leave room sits before the room header on desktop and occupies the same masthead slot as Back on phones. The room-code panel stays in place when entering free ride.
+
+The outgoing menu now becomes hidden immediately while the incoming menu fades and slides. This prevents overlapping titles during back navigation and rapid reversals. The setup transition test was updated from its former 240 ms expectation to the implemented 280 ms entry movement.
+
+Follow-up verification: eight setup/menu browser tests and two local WebRTC multiplayer tests pass, including per-frame checks for overlapping screens at desktop and phone widths, room exit, and mobile free ride. TypeScript, build, and formatting pass. Final desktop and phone captures confirm the arrows have no background or border.

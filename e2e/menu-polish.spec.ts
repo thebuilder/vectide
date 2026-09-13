@@ -35,3 +35,45 @@ test('reduced motion keeps course selection static and keyboard activation immed
   await expect(page.locator('[data-track="1"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-track="1"] .course-tracer')).toHaveCSS('animation-name', 'none');
 });
+
+test('pointer navigation never paints the home and setup content together', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.home-actions')).toHaveJSProperty('inert', false);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const overlapFrames = await page.evaluate(async () => {
+      const home = document.getElementById('menu-home')!;
+      const setup = document.getElementById('race-setup')!;
+      let overlaps = 0;
+      const painted = (element: HTMLElement) => {
+        const style = getComputedStyle(element);
+        return style.visibility === 'visible' && Number(style.opacity) > 0;
+      };
+      const click = (id: string) =>
+        document.getElementById(id)!.dispatchEvent(new MouseEvent('click', { detail: 1 }));
+      const observe = async (duration: number) => {
+        const end = performance.now() + duration;
+        while (performance.now() < end) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          if (painted(home) && painted(setup)) overlaps++;
+        }
+      };
+      click('open-setup');
+      await observe(350);
+      click('setup-back');
+      await observe(350);
+      // Reverse twice before entry finishes, then return home.
+      click('open-setup');
+      await observe(50);
+      click('setup-back');
+      await observe(50);
+      click('open-setup');
+      await observe(350);
+      click('setup-back');
+      await observe(350);
+      return overlaps;
+    });
+    expect(overlapFrames).toBe(0);
+    await expect(page.locator('#open-setup')).toBeFocused();
+  }
+});

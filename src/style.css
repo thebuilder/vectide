@@ -1496,19 +1496,13 @@ button *,
   .masthead #leave-room {
     margin: 0;
     min-height: 44px;
-    padding: 12px;
+    padding: 6px 8px;
     font-size: 0.625rem;
   }
   body.playing #setup-back,
   body.in-lobby #setup-back,
   body:not(.in-lobby) .masthead #leave-room {
     display: none;
-  }
-  .masthead #leave-room {
-    width: auto;
-  }
-  .masthead #leave-room span {
-    display: inline;
   }
   #touch-controls .touch-stick {
     width: 120px;

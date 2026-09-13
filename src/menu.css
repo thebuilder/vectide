@@ -13,6 +13,7 @@
   flex: 1;
   min-height: 0;
 }
+/* Hide the outgoing screen immediately; only the incoming screen fades and slides. */
 #menu .menu-screen {
   position: absolute;
   inset: 0;
@@ -28,7 +29,7 @@
   transition:
     opacity 160ms ease-out,
     transform 280ms var(--menu-ease),
-    visibility 0s 280ms;
+    visibility 0s;
 }
 #menu #menu-home {
   display: flex;
@@ -214,11 +215,26 @@
   letter-spacing: -0.04em;
   font-size: clamp(38px, 4.4vw, 62px);
 }
-#setup-back {
-  min-height: 44px;
-  padding: 12px 18px;
-  border: 1px solid var(--line);
-  background: #071a21c9;
+#setup-back,
+#leave-room {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 60px;
+  min-height: 52px;
+  padding: 6px 8px;
+  color: var(--phosphor);
+  border: 0;
+  background: transparent;
+}
+#setup-back svg,
+#leave-room svg {
+  display: block;
+  flex: none;
+  width: 44px;
+  height: 36px;
+  filter: drop-shadow(0 0 5px #86fadd80);
 }
 #race-setup #start {
   min-width: 310px;
@@ -492,9 +508,6 @@
   }
   #race-setup .setup-heading h2 {
     font-size: 36px;
-  }
-  #setup-back {
-    padding: 10px 12px;
   }
   #race-setup .course {
     min-height: 72px;

@@ -39,7 +39,7 @@ app.innerHTML = `
     <div class="multiplayer-launch"><span class="eyebrow">MULTIPLAYER</span><div><button id="host-online">HOST</button><button id="join-online">JOIN</button></div></div>
   </div></section>
   <section id="race-setup" class="menu-screen" aria-label="Race setup" inert>
-  <div class="launch"><div class="setup-scroll"><div class="setup-heading"><button id="setup-back" class="quiet">BACK</button><h2>Set your course.</h2></div>
+  <div class="launch"><div class="setup-scroll"><div class="setup-heading"><button id="setup-back" class="quiet" aria-label="Back to main menu" title="Back to main menu"><svg width="34" height="28" viewBox="0 0 34 28" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M29 14H6M16 4 6 14l10 10"/></svg></button><h2>Set your course.</h2></div>
     <div class="course-heading"><span>SELECT COURSE</span><span id="course-number">01 / 03</span></div>
     <div class="courses">${courseCards('data-track')}</div>
     <div class="course-description"><span id="description">${TRACKS[0].description}</span><span id="lap-estimate">~1 MIN / LAP</span></div>
