@@ -3,8 +3,6 @@ import { StuntHud } from './stunt-hud';
 import './stunt-hud.css';
 import { PickupHud } from './pickup-hud';
 import { CheckpointGuide } from './checkpoint-guide';
-import { RideCoach } from './ride-coach';
-import './ride-coach.css';
 import { rideHelp, setupRideHelp } from './ride-help';
 import './pickups.css';
 import { courseCards } from './course-cards';
@@ -61,7 +59,6 @@ app.innerHTML = `
   <div id="online-race-status" hidden></div>
   <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE · RELEASE AT TAKEOFF · LEAN TO ROTATE</div>
 </section>
-<aside id="ride-coach" hidden aria-label="Driving tip"><kbd class="coach-key"></kbd><span class="coach-text"></span><button aria-label="Dismiss driving tips">×</button></aside>
 <div id="touch-controls" aria-label="Touch driving controls">
  <div class="touch-navigation"><button data-touch-key="reset" hidden>RESET</button><div class="touch-stick-wrap"><button data-touch-key="stick" class="touch-stick" aria-label="Slide to steer and lean" aria-describedby="stick-help"><span class="stick-axis" aria-hidden="true"></span><span class="stick-thumb" aria-hidden="true"></span></button><span id="stick-help">STEER / LEAN</span></div></div>
  <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
@@ -119,7 +116,6 @@ for (const channel of ['sounds', 'music'] as const) {
 }
 const touch = new TouchControls(engine, $('touch-controls'));
 const controls = new Controls(engine);
-const rideCoach = new RideCoach($('ride-coach'));
 $('pickups-toggle').onclick = () => {
   engine.pickupsEnabled = !engine.pickupsEnabled;
   $('pickups-toggle').setAttribute('aria-pressed', String(engine.pickupsEnabled));
@@ -292,7 +288,6 @@ engine.onUpdate = (s) => {
   results.update(s, engine.network?.disconnected);
   syncIntro(engine.introStatus.progress);
   touch.sync(s);
-  rideCoach.update(s, engine.drivingInput);
   if (s.player.laps.length > shownLaps) {
     shownLaps = s.player.laps.length;
     const latest = s.player.laps[shownLaps - 1];

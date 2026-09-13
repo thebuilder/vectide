@@ -57,26 +57,19 @@ test.describe('small-screen setup', () => {
   }
 });
 
-test('first driving tips respond to input and remember dismissal', async ({ page }) => {
+test('keyboard racing stays clear of driving-tip popups', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.locator('#open-setup').click();
   await page.locator('#start').click();
-  const coach = page.locator('#ride-coach');
-  await expect(coach).toContainText('Hold to accelerate');
+  await expect(page.locator('#ride-coach')).toHaveCount(0);
   await page.keyboard.down('w');
-  await expect(coach).toContainText('Steer between both glowing buoys', { timeout: 15000 });
+  await page.waitForFunction(() => (window as any).__vectide.speed > 15);
   await page.keyboard.up('w');
+  await expect(page.locator('#ride-coach')).toHaveCount(0);
   await page.locator('#pause').click();
-  await expect(coach).toBeHidden();
   await page.locator('#resume').click();
-  await expect(coach).toBeVisible();
-  await coach.getByRole('button', { name: 'Dismiss driving tips' }).click();
-  await expect(coach).toBeHidden();
-  await page.reload();
-  await page.locator('#open-setup').click();
-  await page.locator('#start').click();
-  await expect(coach).toBeHidden();
+  await expect(page.locator('#ride-coach')).toHaveCount(0);
 });
 
 test('touch racing starts without driving tips to dismiss', async ({ browser }) => {
@@ -91,9 +84,9 @@ test('touch racing starts without driving tips to dismiss', async ({ browser }) 
   await page.locator('#open-setup').tap();
   await page.locator('#start').tap();
   await expect(page.locator('#countdown')).toBeVisible();
-  await expect(page.locator('#ride-coach')).toBeHidden();
+  await expect(page.locator('#ride-coach')).toHaveCount(0);
   await page.waitForFunction(() => (window as any).__vectide.speed > 15);
-  await expect(page.locator('#ride-coach')).toBeHidden();
+  await expect(page.locator('#ride-coach')).toHaveCount(0);
   await page.locator('#pause').tap();
   await page.locator('#pause-help').tap();
   await expect(page.locator('#help-dialog')).toContainText('Throttle is automatic');

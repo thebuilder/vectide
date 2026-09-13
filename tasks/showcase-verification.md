@@ -44,7 +44,7 @@ Earlier slice verification also covered desktop WebKit phone setup/rotation, the
 
 ## Quiet racing feedback follow-up
 
-- Touch driving tips stay hidden, so automatic throttle and follow-on coaching require no dismissal. Touch controls remain explained in the help dialog.
+- The on-water driving-tip popup has been removed for all input devices. Controls remain explained in the help dialog.
 - Removed the rider-down and climbing-back-on status messages. A yellow, unboxed WIPEOUT now uses the same brief animation as landed tricks. Recovery physics and rider animation are unchanged. The popup expires automatically, freezes with a paused local race, respects reduced motion, and resets correctly between runs.
 - Direction guidance stays hidden while the next gate opening or posts are in the camera viewport, including near approaches and targets outside the reserved HUD margins. Exact clipping of the oriented gate faces avoids false visibility around diagonal gates and pitched, side-on views. Offscreen and behind-camera guidance remains available, including the finish gate after the opening grid.
 - All 341 tests and the production build pass. Thirteen distinct native browser cases pass across a complete Storm lap, visible/offscreen gate views, phone rotation, touch startup/help, stunt/wipeout feedback, pause/restart, and real local WebRTC guest-only wipeout delivery and expiry. Desktop and phone wipeout renders were inspected. Both diagonal and pitched-camera visibility regressions caught during review were reproduced and corrected; final independent review found no further issues.
