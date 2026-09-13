@@ -6,13 +6,14 @@
   gap: 0;
   padding: 90px 40px 0;
   overflow: hidden;
+  --menu-ease: cubic-bezier(0.23, 1, 0.32, 1);
 }
 #menu-panels {
   position: relative;
   flex: 1;
   min-height: 0;
 }
-.menu-screen {
+#menu .menu-screen {
   position: absolute;
   inset: 0;
   overflow-x: hidden;
@@ -20,28 +21,29 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
   opacity: 0;
-  transform: translateX(24px);
   visibility: hidden;
   pointer-events: none;
+  transform: translateX(48px) skewX(-2deg);
+  transform-origin: center bottom;
   transition:
     opacity 160ms ease-out,
-    transform 240ms cubic-bezier(0.23, 1, 0.32, 1),
-    visibility 0s 240ms;
+    transform 280ms var(--menu-ease),
+    visibility 0s 280ms;
 }
-#menu-home {
+#menu #menu-home {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
   padding: 32px max(0px, calc((100% - 1140px) / 2));
-  transform: translateX(-24px);
+  transform: translateX(-48px) skewX(2deg);
 }
-.menu-screen.is-active,
-#menu-home.is-active {
+#menu .menu-screen.is-active,
+#menu #menu-home.is-active {
   opacity: 1;
-  transform: translateX(0);
   visibility: visible;
   pointer-events: auto;
+  transform: none;
   transition-delay: 0s;
 }
 #menu[data-instant='true'] .menu-screen {
@@ -53,16 +55,22 @@
   flex: none;
 }
 #menu-home h1 {
-  font-size: clamp(56px, 7vw, 106px);
+  font-size: clamp(56px, 7.3vw, 112px);
+  letter-spacing: -0.04em;
 }
 #menu-home .intro {
   margin: 24px 0 0;
+  margin-top: 16px;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  color: #e9f6f1;
 }
-.home-actions {
-  width: 360px;
+#menu .home-actions {
   max-width: 100%;
-  margin-top: 40px;
   flex: none;
+  width: 430px;
+  margin-top: 34px;
 }
 #open-setup {
   width: 100%;
@@ -72,25 +80,39 @@
 #open-setup svg {
   flex-shrink: 0;
 }
-.home-actions .multiplayer-launch {
+#menu .home-actions .multiplayer-launch {
   display: block;
   padding: 0;
   margin: 24px 0 0;
   border: 0;
   background: transparent;
+  margin-top: 22px;
 }
-.home-actions .multiplayer-launch .eyebrow {
+#menu .home-actions .multiplayer-launch .eyebrow {
   display: block;
-  margin-bottom: 12px;
   font-size: 9px;
+  margin-bottom: 10px;
 }
-.home-actions .multiplayer-launch > div {
+#menu .home-actions .multiplayer-launch > div {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
-.home-actions .multiplayer-launch button {
+#menu .home-actions .multiplayer-launch button {
   min-width: 0;
-  min-height: 48px;
+  position: relative;
+  min-height: 52px;
+  background: #07171ed9;
+  border: 1px solid var(--phosphor);
+  color: var(--phosphor);
+  font-family: 'Roboto', Arial, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  transition:
+    transform 120ms var(--menu-ease),
+    background 120ms ease-out;
 }
 #race-setup {
   display: flex;
@@ -119,12 +141,17 @@
   padding: 12px 0 0;
   border-top: 1px solid #86fadd55;
   background: #07171ef2;
+  margin-top: 10px;
+  padding-top: 14px;
 }
 #race-setup .course-description {
-  background: #07171ee8;
   color: #d3e9e0;
   padding: 12px 16px;
   font-size: 12px;
+  margin-top: 10px;
+  min-height: 54px;
+  align-items: center;
+  background: #07171eed;
 }
 #race-setup .course-heading {
   color: #d3e9e0;
@@ -171,21 +198,21 @@
   outline: 2px solid #86fadd;
   outline-offset: 6px;
 }
-.setup-heading {
+#race-setup .setup-heading {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 32px;
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
 }
-.setup-heading h2 {
+#race-setup .setup-heading h2 {
   margin: 0;
   font-family: 'Roboto', Arial, sans-serif;
   font-style: italic;
   font-weight: 900;
-  font-size: clamp(36px, 4.5vw, 60px);
   line-height: 1;
   letter-spacing: -0.04em;
+  font-size: clamp(38px, 4.4vw, 62px);
 }
 #setup-back {
   min-height: 44px;
@@ -194,39 +221,261 @@
   background: #071a21c9;
 }
 #race-setup #start {
-  justify-content: center;
+  min-width: 310px;
+  justify-content: space-between;
+  gap: 24px;
 }
 #menu .menu-footer {
   position: static;
   flex: none;
   padding: 20px 0;
 }
-@media (prefers-reduced-motion: reduce) {
-  .menu-screen {
-    transition: none;
-    transform: none;
+
+/* The menu borrows its angles, colors and moving course line from the race itself. */
+#menu-home h1 > span {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 14px;
+}
+#menu-home h1 > span::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 5px;
+  background: var(--signal);
+  transform: scaleX(0.16);
+  transform-origin: left;
+  transition: transform 600ms var(--menu-ease) 100ms;
+}
+#menu-home .intro-visible h1 > span::after {
+  transform: scaleX(1);
+}
+.hero-signature {
+  margin: 14px 0 0;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--phosphor);
+}
+#menu .primary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 68px;
+  padding: 18px 26px;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  font-size: 23px;
+  letter-spacing: 0.01em;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+  transition:
+    transform 120ms var(--menu-ease),
+    background 120ms ease-out;
+}
+#menu .primary::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: #e9fff8;
+  transform: translateX(-110%) skewX(-20deg);
+  transition: transform 240ms var(--menu-ease);
+}
+#menu .primary svg {
+  width: 40px;
+  height: 28px;
+  flex: none;
+  transition: transform 160ms var(--menu-ease);
+}
+#open-setup svg {
+  animation: menu-chevron 2400ms var(--menu-ease) infinite;
+  animation-play-state: paused;
+}
+#menu-home.is-active .intro-visible #open-setup svg {
+  animation-play-state: running;
+}
+#menu[hidden] #open-setup svg {
+  animation-play-state: paused;
+}
+@keyframes menu-chevron {
+  0%,
+  60%,
+  100% {
+    translate: 0;
   }
+  76% {
+    translate: 6px;
+  }
+}
+#menu .primary:active {
+  transform: scale(0.98);
+}
+#menu #start-label {
+  font-size: inherit;
+  line-height: inherit;
+}
+#menu .home-actions .multiplayer-launch button:active {
+  transform: scale(0.97);
+}
+#race-setup .courses {
+  gap: 12px;
+  border: 0;
+  padding: 4px 0;
+}
+#race-setup .course {
+  min-height: 176px;
+  padding: 80px 20px 20px;
+  align-items: flex-end;
+  color: #e9f6f1;
+  background: #07171eed;
+  border: 1px solid #a0b4ad55;
+  box-shadow: none;
+  transition:
+    transform 160ms var(--menu-ease),
+    background 160ms ease-out,
+    border-color 160ms ease-out;
+}
+#race-setup .course.selected {
+  border-color: var(--course-accent);
+  background: #0c2925f5;
+}
+#race-setup .course-index {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  padding: 0;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 900;
+  opacity: 0.65;
+}
+.course-status,
+.course-tracer {
+  display: none;
+}
+#race-setup .course-status {
+  position: absolute;
+  inset: 19px auto auto 64px;
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--course-accent);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 140ms ease-out,
+    transform 180ms var(--menu-ease);
+}
+#race-setup .selected .course-status {
+  opacity: 1;
+  transform: none;
+}
+#race-setup .course-name {
+  position: relative;
+  z-index: 1;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-size: clamp(18px, 1.7vw, 24px);
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+#race-setup .course small {
+  margin-top: 8px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 9px;
+  font-style: normal;
+  color: #c3d0cb;
+}
+#race-setup .course-line {
+  display: block;
+  position: absolute;
+  inset: 18px 18px auto auto;
+  width: 104px;
+  height: 92px;
+  margin: 0;
+  color: var(--course-accent);
+  opacity: 0.7;
+  transform: scale(0.9);
+  transition:
+    opacity 180ms ease-out,
+    transform 240ms var(--menu-ease);
+}
+#race-setup .selected .course-line {
+  opacity: 1;
+  transform: none;
+}
+#race-setup .course-line > path:first-child {
+  opacity: 0.6;
+}
+#race-setup .selected .course-tracer {
+  display: block;
+  stroke: #e9fff8;
+  stroke-dasharray: 0.12 0.88;
+  stroke-dashoffset: 0;
+  animation: course-lap 4s linear infinite;
+  animation-play-state: paused;
+}
+#race-setup.is-active .selected .course-tracer {
+  animation-play-state: running;
+}
+.playing #race-setup .course-tracer {
+  animation-play-state: paused;
+}
+@keyframes course-lap {
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+#race-setup .setup-options,
+#difficulty-description {
+  background: #07171eed;
+}
+#race-setup .difficulty-toggle button,
+#race-setup .pickup-toggle {
+  transition:
+    transform 120ms var(--menu-ease),
+    background 120ms ease-out;
+}
+#race-setup .difficulty-toggle button:active,
+#race-setup .pickup-toggle:active {
+  transform: scale(0.97);
+}
+#race-setup .mode-switch button {
+  min-width: 160px;
+  padding: 14px 20px;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+#race-setup .mode-switch small {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 9px;
+  font-style: normal;
 }
 @media (max-width: 700px) {
   #menu {
     padding: 70px max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
   }
-  #menu-home {
+  #menu #menu-home {
     padding: 24px 0;
     justify-content: safe center;
   }
   #menu-home h1 {
-    font-size: clamp(46px, 12vw, 76px);
+    font-size: clamp(43px, 11.4vw, 76px);
   }
   #menu-home .hero .eyebrow {
     margin-bottom: 14px;
   }
   #menu-home .intro {
     margin-top: 16px;
+    font-size: 15px;
   }
-  .home-actions {
+  #menu .home-actions {
     width: 100%;
-    margin-top: 32px;
+    margin-top: 30px;
   }
   #menu .menu-footer {
     padding: 12px 0 max(12px, env(safe-area-inset-bottom));
@@ -237,39 +486,118 @@
   #race-setup .launch {
     padding: 4px;
   }
-  .setup-heading {
+  #race-setup .setup-heading {
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
-  .setup-heading h2 {
-    font-size: 34px;
+  #race-setup .setup-heading h2 {
+    font-size: 36px;
   }
   #setup-back {
     padding: 10px 12px;
   }
   #race-setup .course {
-    min-height: 54px;
-    padding: 10px 12px;
+    min-height: 72px;
+    padding: 12px 74px 12px 52px;
   }
   #race-setup .course small {
+    font-size: 8px;
     margin-top: 5px;
   }
   #race-setup .course-heading {
     padding-bottom: 10px;
   }
   #race-setup .setup-options {
-    margin: 8px 0 16px;
     gap: 8px;
+    padding: 12px;
+    margin: 8px 0 0;
   }
   #race-setup #start {
     min-height: 52px;
+    min-width: 0;
+    width: 100%;
+  }
+  #menu-home h1 > span {
+    padding-bottom: 10px;
+  }
+  #menu-home h1 > span::after {
+    height: 3px;
+  }
+  .hero-signature {
+    font-size: 8px;
+    line-height: 1.6;
+  }
+  #menu .primary {
+    min-height: 60px;
+    font-size: 20px;
+    padding: 16px 20px;
+  }
+  #race-setup .courses {
+    gap: 8px;
+  }
+  #race-setup .course-index {
+    left: 13px;
+    top: 17px;
+    font-size: 22px;
+  }
+  #race-setup .course-name {
+    font-size: 18px;
+  }
+  #race-setup .course-status {
+    inset: auto 12px 10px auto;
+    font-size: 6px;
+  }
+  #race-setup .course-line {
+    display: block;
+    inset: 8px 9px auto auto;
+    width: 56px;
+    height: 52px;
+  }
+  #race-setup .course-description {
+    min-height: 0;
+    margin-top: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  #difficulty-description {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+  #race-setup .mode-switch button {
+    min-width: 0;
+    padding: 12px;
+    font-size: 16px;
+  }
+  #race-setup .mode-switch small {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
+  #race-setup .setup-heading {
+    display: block;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  #menu .primary:hover::before {
+    transform: translateX(0) skewX(0);
+  }
+  #menu .primary:hover svg {
+    transform: translateX(5px);
+  }
+  #race-setup .course:hover {
+    transform: translateY(-3px);
+    border-color: var(--course-accent);
+  }
+  #menu .home-actions .multiplayer-launch button:hover {
+    background: #153c36;
   }
 }
 @media (max-height: 500px) and (orientation: landscape) {
   #menu {
     padding-top: 64px;
   }
-  #menu-home {
+  #menu #menu-home {
     display: grid;
     grid-template-columns: 1fr 1fr;
     align-items: center;
@@ -277,20 +605,21 @@
     padding: 16px 0;
   }
   #menu-home h1 {
-    font-size: 48px;
+    font-size: 44px;
   }
   #menu-home .eyebrow {
     font-size: 8px;
   }
   #menu-home .intro {
     margin-top: 12px;
-    font-size: 10px;
+    font-size: 13px;
   }
-  .home-actions {
+  #menu .home-actions {
+    width: 100%;
     margin: 0;
   }
-  .home-actions .multiplayer-launch {
-    margin-top: 16px;
+  #menu .home-actions .multiplayer-launch {
+    margin-top: 12px;
   }
   #menu .menu-footer {
     padding: 10px 0;
@@ -298,15 +627,21 @@
   #race-setup {
     align-items: flex-start;
   }
+  #race-setup {
+    padding: 8px 0;
+  }
+  #race-setup .mode-switch small {
+    white-space: nowrap;
+  }
   #race-setup .launch {
     height: 100%;
     margin: 0 auto;
   }
-  .setup-heading {
-    margin-bottom: 16px;
+  #race-setup .setup-heading {
+    margin-bottom: 14px;
   }
-  .setup-heading h2 {
-    font-size: 34px;
+  #race-setup .setup-heading h2 {
+    font-size: 28px;
   }
   #race-setup .launch-row {
     display: flex;
@@ -315,49 +650,111 @@
     align-items: stretch;
   }
   #race-setup #start {
-    min-width: 180px;
-    min-height: 48px;
     padding: 12px 20px;
+    min-width: 200px;
+    min-height: 52px;
   }
   #race-setup .mode-switch button {
     min-height: 48px;
+    min-width: 0;
     padding: 8px 12px;
+    font-size: 15px;
+  }
+  #menu-home h1 > span {
+    padding-bottom: 8px;
+  }
+  .hero-signature {
+    font-size: 7px;
+    margin-top: 8px;
+  }
+  #menu .primary {
+    min-height: 52px;
+    font-size: 18px;
+    padding: 14px 18px;
+  }
+  #menu .home-actions .multiplayer-launch button {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  #menu .home-actions .multiplayer-launch .eyebrow {
+    font-size: 8px;
+    margin-bottom: 6px;
+  }
+  #race-setup .course {
+    min-height: 56px;
+    padding: 9px 80px 9px 52px;
+  }
+  #race-setup .course-index {
+    font-size: 20px;
+    top: 10px;
+  }
+  #race-setup .course-status {
+    display: none;
+  }
+  #race-setup .course-line {
+    width: 44px;
+    height: 40px;
+    top: 6px;
+  }
+  #race-setup .course-name {
+    font-size: 17px;
+  }
+  #race-setup .course small {
+    margin-top: 5px;
   }
 }
 
-@media (max-width: 700px) and (max-height: 740px) {
+@media (max-width: 700px) and (max-height: 900px) {
   #race-setup .course-description {
     display: none;
   }
   #race-setup .setup-options {
     margin-top: 16px;
-  }
-  .setup-heading {
     margin-bottom: 12px;
   }
-  #race-setup .course {
-    min-height: 48px;
-    padding-block: 8px;
-  }
-  #race-setup .setup-options {
-    margin-bottom: 12px;
-  }
-}
-
-@media (max-width: 700px) and (max-height: 740px) {
-  .setup-heading {
+  #race-setup .setup-heading {
     flex-direction: row;
     align-items: center;
     gap: 12px;
     margin-bottom: 10px;
   }
-  .setup-heading h2 {
+  #race-setup .course {
+    min-height: 64px;
+    padding-block: 8px;
+  }
+  #race-setup .setup-heading h2 {
     font-size: clamp(26px, 7.5vw, 34px);
   }
 }
-
-@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
-  .setup-heading {
-    display: block;
+@media (prefers-reduced-motion: reduce) {
+  #open-setup svg {
+    animation: none;
+  }
+  #menu .menu-screen {
+    transition: none;
+    transform: none;
+  }
+  #menu .menu-screen,
+  #menu #menu-home,
+  #menu .primary,
+  #menu .primary svg,
+  #menu .primary::before,
+  #menu .home-actions .multiplayer-launch button,
+  #menu-home h1 > span::after,
+  #race-setup .course,
+  #race-setup .course-line,
+  #race-setup .course-status,
+  #race-setup .difficulty-toggle button,
+  #race-setup .pickup-toggle {
+    transition: none;
+    transform: none;
+  }
+  #race-setup .selected .course-tracer {
+    animation: none;
+    stroke-dasharray: none;
+    opacity: 0.7;
+  }
+  #menu .primary::before {
+    display: none;
   }
 }

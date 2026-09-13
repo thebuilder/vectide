@@ -34,7 +34,7 @@ app.innerHTML = `
 <main id="menu">
   <div id="menu-panels">
   <section id="menu-home" class="menu-screen is-active" aria-label="Main menu">
-  <div class="hero"><p class="eyebrow">ANALOG SOUL. DIGITAL OCEAN.</p><h1>RIDE THE<br/><span>WAVEFORM.</span></h1><p class="intro">Find your line. Feel every wave.</p></div>
+  <div class="hero"><h1>RIDE THE<br/><span>WAVEFORM.</span></h1><p class="intro">Find your line. Feel every wave.</p><p class="hero-signature">ANALOG SOUL. DIGITAL OCEAN.</p></div>
   <div class="home-actions"><button id="open-setup" class="primary">HIT THE WATER <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button>
     <div class="multiplayer-launch"><span class="eyebrow">MULTIPLAYER</span><div><button id="host-online">HOST</button><button id="join-online">JOIN</button></div></div>
   </div></section>
@@ -48,7 +48,7 @@ app.innerHTML = `
       <div class="setup-option"><span id="pickups-heading">PICKUPS</span><button id="pickups-toggle" class="pickup-toggle" aria-labelledby="pickups-heading pickups-toggle" aria-pressed="true">ON</button></div>
     </div>
     <p id="difficulty-description">Sporting opponents. Your handling stays the same.</p></div>
-    <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary">START RACE</button></div>
+    <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary"><span id="start-label">START RACE</span><svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button></div>
   </div></section>
   </div>
   <footer class="menu-footer"><a class="creator-credit" href="https://thebuilder.dk/" target="_blank" rel="noopener noreferrer">by thebuilder.dk</a><span data-keyboard="WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT" data-touch="TOUCH TO SELECT · SLIDE STICK TO STEER & LEAN" data-gamepad="D-PAD / STICK · NAVIGATE · A SELECT · B BACK">WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT</span><button id="help" class="quiet">HOW TO RIDE <span>+</span></button></footer>
@@ -181,7 +181,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((button) =>
       'aria-pressed',
       String(mode === 'race' && engine.pickupsEnabled),
     );
-    $('start').textContent = mode === 'trial' ? 'START TIME TRIAL' : 'START RACE';
+    $('start-label').textContent = mode === 'trial' ? 'START TIME TRIAL' : 'START RACE';
     document.querySelectorAll('[data-mode]').forEach((b) => {
       const active = b === button;
       b.classList.toggle('active', active);
