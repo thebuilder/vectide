@@ -139,11 +139,8 @@
 }
 #race-setup .launch-row {
   flex: none;
-  padding: 12px 0 0;
-  border-top: 1px solid #86fadd55;
-  background: #07171ef2;
+  padding: 14px 0 0;
   margin-top: 10px;
-  padding-top: 14px;
 }
 #race-setup .course-description {
   color: #d3e9e0;
