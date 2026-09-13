@@ -195,11 +195,10 @@ export const COURSE_LAYOUTS = {
     turnSigns: [
       {
         name: 'Entrance channel turn board',
-        at: [17.1, -69],
+        at: [0, -135],
         facing: [0, 1],
         direction: 'right',
         baseHeight: 3,
-        height: 10,
       },
       {
         name: 'Inner basin left-turn board',
