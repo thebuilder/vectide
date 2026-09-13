@@ -99,13 +99,6 @@ button:hover {
   width: auto;
   height: 28px;
 }
-.version {
-  font-size: 10px;
-  opacity: 0.5;
-  font-weight: 400;
-  letter-spacing: 1px;
-  margin-left: 5px;
-}
 .header-right {
   display: flex;
   align-items: center;
@@ -704,9 +697,6 @@ dialog dd {
 @media (max-width: 650px) {
   .masthead {
     padding: 20px;
-  }
-  .version {
-    display: none;
   }
   #menu {
     padding: 0 20px;
