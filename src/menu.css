@@ -234,6 +234,13 @@
   flex: none;
   padding: 20px 0;
 }
+#menu .menu-footer :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 16px;
+}
 
 /* The menu borrows its angles, colors and moving course line from the race itself. */
 #menu-home h1 > span {
