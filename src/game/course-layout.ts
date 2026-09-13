@@ -207,6 +207,8 @@ export const COURSE_LAYOUTS = {
       dock('South quay', 157.5, 209.25, 121.5, 33.75),
       dock('West breakwater', -96.75, 72, 15.75, 85.5),
       dock('Outer breakwater', 297, 105.75, 20.25, 135),
+      // Close the false straight-ahead passage after the Inner basin checkpoint.
+      dock('Inner basin cross-quay', 139.05, 73, 41.25, 26.3),
     ],
     zones: [
       zone('Entrance channel', 0, -31.5, 0, 1, 162, 76.5, 0.92, 0),
@@ -219,18 +221,20 @@ export const COURSE_LAYOUTS = {
   },
   storm: {
     checkpoints: [
-      { name: 'Start / finish', at: [-36, 0], width: 40 },
-      { name: 'West wave turn', at: [-118, 60], width: 56 },
+      { name: 'Start / finish', at: [-48, -8], width: 40 },
+      { name: 'West approach', at: [-118, 32], width: 56, facePrevious: true },
       { name: 'Cross-swell reef', at: [32, 106], width: 40 },
       { name: 'East channel', at: [210, 63], width: 56 },
       { name: 'Signal north turn', at: [68, -142], width: 56 },
     ],
     route: [
-      [-36, 0],
-      [-72, 22],
-      [-104, 45],
-      [-119, 65],
-      [-103, 111],
+      [-48, -8],
+      // Keep the grid, first gate and run-out collinear before the wave bend.
+      [-83, 12],
+      [-118, 32],
+      [-128.5, 38],
+      [-135, 70],
+      [-111, 112],
       [-60, 137],
       [-12, 126],
       [32, 106],
@@ -244,6 +248,7 @@ export const COURSE_LAYOUTS = {
       [58, -144],
       [11, -109],
       [0, -60],
+      [-13, -28],
     ],
     land: [
       island('Signal island', 85, -42, 134, 126, 14, 'rock'),
@@ -259,8 +264,8 @@ export const COURSE_LAYOUTS = {
       zone('North swell', 104, -128, -1, 0, 144, 88, 0.3, 1.3, 37, 6),
       zone('Exposed east channel', 196, 42, 0, -1, 176, 72, 0.05, 1.8, 34, 6),
       zone('Cross-swell bend', 32, 91, -1, 0.35, 112, 80, 0.25, 1.1, 32, 5),
-      zone('West wave train', -114, 56, 0, 1, 104, 70, 0.1, 1.4, 29, 5),
-      zone('Departure lee', -48, 18, 1, 0, 96, 52, 0.9, 0),
+      zone('West wave train', -117, 100, 0, 1, 100, 70, 0.1, 1.4, 29, 5),
+      zone('Departure lee', -65, -5, -7, 4, 180, 65, 0.9, 0),
     ],
     rampCenters: [],
   },

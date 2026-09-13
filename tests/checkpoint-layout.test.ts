@@ -14,7 +14,10 @@ it.each(TRACKS)('uses separated, named route-choice checkpoints on $name', (trac
   expect(track.gates.length).toBeLessThanOrEqual(track.id === 'harbor' ? 7 : 6);
   expect(new Set(track.gates.map((g) => g.name)).size).toBe(track.gates.length);
   for (const [i, gate] of track.gates.entries()) {
-    expect(checkpointDistance(track, i), gate.name).toBeGreaterThan(100);
+    // Storm's opening straight ends before the exposed wave bend.
+    expect(checkpointDistance(track, i), gate.name).toBeGreaterThan(
+      track.id === 'storm' && i === 1 ? 75 : 100,
+    );
     if (i) expect(gate.routeIndex!).toBeGreaterThan(track.gates[i - 1].routeIndex!);
   }
 });
