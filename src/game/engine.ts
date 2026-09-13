@@ -195,7 +195,29 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     this.frameLobby();
   };
+  private syncKeyboardModifiers(e: KeyboardEvent): boolean {
+    // A system shortcut can consume keyup without blurring the game window.
+    if (
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.code.startsWith('Meta') ||
+      e.code.startsWith('Control') ||
+      e.code.startsWith('Alt')
+    ) {
+      this.keys.clear();
+      cancelTrickSetup(this.player);
+      return false;
+    }
+    // Other key events still report Shift's real state if its own release was lost.
+    if (!e.shiftKey) {
+      this.keys.delete('ShiftLeft');
+      this.keys.delete('ShiftRight');
+    }
+    return true;
+  }
   private keyDown = (e: KeyboardEvent) => {
+    if (!this.syncKeyboardModifiers(e)) return;
     if (e.defaultPrevented) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
     if (
@@ -218,7 +240,10 @@ export class Engine {
     if (e.code === 'KeyR') this.reset();
     if (e.code === 'KeyQ') this.useItem();
   };
-  private keyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
+  private keyUp = (e: KeyboardEvent) => {
+    this.syncKeyboardModifiers(e);
+    this.keys.delete(e.code);
+  };
   private blur = () => {
     this.keys.clear();
     this.itemRequested = false;
