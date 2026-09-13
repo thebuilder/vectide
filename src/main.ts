@@ -3,8 +3,6 @@ import { StuntHud } from './stunt-hud';
 import './stunt-hud.css';
 import { PickupHud } from './pickup-hud';
 import { CheckpointGuide } from './checkpoint-guide';
-import { RideCoach } from './ride-coach';
-import './ride-coach.css';
 import { rideHelp, setupRideHelp } from './ride-help';
 import './pickups.css';
 import { courseCards } from './course-cards';
@@ -30,25 +28,24 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
 <canvas id="ocean" aria-label="Vectide 3D jet ski racing game"></canvas>
 <div class="screen-grain" aria-hidden="true"></div>
-<header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><img src="/logo.svg" width="570" height="99" alt=""/><span class="version">/ 01</span></a><div class="header-right"><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound"><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5Z"/><path class="speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="speaker-muted" d="m15 9 6 6m0-6-6 6"/></svg><span id="sound-label">SOUND OFF</span></button><button id="pause" class="quiet" aria-label="Pause" title="Pause (Esc)" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button></div></header>
+<header class="masthead"><a class="wordmark" href="/" aria-label="Vectide home"><img src="/logo.svg" width="570" height="99" alt=""/></a><div class="header-right"><span id="header-label">WATER RACING SYSTEM</span><button id="sound" class="quiet" aria-pressed="false" aria-label="Enable engine sound"><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 4 5 9H2v6h3l6 5Z"/><path class="speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="speaker-muted" d="m15 9 6 6m0-6-6 6"/></svg><span id="sound-label">SOUND OFF</span></button><button id="pause" class="quiet" aria-label="Pause" title="Pause (Esc)" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button></div></header>
 <main id="menu">
   <div id="menu-panels">
   <section id="menu-home" class="menu-screen is-active" aria-label="Main menu">
-  <div class="hero"><p class="eyebrow">ANALOG SOUL. DIGITAL OCEAN.</p><h1>RIDE THE<br/><span>WAVEFORM.</span></h1><p class="intro">Find your line. Feel every wave.</p></div>
+  <div class="hero"><h1>RIDE THE<br/><span>WAVEFORM.</span></h1><p class="intro">Find your line. Feel every wave.</p><p class="hero-signature">ANALOG SOUL. DIGITAL OCEAN.</p></div>
   <div class="home-actions"><button id="open-setup" class="primary">HIT THE WATER <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button>
     <div class="multiplayer-launch"><span class="eyebrow">MULTIPLAYER</span><div><button id="host-online">HOST</button><button id="join-online">JOIN</button></div></div>
   </div></section>
   <section id="race-setup" class="menu-screen" aria-label="Race setup" inert>
-  <div class="launch"><div class="setup-scroll"><div class="setup-heading"><button id="setup-back" class="quiet">BACK</button><h2>Set your course.</h2></div>
+  <div class="launch"><div class="setup-scroll"><div class="setup-heading"><button id="setup-back" class="quiet" aria-label="Back to main menu" title="Back to main menu"><svg width="34" height="28" viewBox="0 0 34 28" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M29 14H6M16 4 6 14l10 10"/></svg></button><h2>Set your course.</h2></div>
     <div class="course-heading"><span>SELECT COURSE</span><span id="course-number">01 / 03</span></div>
     <div class="courses">${courseCards('data-track')}</div>
-    <div class="course-description"><span id="description">${TRACKS[0].description}</span><span id="lap-estimate">~1 MIN / LAP</span></div>
     <div class="setup-options">
       <div class="setup-option"><span id="difficulty-heading">DIFFICULTY</span><div class="difficulty-toggle" role="group" aria-labelledby="difficulty-heading" aria-describedby="difficulty-description">${['easy', 'normal', 'expert'].map((d) => `<button type="button" data-difficulty="${d}" aria-pressed="${d === 'normal'}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div></div>
       <div class="setup-option"><span id="pickups-heading">PICKUPS</span><button id="pickups-toggle" class="pickup-toggle" aria-labelledby="pickups-heading pickups-toggle" aria-pressed="true">ON</button></div>
     </div>
     <p id="difficulty-description">Sporting opponents. Your handling stays the same.</p></div>
-    <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary">START RACE</button></div>
+    <div class="launch-row"><div class="mode-switch" aria-label="Race mode"><button data-mode="race" class="active" aria-pressed="true">RACE <small>6 RIDERS · 3 LAPS</small></button><button data-mode="trial" aria-pressed="false">TIME TRIAL <small>SOLO · 1 LAP</small></button></div><button id="start" class="primary"><span id="start-label">START RACE</span><svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m3 5 7 7-7 7m10-14 7 7-7 7m10-14 7 7-7 7"/></svg></button></div>
   </div></section>
   </div>
   <footer class="menu-footer"><a class="creator-credit" href="https://thebuilder.dk/" target="_blank" rel="noopener noreferrer">by thebuilder.dk</a><span data-keyboard="WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT" data-touch="TOUCH TO SELECT · SLIDE STICK TO STEER & LEAN" data-gamepad="D-PAD / STICK · NAVIGATE · A SELECT · B BACK">WASD / ARROWS · NAVIGATE & RIDE · ENTER SELECT</span><button id="help" class="quiet">HOW TO RIDE <span>+</span></button></footer>
@@ -62,7 +59,6 @@ app.innerHTML = `
   <div id="online-race-status" hidden></div>
   <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE · RELEASE AT TAKEOFF · LEAN TO ROTATE</div>
 </section>
-<aside id="ride-coach" hidden aria-label="Driving tip"><kbd class="coach-key"></kbd><span class="coach-text"></span><button aria-label="Dismiss driving tips">×</button></aside>
 <div id="touch-controls" aria-label="Touch driving controls">
  <div class="touch-navigation"><button data-touch-key="reset" hidden>RESET</button><div class="touch-stick-wrap"><button data-touch-key="stick" class="touch-stick" aria-label="Slide to steer and lean" aria-describedby="stick-help"><span class="stick-axis" aria-hidden="true"></span><span class="stick-thumb" aria-hidden="true"></span></button><span id="stick-help">STEER / LEAN</span></div></div>
  <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
@@ -120,7 +116,6 @@ for (const channel of ['sounds', 'music'] as const) {
 }
 const touch = new TouchControls(engine, $('touch-controls'));
 const controls = new Controls(engine);
-const rideCoach = new RideCoach($('ride-coach'));
 $('pickups-toggle').onclick = () => {
   engine.pickupsEnabled = !engine.pickupsEnabled;
   $('pickups-toggle').setAttribute('aria-pressed', String(engine.pickupsEnabled));
@@ -166,8 +161,6 @@ document.querySelectorAll<HTMLButtonElement>('[data-track]').forEach((button) =>
       b.classList.toggle('selected', active);
       b.setAttribute('aria-pressed', String(active));
     });
-    $('description').textContent = TRACKS[selectedTrack].description;
-    $('lap-estimate').textContent = '~1 MIN / LAP';
     $('course-number').textContent = `0${selectedTrack + 1} / 03`;
   }),
 );
@@ -181,7 +174,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((button) =>
       'aria-pressed',
       String(mode === 'race' && engine.pickupsEnabled),
     );
-    $('start').textContent = mode === 'trial' ? 'START TIME TRIAL' : 'START RACE';
+    $('start-label').textContent = mode === 'trial' ? 'START TIME TRIAL' : 'START RACE';
     document.querySelectorAll('[data-mode]').forEach((b) => {
       const active = b === button;
       b.classList.toggle('active', active);
@@ -295,7 +288,6 @@ engine.onUpdate = (s) => {
   results.update(s, engine.network?.disconnected);
   syncIntro(engine.introStatus.progress);
   touch.sync(s);
-  rideCoach.update(s, engine.drivingInput);
   if (s.player.laps.length > shownLaps) {
     shownLaps = s.player.laps.length;
     const latest = s.player.laps[shownLaps - 1];

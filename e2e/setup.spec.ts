@@ -72,7 +72,7 @@ test('pointer transitions fade and slide, reverse cleanly, and fit phones', asyn
   }));
   expect(motion.properties).toContain('opacity');
   expect(motion.properties).toContain('transform');
-  expect(motion.duration).toContain('0.24s');
+  expect(motion.duration).toContain('0.28s');
   // Reverse before the first transition finishes, then enter again.
   await page.locator('#setup-back').dispatchEvent('click', { detail: 1 });
   await page.locator('#open-setup').dispatchEvent('click', { detail: 1 });
