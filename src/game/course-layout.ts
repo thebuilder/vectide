@@ -72,7 +72,7 @@ export const COURSE_LAYOUTS = {
     turnSigns: [
       {
         name: 'Outer reef exit turn board',
-        at: [302, 136],
+        at: [332, 165],
         facing: [-0.1, -1],
         direction: 'right',
       },
