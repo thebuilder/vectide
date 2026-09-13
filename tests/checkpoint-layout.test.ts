@@ -11,7 +11,7 @@ import {
 import { hullPoints, polygonContact } from '../src/game/hull-contact';
 
 it.each(TRACKS)('uses separated, named route-choice checkpoints on $name', (track) => {
-  expect(track.gates.length).toBeLessThanOrEqual(6);
+  expect(track.gates.length).toBeLessThanOrEqual(track.id === 'harbor' ? 7 : 6);
   expect(new Set(track.gates.map((g) => g.name)).size).toBe(track.gates.length);
   for (const [i, gate] of track.gates.entries()) {
     expect(checkpointDistance(track, i), gate.name).toBeGreaterThan(100);

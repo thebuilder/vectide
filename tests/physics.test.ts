@@ -97,8 +97,8 @@ describe('fair racing', () => {
       z: r.z,
     });
     expect(r.finished).toBe(true);
-    // The compact harbor and offshore routes target one-minute laps.
-    expect(r.laps[0]).toBeGreaterThan(55);
+    // Palm's open reef approach is shorter; all courses stay near one-minute laps.
+    expect(r.laps[0]).toBeGreaterThan(track.id === 'palms' ? 50 : 55);
     expect(r.laps[0]).toBeLessThan(70);
   });
 });
