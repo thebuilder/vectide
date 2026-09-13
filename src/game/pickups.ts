@@ -65,7 +65,11 @@ export function pickupRows(track: Track): Pickup[] {
       },
       track.land,
     );
-    const spacing = Math.min(5, (gate.width - 8) / (lanes - 1));
+    // Cover the wider racing lines on the harbor swell without moving items into a gate.
+    const spacing = Math.min(
+      track.id === 'harbor' && row === 2 ? 6 : 5,
+      (gate.width - 8) / (lanes - 1),
+    );
     const points = Array.from({ length: lanes }, (_, lane) => ({
       x: gate.x - gate.tz * (lane - (lanes - 1) / 2) * spacing,
       z: gate.z + gate.tx * (lane - (lanes - 1) / 2) * spacing,

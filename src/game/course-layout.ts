@@ -63,7 +63,7 @@ export const COURSE_LAYOUTS = {
       { name: 'Start / finish', at: [0, 0], width: 40 },
       { name: 'Crescent turn', at: [105, -140], width: 48 },
       { name: 'Reef entrance', at: [270, 30], width: 64 },
-      { name: 'Outer reef', at: [262, 125], width: 64 },
+      { name: 'Outer reef', at: [218, 155], width: 64 },
       { name: 'Lagoon turn', at: [27.5, 167.5], width: 48 },
     ],
     route: [
@@ -151,10 +151,10 @@ export const COURSE_LAYOUTS = {
     checkpoints: [
       { name: 'Start / finish', at: [0, 0], width: 24 },
       { name: 'Container turn', at: [148.5, -90], width: 44 },
-      { name: 'Inner basin', at: [139, 14], width: 32 },
+      { name: 'Inner basin', at: [139, 14], width: 32, facePrevious: true },
       { name: 'Harbor mouth', at: [256.5, 78.75], width: 52 },
       { name: 'Cargo south passage', at: [175, 170], width: 44 },
-      { name: 'Southwest basin', at: [50, 143], width: 44 },
+      { name: 'Southwest basin', at: [50, 143], width: 44, facePrevious: true },
       { name: 'West breakwater', at: [-69.75, 63], width: 44 },
     ],
     route: [
@@ -249,7 +249,7 @@ export const COURSE_LAYOUTS = {
   string,
   {
     route: number[][];
-    checkpoints: { name: string; at: number[]; width: number }[];
+    checkpoints: { name: string; at: number[]; width: number; facePrevious?: boolean }[];
     land: Landform[];
     zones: WaveZone[];
     rampCenters: number[][];

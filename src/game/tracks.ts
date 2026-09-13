@@ -119,7 +119,12 @@ export const TRACKS: Track[] = definitions.map((d) => {
     return { x: p.x, z: p.z, tx: t.x, tz: t.z, width };
   };
   // Checkpoints guard route choices; the centerline remains independent of gate count.
-  const gates = layout.checkpoints.map(({ name, at: [x, z], width }, index) => {
+  const gates = layout.checkpoints.map((checkpoint, index) => {
+    const {
+      name,
+      at: [x, z],
+      width,
+    } = checkpoint;
     const routeIndex = points.reduce(
       (best, p, i) =>
         Math.hypot(p.x - x, p.z - z) < Math.hypot(points[best].x - x, points[best].z - z)
@@ -134,7 +139,13 @@ export const TRACKS: Track[] = definitions.map((d) => {
     const turn = Math.atan2(Math.sin(exitHeading - heading), Math.cos(exitHeading - heading));
     // Face into the next water leg; aiming across the full sector can point through an island.
     // Keep the opening broad on approach and preserve the finish channel's grid heading.
-    const approach = points[(routeIndex - 18 + points.length) % points.length];
+    // Open basin gates can instead face the incoming leg before the rider starts the next turn.
+    const facePrevious = 'facePrevious' in checkpoint && checkpoint.facePrevious;
+    const previous =
+      layout.checkpoints[(index - 1 + layout.checkpoints.length) % layout.checkpoints.length];
+    const approach = facePrevious
+      ? { x: previous.at[0], z: previous.at[1] }
+      : points[(routeIndex - 18 + points.length) % points.length];
     const approachHeading = Math.atan2(center.x - approach.x, center.z - approach.z);
     const approachTurn = Math.atan2(
       Math.sin(heading - approachHeading),
@@ -144,8 +155,10 @@ export const TRACKS: Track[] = definitions.map((d) => {
     const angle =
       index === 0
         ? heading
-        : approachHeading +
-          Math.max(-Math.PI / 6, Math.min(Math.PI / 6, approachTurn + adjustment));
+        : facePrevious
+          ? approachHeading
+          : approachHeading +
+            Math.max(-Math.PI / 6, Math.min(Math.PI / 6, approachTurn + adjustment));
     return {
       ...fitGateToShore(
         { ...center, tx: Math.sin(angle), tz: Math.cos(angle), width },

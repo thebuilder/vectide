@@ -30,7 +30,12 @@ it('gives Palm a continuous approach that straightens before the large reef wave
   expect(-(entrance.tx * reef.tx + entrance.tz * reef.tz)).toBeGreaterThan(0.9);
   const ahead = palm.points[entrance.routeIndex! + 40];
   expect(waveZoneWeight(ahead.x, ahead.z, reef)).toBeGreaterThan(0.7);
-  expect(waveZoneWeight(exit.x, exit.z, reef)).toBeLessThan(0.4);
+  // Leave room to settle after the wave train, across the entire gate opening.
+  for (let offset = -exit.width / 2; offset <= exit.width / 2; offset += 2) {
+    expect(waveZoneWeight(exit.x - exit.tz * offset, exit.z + exit.tx * offset, reef)).toBe(0);
+  }
+  const settling = palm.points[exit.routeIndex! - 20];
+  expect(waveZoneWeight(settling.x, settling.z, reef)).toBe(0);
 });
 
 it.each([
@@ -41,6 +46,10 @@ it.each([
   const required = port.gates.find((gate) => gate.name === bend)!;
   const end = port.gates.find((gate) => gate.name === after)!;
   expect(required).toBeDefined();
+  const incoming = Math.hypot(required.x - start.x, required.z - start.z);
+  expect(
+    ((required.x - start.x) * required.tx + (required.z - start.z) * required.tz) / incoming,
+  ).toBeGreaterThan(0.99);
   expect(crossesGate(start, end, required)).toBe(false);
   expect(
     port.points.some((p, i) => crossesGate(p, port.points[(i + 1) % port.points.length], required)),
@@ -81,13 +90,20 @@ it.each([palm, port])('keeps pickups within reach of both racing speeds on $name
     const r = createRacer(track, 1);
     const distances = Array<number>(5).fill(Infinity);
     let retries = 0;
+    let lastAir = 0;
     for (let frame = 0; frame < 120 * 90 && !r.finished; frame++) {
       const previous = { x: r.x, z: r.z };
+      const nextGate = r.nextGate;
       const approaching = r.approachingGate;
       const input = aiInput(r, track, [r], difficulty);
       if (!approaching && r.approachingGate) retries++;
       stepRacer(r, input, track, frame / 120, 1 / 120);
+      if (r.wet === 0) lastAir = frame / 120;
       updateProgress(r, previous, track, frame / 120, 1);
+      if (track.id === 'palms' && nextGate === 3 && r.nextGate !== nextGate) {
+        expect(r.wet, `${difficulty} at reef exit`).toBeGreaterThan(0);
+        expect(frame / 120 - lastAir, `${difficulty} settled before reef exit`).toBeGreaterThan(1);
+      }
       for (const box of boxes) {
         distances[box.row] = Math.min(distances[box.row], Math.hypot(r.x - box.x, r.z - box.z));
       }
