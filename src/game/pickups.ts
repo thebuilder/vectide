@@ -46,10 +46,10 @@ export function pickupRows(track: Track): Pickup[] {
   const lanes = track.id === 'palms' ? 5 : 3;
   const fractions =
     track.id === 'palms'
-      ? [0.125, 0.25, 0.45, 0.625, 0.875]
+      ? [0.125, 0.25, 0.4, 0.595, 0.92]
       : track.id === 'storm'
         ? [0.17, 0.37, 0.57, 0.77, 0.97]
-        : [0.14, 0.34, 0.54, 0.74, 0.94];
+        : [0.13, 0.3, 0.54, 0.71, 0.96];
   return fractions.flatMap((fraction, row) => {
     const pointIndex = Math.round(fraction * track.points.length),
       p = track.points[pointIndex],

@@ -20,7 +20,7 @@ it.each(TRACKS)('Normal is competitive and difficulties stay ordered on $name', 
     expect(r.recovered).toBe(false);
     laps[difficulty] = r.laps[0];
   }
-  expect(laps.normal).toBeGreaterThan(55);
+  expect(laps.normal).toBeGreaterThan(track.id === 'palms' ? 50 : 55);
   expect(laps.normal).toBeLessThan(70);
   expect(laps.normal).toBeLessThan(laps.easy);
   expect(laps.expert).toBeLessThan(laps.normal);

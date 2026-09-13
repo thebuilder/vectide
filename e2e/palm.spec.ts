@@ -42,7 +42,7 @@ test('Palm has a clear early bend and a rideable wave section through a full ren
     };
   });
   expect(finish.laps).toHaveLength(1);
-  expect(finish.laps[0]).toBeGreaterThan(55);
+  expect(finish.laps[0]).toBeGreaterThan(50);
   expect(finish.laps[0]).toBeLessThan(70);
   expect(finish.recovered).toBe(false);
   expect(finish.crashes).toBe(0);

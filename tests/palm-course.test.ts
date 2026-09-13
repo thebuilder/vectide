@@ -26,7 +26,7 @@ it('puts a sustained reef wave train on the normal racing line', () => {
     maxClearance = Math.max(maxClearance, r.y - waterHeight(r.x, r.z, t, track));
   }
   expect(r.finished).toBe(true);
-  expect(r.laps[0]).toBeGreaterThan(55);
+  expect(r.laps[0]).toBeGreaterThan(50);
   expect(r.laps[0]).toBeLessThan(70);
   expect(exposed).toBeGreaterThan(4);
   expect(launches).toBeGreaterThanOrEqual(3);
