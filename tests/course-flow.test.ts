@@ -84,7 +84,7 @@ it.each([
   },
 );
 
-it.each([palm, port])('keeps pickups within reach of both racing speeds on $name', (track) => {
+it.each(TRACKS)('keeps pickups within reach of both racing speeds on $name', (track) => {
   const boxes = pickupRows(track);
   for (const difficulty of ['normal', 'expert'] as const) {
     const r = createRacer(track, 1);

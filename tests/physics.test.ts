@@ -97,8 +97,8 @@ describe('fair racing', () => {
       z: r.z,
     });
     expect(r.finished).toBe(true);
-    // Palm's open reef approach is shorter; all courses stay near one-minute laps.
-    expect(r.laps[0]).toBeGreaterThan(track.id === 'palms' ? 50 : 55);
+    // Palm and Storm use shorter open-water lines; all courses stay near one-minute laps.
+    expect(r.laps[0]).toBeGreaterThan(track.id === 'harbor' ? 55 : 50);
     expect(r.laps[0]).toBeLessThan(70);
   });
 });

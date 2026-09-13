@@ -48,7 +48,7 @@ export function pickupRows(track: Track): Pickup[] {
     track.id === 'palms'
       ? [0.125, 0.25, 0.4, 0.595, 0.92]
       : track.id === 'storm'
-        ? [0.14, 0.34, 0.54, 0.74, 0.94]
+        ? [0.235, 0.405, 0.565, 0.725, 0.925]
         : [0.13, 0.3, 0.54, 0.71, 0.96];
   return fractions.flatMap((fraction, row) => {
     const pointIndex = Math.round(fraction * track.points.length),
@@ -65,9 +65,9 @@ export function pickupRows(track: Track): Pickup[] {
       },
       track.land,
     );
-    // Cover the wider racing lines on the harbor swell without moving items into a gate.
+    // Cover the different riding lines through exposed water without crowding a checkpoint.
     const spacing = Math.min(
-      track.id === 'harbor' && row === 2 ? 6 : 5,
+      track.id === 'storm' || (track.id === 'harbor' && row === 2) ? 6 : 5,
       (gate.width - 8) / (lanes - 1),
     );
     const points = Array.from({ length: lanes }, (_, lane) => ({
