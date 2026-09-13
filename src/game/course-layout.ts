@@ -242,16 +242,17 @@ export const COURSE_LAYOUTS = {
     ],
     land: [
       dock('West entrance pier', -17.1, -38.25, 12.6, 65.25),
-      dock('East entrance pier', 17.1, -38.25, 12.6, 65.25),
-      dock('Container quay', 74.25, -83.25, 60.75, 31.5),
-      dock('Inner basin pier', 98.1, 45, 42.75, 81),
+      // Adjoining convex sections form one dock without water gaps or overlapping top faces.
+      dock('Central dock west', 43.7625, 7.3125, 65.925, 156.375),
+      dock('Container quay', 74.25, -84.9375, 60.75, 28.125),
+      dock('Central dock east', 98.1, 7.3125, 42.75, 156.375),
       dock('Cargo terminal', 193.5, 98.1, 69.75, 76.5),
       dock('South quay', 157.5, 209.25, 121.5, 33.75),
       dock('West breakwater', -96.75, 72, 15.75, 85.5),
       dock('Outer breakwater', 297, 105.75, 20.25, 135),
       // Close the false straight-ahead passage after the Inner basin checkpoint.
       dock('Inner basin cross-quay', 139.05, 73, 41.25, 26.3),
-      { ...dock('Finish approach divider', 12, 70, 60, 24), height: 6 },
+      { ...dock('Finish approach divider', 12, 74, 60, 16), height: 6 },
     ],
     zones: [
       zone('Entrance channel', 0, -31.5, 0, 1, 162, 76.5, 0.92, 0),
