@@ -71,13 +71,6 @@ export const COURSE_LAYOUTS = {
   palms: {
     turnSigns: [
       {
-        name: 'Crescent approach turn board',
-        at: [18, -82],
-        facing: [0, 1],
-        direction: 'right',
-        baseHeight: 3.6,
-      },
-      {
         name: 'Outer reef exit turn board',
         at: [302, 136],
         facing: [-0.1, -1],

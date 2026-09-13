@@ -9,7 +9,6 @@ it('keeps harbor docks free of offshore wind turbines', () => {
 });
 
 for (const [index, gateName, boardName] of [
-  [0, 'Start / finish', 'Crescent approach turn board'],
   [0, 'Reef entrance', 'Outer reef exit turn board'],
   [1, 'Start / finish', 'Entrance channel turn board'],
   [1, 'Inner basin', 'Inner basin left-turn board'],
