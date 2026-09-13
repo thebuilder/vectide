@@ -42,8 +42,6 @@ it.each(TRACKS)('still requires every checkpoint in order to complete a lap on $
 it.each([
   { track: TRACKS[0], from: [35, -130], to: [135, -25], shore: 'Crescent island' },
   { track: TRACKS[0], from: [278, 110], to: [95, 170], shore: 'Outer island' },
-  { track: TRACKS[2], from: [-12, 126], to: [80, 131], shore: 'Cross-swell reef' },
-  { track: TRACKS[2], from: [80, 131], to: [210, 63], shore: 'East breakwater' },
   { track: TRACKS[2], from: [210, 63], to: [68, -142], shore: 'Signal island' },
 ])('uses $shore to block a direct cut across its bend', ({ track, from, to, shore }) => {
   const r = createRacer(track, 0),

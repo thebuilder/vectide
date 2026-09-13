@@ -1,4 +1,10 @@
-import { COURSE_LAYOUTS, fitGateToShore, landmarkObstacles, type Landform } from './course-layout';
+import {
+  COURSE_LAYOUTS,
+  fitGateToShore,
+  landmarkObstacles,
+  type CourseTurnSign,
+  type Landform,
+} from './course-layout';
 import { waveZoneWeight, type WaveZone } from './water';
 import { CatmullRomCurve3, Vector3 } from 'three';
 import { createShoreField, type ShoreField } from './shore';
@@ -45,6 +51,7 @@ export interface Track {
   obstacles: Obstacle[];
   land: Landform[];
   length: number;
+  turnSigns?: CourseTurnSign[];
 }
 const definitions = [
   {
@@ -209,6 +216,7 @@ export const TRACKS: Track[] = definitions.map((d) => {
     gates,
     ramps,
     land: layout.land,
+    turnSigns: layout.turnSigns,
     landmark,
     dolphin: at(d.id === 'harbor' ? 0.2 : 0.22),
     obstacles: landmarkObstacles(d.id, landmark),

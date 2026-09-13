@@ -151,35 +151,7 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
         rock.rotation.y = n * 1.73;
         parent.add(rock);
       }
-    } else if (land.name === 'Inner basin cross-quay') {
-      const face = Math.min(...land.outline.map((p) => p.z)) + 0.8;
-      const sign = new T.Group();
-      sign.name = 'Inner basin left-turn board';
-      sign.position.set(land.x, land.height, face);
-      // The board faces the incoming channel; +X is the rider's left toward the harbor mouth.
-      for (const x of [-12, 12]) box(sign, 0.7, 5, 0.7, x, 2.5, 0, track.accent);
-      box(sign, 34, 7, 0.8, 0, 5, 0, 0xffbc57);
-      const chevron = new T.Shape();
-      chevron.moveTo(-3, -2.5);
-      chevron.lineTo(-0.5, -2.5);
-      chevron.lineTo(3, 0);
-      chevron.lineTo(-0.5, 2.5);
-      chevron.lineTo(-3, 2.5);
-      chevron.lineTo(0.5, 0);
-      chevron.closePath();
-      const geometry = new T.ShapeGeometry(chevron);
-      const material = new T.MeshBasicMaterial({
-        color: 0xffbc57,
-        side: T.DoubleSide,
-        toneMapped: false,
-      });
-      for (const x of [-10, 0, 10]) {
-        const arrow = new T.Mesh(geometry, material);
-        arrow.position.set(x, 5, -0.45);
-        sign.add(arrow);
-      }
-      parent.add(sign);
-    } else if (land.kind === 'dock') {
+    } else if (land.kind === 'dock' && land.name !== 'Inner basin cross-quay') {
       const long =
         land.outline.length === 4
           ? Math.hypot(land.outline[1].x - land.outline[0].x, land.outline[1].z - land.outline[0].z)
@@ -225,7 +197,7 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
           glowing(track.accent, 0.4),
         ),
       );
-    } else {
+    } else if (land.kind === 'rock') {
       const pole = new T.Mesh(new T.CylinderGeometry(0.7, 1.3, 42, 7), dark);
       pole.position.set(land.x, land.height + 21, land.z);
       parent.add(pole);

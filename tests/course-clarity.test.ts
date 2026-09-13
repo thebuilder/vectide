@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { Group, Mesh, Raycaster, Vector3 } from 'three';
 import { gatePointClear } from '../src/game/course-layout';
 import { addTerrain } from '../src/game/terrain-visuals';
+import { addCourseGuidance } from '../src/game/course-guidance';
 import { createRacer, stepRacer, updateProgress } from '../src/game/physics';
 import { TRACKS } from '../src/game/tracks';
 import { waterHeight, waveZoneWeight } from '../src/game/water';
@@ -28,6 +29,7 @@ it('closes the false straight-ahead channel beyond the Port inner-basin gate', (
 it('shows the Port turn board above the quay before reaching the checkpoint', () => {
   const world = new Group();
   addTerrain(world, port);
+  addCourseGuidance(world, port);
   world.updateMatrixWorld(true);
   const sign = world.getObjectByName('Inner basin left-turn board')!;
   const gate = port.gates.find((gate) => gate.name === 'Inner basin')!;
