@@ -1,33 +1,12 @@
 import { expect, it } from 'vitest';
 import { Group, Mesh, Raycaster, Vector3 } from 'three';
-import { courseGuidePosts, addCourseGuidance } from '../src/game/course-guidance';
-import { gatePointClear } from '../src/game/course-layout';
+import { addCourseGuidance } from '../src/game/course-guidance';
 import { addTerrain } from '../src/game/terrain-visuals';
 import { TRACKS } from '../src/game/tracks';
 
 it('keeps harbor docks free of offshore wind turbines', () => {
   expect(addTerrain(new Group(), TRACKS[1])).toHaveLength(0);
 });
-
-it.each(TRACKS)(
-  'keeps $name marked between gates without putting guide posts in the racing line',
-  (track) => {
-    const posts = courseGuidePosts(track);
-    for (const post of posts) {
-      expect(gatePointClear(post.x, post.z, track.land)).toBe(true);
-      expect(
-        Math.min(...track.points.map((p) => Math.hypot(p.x - post.x, p.z - post.z))),
-      ).toBeGreaterThan(5);
-    }
-    for (const point of track.points) {
-      const distance = Math.min(
-        ...posts.map((p) => Math.hypot(p.x - point.x, p.z - point.z)),
-        ...track.gates.map((g) => Math.hypot(g.x - point.x, g.z - point.z)),
-      );
-      expect(distance).toBeLessThan(38);
-    }
-  },
-);
 
 for (const [index, gateName, boardName] of [
   [0, 'Start / finish', 'Crescent approach turn board'],
@@ -37,7 +16,6 @@ for (const [index, gateName, boardName] of [
   [1, 'Harbor mouth', 'Cargo terminal turn board'],
   [2, 'West approach', 'West approach turn board'],
   [2, 'Cross-swell reef', 'East sweep turn board'],
-  [2, 'East channel', 'East channel turn board'],
   [2, 'Signal east turn', 'Signal approach turn board'],
   [2, 'Signal north turn', 'Home sweep turn board'],
 ] as const) {

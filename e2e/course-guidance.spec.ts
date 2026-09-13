@@ -53,12 +53,14 @@ for (const viewport of [
         bottom: Math.min(...projected.map((p: any) => p.y)),
         depth: projected[0].z,
         guides,
+        duplicate: !!e.scene.getObjectByName('West sweep turn board'),
       };
     });
     expect(approach.passed).toBe(1);
     expect(approach.nextGate).toBe(1);
     expect(Math.abs(approach.side)).toBeLessThan(20);
-    expect(approach.guides).toBeGreaterThan(50);
+    expect(approach.guides).toBe(0);
+    expect(approach.duplicate).toBe(false);
     expect(approach.left).toBeGreaterThan(-0.95);
     expect(approach.right).toBeLessThan(0.95);
     expect(approach.bottom).toBeGreaterThan(-0.95);

@@ -216,13 +216,6 @@ export const COURSE_LAYOUTS = {
         direction: 'right',
         baseHeight: 3,
       },
-      {
-        name: 'Outer breakwater turn board',
-        at: [287, 139],
-        facing: [0, -1],
-        direction: 'right',
-        baseHeight: 3,
-      },
     ],
     checkpoints: [
       { name: 'Start / finish', at: [0, 0], width: 24 },
@@ -279,15 +272,7 @@ export const COURSE_LAYOUTS = {
   storm: {
     turnSigns: [
       { name: 'West approach turn board', at: [-112, 126], facing: [0, -1], direction: 'left' },
-      { name: 'West sweep turn board', at: [-78, 141], facing: [-0.8, -0.6], direction: 'left' },
       { name: 'East sweep turn board', at: [163, 171], facing: [-1, 0], direction: 'left' },
-      {
-        name: 'East channel turn board',
-        at: [232, -23],
-        facing: [0, 1],
-        direction: 'left',
-        height: 10,
-      },
       { name: 'Signal approach turn board', at: [201, -122], facing: [0.1, 1], direction: 'left' },
       { name: 'Home sweep turn board', at: [-109, -150], facing: [1, 0], direction: 'left' },
     ],
