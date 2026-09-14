@@ -355,7 +355,8 @@ engine.onFinish = (s) => {
   engine.audio.finish();
   const best = Math.min(...s.player.laps),
     courseVersion = s.track.id === 'storm' ? 'v16' : s.track.id === 'harbor' ? 'v15' : 'v12',
-    key = `vectide:best:${courseVersion}:${s.track.id}:${engine.network ? 'online' : s.mode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
+    recordMode = engine.network ? 'online' : s.mode === 'race' ? 'race-v2' : 'trial',
+    key = `vectide:best:${courseVersion}:${s.track.id}:${recordMode}${(engine.network?.items ?? engine.items).enabled ? ':pickups' : ''}`;
   let previous = Infinity,
     saved = true;
   try {
