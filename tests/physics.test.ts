@@ -97,8 +97,8 @@ describe('fair racing', () => {
       z: r.z,
     });
     expect(r.finished).toBe(true);
-    // The compact harbor and offshore routes target one-minute laps.
-    expect(r.laps[0]).toBeGreaterThan(55);
+    // Palm and Storm use shorter open-water lines; all courses stay near one-minute laps.
+    expect(r.laps[0]).toBeGreaterThan(track.id === 'harbor' ? 55 : 50);
     expect(r.laps[0]).toBeLessThan(70);
   });
 });

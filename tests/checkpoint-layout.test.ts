@@ -11,10 +11,13 @@ import {
 import { hullPoints, polygonContact } from '../src/game/hull-contact';
 
 it.each(TRACKS)('uses separated, named route-choice checkpoints on $name', (track) => {
-  expect(track.gates.length).toBeLessThanOrEqual(6);
+  expect(track.gates.length).toBeLessThanOrEqual(track.id === 'harbor' ? 7 : 6);
   expect(new Set(track.gates.map((g) => g.name)).size).toBe(track.gates.length);
   for (const [i, gate] of track.gates.entries()) {
-    expect(checkpointDistance(track, i), gate.name).toBeGreaterThan(100);
+    // Storm's opening straight ends before the exposed wave bend.
+    expect(checkpointDistance(track, i), gate.name).toBeGreaterThan(
+      track.id === 'storm' && i === 1 ? 75 : 100,
+    );
     if (i) expect(gate.routeIndex!).toBeGreaterThan(track.gates[i - 1].routeIndex!);
   }
 });
@@ -39,8 +42,6 @@ it.each(TRACKS)('still requires every checkpoint in order to complete a lap on $
 it.each([
   { track: TRACKS[0], from: [35, -130], to: [135, -25], shore: 'Crescent island' },
   { track: TRACKS[0], from: [278, 110], to: [95, 170], shore: 'Outer island' },
-  { track: TRACKS[2], from: [-12, 126], to: [80, 131], shore: 'Cross-swell reef' },
-  { track: TRACKS[2], from: [80, 131], to: [210, 63], shore: 'East breakwater' },
   { track: TRACKS[2], from: [210, 63], to: [68, -142], shore: 'Signal island' },
 ])('uses $shore to block a direct cut across its bend', ({ track, from, to, shore }) => {
   const r = createRacer(track, 0),

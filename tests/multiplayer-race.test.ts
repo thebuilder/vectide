@@ -236,8 +236,10 @@ it.each(TRACKS)(
     expect(guest.player.nextGate).toBe(track.gates.length - 1);
     const invalid = structuredClone(message.state);
     invalid.tick++;
-    invalid.racers[1].nextGate = track.gates.length;
+    // The wire validator covers every course; the receiver enforces its own gate count.
+    invalid.racers[1].nextGate = Math.max(...TRACKS.map((course) => course.gates.length));
     expect(validSnapshot(invalid)).toBe(false);
+    invalid.racers[1].nextGate = track.gates.length;
     const before = guest.snapshot();
     guest.receiveSnapshot(invalid);
     expect(guest.snapshot()).toEqual(before);

@@ -14,6 +14,7 @@ import { createCargoBoat } from './cargo-boat';
 import { createMusicVisuals } from './music-visuals';
 import { addLandmarks } from './landmarks';
 import { createCheckpointPost } from './checkpoint-model';
+import { addCourseGuidance } from './course-guidance';
 export interface World {
   group: T.Group;
   water: T.Mesh;
@@ -223,6 +224,7 @@ export function createWorld(track: Track): World {
     return seed / 4294967296;
   };
   turbines.push(...addTerrain(group, track));
+  addCourseGuidance(group, track);
   // Skyline and angular mountains frame the course, well beyond the racing water.
   const skylineBounds: T.Box3[] = [];
   const skylineCount = track.id === 'harbor' ? 22 : track.id === 'palms' ? 5 : 8;

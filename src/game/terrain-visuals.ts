@@ -151,7 +151,7 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
         rock.rotation.y = n * 1.73;
         parent.add(rock);
       }
-    } else if (land.kind === 'dock') {
+    } else if (land.kind === 'dock' && land.name !== 'Inner basin cross-quay') {
       const long =
         land.outline.length === 4
           ? Math.hypot(land.outline[1].x - land.outline[0].x, land.outline[1].z - land.outline[0].z)
@@ -197,7 +197,7 @@ export function addTerrain(parent: T.Group, track: Track): T.Group[] {
           glowing(track.accent, 0.4),
         ),
       );
-    } else {
+    } else if (land.kind === 'rock') {
       const pole = new T.Mesh(new T.CylinderGeometry(0.7, 1.3, 42, 7), dark);
       pole.position.set(land.x, land.height + 21, land.z);
       parent.add(pole);

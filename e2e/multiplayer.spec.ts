@@ -43,6 +43,11 @@ test('two rendered racers join, sync course and countdown, drive, open menu and 
   try {
     await openOnline(host);
     await expect(host.locator('#online-lobby')).toBeVisible();
+    await expect(host.locator('.lobby-heading #leave-room')).toBeVisible();
+    const leaveButton = await host.locator('#leave-room').boundingBox();
+    const sharePanel = await host.locator('.room-code-panel').boundingBox();
+    expect(leaveButton!.x + leaveButton!.width).toBeLessThan(sharePanel!.x);
+    expect(leaveButton!.y).toBe(sharePanel!.y);
     const code = await host.locator('#room-code').inputValue();
     await expect(host.getByRole('button', { name: 'START RACE', exact: true })).toBeDisabled();
     await openOnline(guest, 'JOIN');
@@ -263,6 +268,11 @@ test('phone menu exposes host and join without scrolling and opens a water lobby
       expect(box!.y + box!.height).toBeLessThanOrEqual(667);
     }
     await expect(page.locator('.wordmark')).toBeHidden();
+    await expect(page.locator('.masthead #leave-room')).toBeVisible();
+    const leaveButton = await page.locator('#leave-room').boundingBox();
+    expect(leaveButton!.x).toBe(16);
+    expect(leaveButton!.y).toBe(12);
+    expect(leaveButton!.width).toBeGreaterThanOrEqual(44);
     const roomPanel = await page.locator('.room-code-panel').boundingBox();
     await page.screenshot({ path: 'artifacts/multiplayer-lobby-mobile.png' });
     await page.getByRole('button', { name: 'FREE RIDE', exact: true }).tap();

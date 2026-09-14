@@ -73,6 +73,52 @@ it('keeps Palm entirely tropical', () => {
   expect(TRACKS[0].land.every((land) => land.kind === 'island')).toBe(true);
 });
 
+it('connects the inner Port quays with continuous dry dock surface', () => {
+  const track = TRACKS[1];
+  for (const [from, to] of [
+    [
+      [17.1, -38.25],
+      [74.25, -83.25],
+    ],
+    [
+      [74.25, -83.25],
+      [98.1, 45],
+    ],
+    [
+      [98.1, 45],
+      [12, 74],
+    ],
+    [
+      [98.1, 73],
+      [193.5, 73],
+    ],
+  ]) {
+    const steps = Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]));
+    for (let step = 0; step <= steps; step++) {
+      const x = from[0] + ((to[0] - from[0]) * step) / steps;
+      const z = from[1] + ((to[1] - from[1]) * step) / steps;
+      const footprint = [
+        { x: x - 0.01, z: z - 0.01 },
+        { x: x + 0.01, z: z - 0.01 },
+        { x: x + 0.01, z: z + 0.01 },
+        { x: x - 0.01, z: z + 0.01 },
+      ];
+      expect(
+        track.land.some((land) => polygonContact(footprint, land.outline)),
+        `open water between inner quays at ${x}, ${z}`,
+      ).toBe(true);
+    }
+  }
+});
+
+it('keeps all twelve Port grid slots clear of the connected dock and finish divider', () => {
+  const track = TRACKS[1];
+  for (let slot = 0; slot < 12; slot++) {
+    const racer = createRacer(track, slot);
+    expect(gatePointClear(racer.x, racer.z, track.land), `grid slot ${slot}`).toBe(true);
+  }
+});
+
 it.each(TRACKS)('keeps the whole checkpoint opening clear of shore on $name', (track) => {
   for (const gate of track.gates) {
     expect(gate.width).toBeGreaterThanOrEqual(12);

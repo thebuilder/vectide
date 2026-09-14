@@ -195,7 +195,29 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     this.frameLobby();
   };
+  private syncKeyboardModifiers(e: KeyboardEvent): boolean {
+    // A system shortcut can consume keyup without blurring the game window.
+    if (
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.code.startsWith('Meta') ||
+      e.code.startsWith('Control') ||
+      e.code.startsWith('Alt')
+    ) {
+      this.keys.clear();
+      cancelTrickSetup(this.player);
+      return false;
+    }
+    // Other key events still report Shift's real state if its own release was lost.
+    if (!e.shiftKey) {
+      this.keys.delete('ShiftLeft');
+      this.keys.delete('ShiftRight');
+    }
+    return true;
+  }
   private keyDown = (e: KeyboardEvent) => {
+    if (!this.syncKeyboardModifiers(e)) return;
     if (e.defaultPrevented) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
     if (
@@ -218,7 +240,10 @@ export class Engine {
     if (e.code === 'KeyR') this.reset();
     if (e.code === 'KeyQ') this.useItem();
   };
-  private keyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
+  private keyUp = (e: KeyboardEvent) => {
+    this.syncKeyboardModifiers(e);
+    this.keys.delete(e.code);
+  };
   private blur = () => {
     this.keys.clear();
     this.itemRequested = false;
@@ -236,6 +261,9 @@ export class Engine {
   private visibility = () => {
     if (document.hidden) this.blur();
   };
+  private gridSlot(id: number): number {
+    return !this.network && !this.lobby && this.mode === 'race' ? (id + 5) % 6 : id;
+  }
   private resetRacers(menu = this.state === 'menu') {
     this.spray.clear();
     this.wake.clear();
@@ -260,7 +288,7 @@ export class Engine {
       (this.lobby
         ? createLobbyRacers(this.track, this.lobby.members)
         : Array.from({ length: this.mode === 'race' ? 6 : 1 }, (_, i) =>
-            createRacer(this.track, i),
+            createRacer(this.track, i, this.gridSlot(i)),
           ));
     this.jets = this.racers.map((r) => {
       const jet = createJet(r.color, r.id + 1);
@@ -486,12 +514,11 @@ export class Engine {
     if (this.state !== 'racing' && this.state !== 'freeride') return;
     if (this.network) this.network.requestReset();
     else {
-      recoverRacer(this.player, this.track, this.visualTime);
+      recoverRacer(this.player, this.track, this.visualTime, this.gridSlot(this.player.id));
       this.presentation.clear();
     }
     this.audio.tone(180);
   }
-  readonly drivingInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   readonly touchInput: Input = { throttle: 0, brake: 0, steer: 0, lean: 0 };
   private input(): Input {
     if (
@@ -588,21 +615,16 @@ export class Engine {
     this.itemRequested = false;
     for (const r of this.racers) {
       const before = { x: r.x, z: r.z };
+      const power = r.id === 0 ? 1 : catchupPower(r, this.player, this.track);
       const control =
-        r.id === 0 && !r.finished ? input : aiInput(r, this.track, this.racers, this.difficulty);
+        r.id === 0 && !r.finished
+          ? input
+          : aiInput(r, this.track, this.racers, this.difficulty, power);
       this.items.use(
         r,
         r.id === 0 ? !!control.use : this.time % 3 < dt && Math.hypot(r.vx, r.vz) > 5,
       );
-      stepRacer(
-        r,
-        control,
-        this.track,
-        this.visualTime,
-        dt,
-        r.id === 0 ? 1 : catchupPower(r, this.player, this.track),
-        this.items.surface,
-      );
+      stepRacer(r, control, this.track, this.visualTime, dt, power, this.items.surface);
       advanceFinishLap(r, before, this.track);
       if (
         updateProgress(r, before, this.track, this.time, this.mode === 'race' ? 3 : 1) &&
@@ -616,7 +638,7 @@ export class Engine {
         this.time - r.lastProgress >
           Math.max(18, checkpointDistance(this.track, r.nextGate) / 10 + 8)
       ) {
-        recoverRacer(r, this.track, this.visualTime);
+        recoverRacer(r, this.track, this.visualTime, this.gridSlot(r.id));
         r.lastProgress = this.time;
       }
     }
@@ -687,7 +709,6 @@ export class Engine {
     );
     const p = rendered[this.racers.indexOf(this.player)];
     const control = this.input();
-    Object.assign(this.drivingInput, control);
     this.audio.transport(this.state === 'paused', dt);
     this.itemSounds.update(this.network?.items ?? this.items, this.player, this.state === 'racing');
     const bands = this.reducedMotion.matches

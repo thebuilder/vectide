@@ -54,10 +54,10 @@ export interface Racer {
 }
 export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 export const angle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
-export function createRacer(track: Track, id: number): Racer {
+export function createRacer(track: Track, id: number, gridSlot = id): Racer {
   const g = track.gates[0],
-    back = id === 0 ? 18 : 26 + Math.floor((id - 1) / 2) * 7,
-    side = id === 0 ? 0 : (id % 2 === 0 ? -1 : 1) * 4;
+    back = gridSlot === 0 ? 18 : 26 + Math.floor((gridSlot - 1) / 2) * 7,
+    side = gridSlot === 0 ? 0 : (gridSlot % 2 === 0 ? -1 : 1) * 4;
   const x = g.x - g.tx * back - g.tz * side,
     z = g.z - g.tz * back + g.tx * side;
   return {
@@ -411,9 +411,11 @@ export function raceProgress(r: Racer, track: Track): number {
     next = gate.routeIndex ?? nearestPoint(track, gate),
     pointGap = (next - nearestPoint(track, r) + track.points.length) % track.points.length,
     remaining =
-      ((pointGap > track.points.length / 2 ? pointGap - track.points.length : pointGap) *
-        track.length) /
-      track.points.length;
+      r.passed === 0
+        ? Math.max(0, (gate.x - r.x) * gate.tx + (gate.z - r.z) * gate.tz)
+        : ((pointGap > track.points.length / 2 ? pointGap - track.points.length : pointGap) *
+            track.length) /
+          track.points.length;
   // Position keeps changing on long sections, and catch-up keeps its original lap-distance scale.
   return (
     ((r.passed - clamp(remaining / checkpointDistance(track, r.nextGate), 0, 0.99)) * 16) /
@@ -435,7 +437,7 @@ export function racePosition(player: Racer, racers: Racer[], track: Track): numb
   );
 }
 export function catchupPower(r: Racer, player: Racer, track: Track): number {
-  if (r.id !== 1 && r.id !== 2) return 1;
+  if ((r.id !== 1 && r.id !== 2) || r.finished || player.finished) return 1;
   return 1 + clamp((raceProgress(player, track) - raceProgress(r, track) - 1) / 8, 0, 0.12);
 }
 export type Difficulty = 'easy' | 'normal' | 'expert';
@@ -444,6 +446,7 @@ export function aiInput(
   track: Track,
   racers: Racer[],
   difficulty: Difficulty = 'normal',
+  power = 1,
 ): Input {
   const nearest = nearestPoint(track, r),
     speed = Math.hypot(r.vx, r.vz);
@@ -480,9 +483,16 @@ export function aiInput(
     normal: { cruise: 23, corner: 14, maxSlowdown: 18, throttle: 1 },
     expert: { cruise: 26, corner: 10, maxSlowdown: 18, throttle: 1 },
   }[difficulty];
+  // Extra engine power only helps if the driver also permits a faster target pace.
+  const catchup = clamp((power - 1) / 0.12, 0, 1);
   const targetSpeed = r.approachingGate
     ? 11
-    : pace.cruise - Math.min(Math.abs(turn) * pace.corner, pace.maxSlowdown);
+    : pace.cruise +
+      catchup * (difficulty === 'normal' ? 3 : 1) -
+      Math.min(
+        Math.abs(turn) * (pace.corner - catchup * (difficulty === 'normal' ? 4 : 1)),
+        pace.maxSlowdown,
+      );
   return {
     throttle: clamp((targetSpeed - speed) * 0.4 + 0.65, 0, pace.throttle),
     brake: clamp((speed - targetSpeed - 1) / 12, 0, 0.7),
@@ -490,10 +500,10 @@ export function aiInput(
     lean: 0,
   };
 }
-export function recoverRacer(r: Racer, track: Track, time: number): void {
+export function recoverRacer(r: Racer, track: Track, time: number, gridSlot = r.id): void {
   r.approachingGate = false;
   const g = track.gates[(r.nextGate - 1 + track.gates.length) % track.gates.length];
-  const start = r.passed === 0 ? createRacer(track, r.id) : null;
+  const start = r.passed === 0 ? createRacer(track, r.id, gridSlot) : null;
   r.x = start ? start.x : g.x;
   r.z = start ? start.z : g.z;
   r.y = waterHeight(r.x, r.z, time, track) + 0.6;
