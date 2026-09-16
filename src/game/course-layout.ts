@@ -9,6 +9,16 @@ export interface Landform {
   height: number;
   outline: Point[];
 }
+export interface CourseTurnSign {
+  name: string;
+  at: [number, number];
+  /** Horizontal direction from the board toward approaching riders. */
+  facing: [number, number];
+  direction: 'left' | 'right';
+  baseHeight?: number;
+  width?: number;
+  height?: number;
+}
 const island = (
   name: string,
   x: number,
@@ -59,11 +69,19 @@ const zone = (
 };
 export const COURSE_LAYOUTS = {
   palms: {
+    turnSigns: [
+      {
+        name: 'Outer reef exit turn board',
+        at: [332, 165],
+        facing: [-0.1, -1],
+        direction: 'right',
+      },
+    ],
     checkpoints: [
       { name: 'Start / finish', at: [0, 0], width: 40 },
       { name: 'Crescent turn', at: [105, -140], width: 48 },
-      { name: 'Reef entrance', at: [170, 15], width: 64 },
-      { name: 'Outer reef', at: [278, 85], width: 56 },
+      { name: 'Reef entrance', at: [270, 30], width: 64 },
+      { name: 'Outer reef', at: [218, 155], width: 64 },
       { name: 'Lagoon turn', at: [27.5, 167.5], width: 48 },
     ],
     route: [
@@ -71,14 +89,13 @@ export const COURSE_LAYOUTS = {
       [0, -70],
       [35, -130],
       [105, -140],
-      [155, -100],
-      [142, -55],
-      [135, -25],
-      [150, 4],
-      [170, 15],
-      [217.5, -2.5],
-      [270, 25],
-      [278, 72],
+      // Finish the sweeping turn before entering the reef wave train.
+      [153, -98],
+      [185, -60],
+      [220, -24],
+      [250, 5],
+      [273, 40],
+      [282, 77],
       [278, 110],
       [227.5, 150],
       [165, 170],
@@ -107,21 +124,40 @@ export const COURSE_LAYOUTS = {
           [25, 9],
         ].map(([x, z]) => ({ x, z })),
       },
-      island('Reef headland', 225, -68, 45, 60, 3.1),
+      {
+        name: 'Reef headland',
+        kind: 'island',
+        x: 235,
+        z: -70,
+        height: 3.1,
+        // The southern tip supports the arch without closing its water approach.
+        outline: [
+          [210, -70],
+          [215, -89],
+          [227, -101],
+          [243, -101],
+          [255, -89],
+          [266, -53],
+          [266, -36],
+          [256, -28],
+          [227, -39],
+          [214, -51],
+        ].map(([x, z]) => ({ x, z })),
+      },
       {
         name: 'Outer island',
         kind: 'island',
         x: 130,
         z: 82,
         height: 9,
-        // One continuous bank closes the misleading view and shortcut toward the jump straight.
+        // The northern tip grounds the other arch support; keep the bank convex for collision.
         outline: [
           { x: 37.5, z: 75.0 },
           { x: 42.75, z: 38.26 },
           { x: 56.5, z: 15.56 },
-          { x: 73.5, z: 15.56 },
-          { x: 191.91, z: 37.81 },
-          { x: 214.41, z: 58.7 },
+          { x: 195, z: -2 },
+          { x: 208, z: 0 },
+          { x: 219, z: 16 },
           { x: 223.0, z: 92.5 },
           { x: 214.41, z: 126.3 },
           { x: 191.91, z: 147.19 },
@@ -131,14 +167,14 @@ export const COURSE_LAYOUTS = {
         ],
       },
       island('West shore', -87.5, 77.5, 37.5, 80.0, 2.7),
-      island('Lookout point', 282, -32.5, 50, 62.5, 3.4),
+      island('Lookout point', 290, -25, 50, 58, 3.4),
       island('Outer reef', 350, 75, 50, 125, 3.2),
       island('South sandbar', 112.5, 217.5, 135.0, 32.5, 1.8),
     ],
     zones: [
       zone('Start bay rollers', 0.0, -32.5, 0, 1, 125.0, 85.0, 0.35, 1.1, 26, 4),
       zone('Island lee', 97.5, -47.5, 0, 1, 100.0, 75.0, 0.8, 0),
-      zone('Reef wave channel', 274, 65, 0, -1, 130, 120, 0.2, 2.7, 30, 5),
+      zone('Reef wave channel', 283, 80, -0.1, -Math.sqrt(0.99), 110, 110, 0.2, 2.7, 30, 5),
       zone('Jump straight', 142.5, 168.5, 1, 0, 210.0, 77.5, 0.88, 0),
       zone('Inner lagoon', -32.5, 77.5, 0, 1, 130.0, 95.0, 0.9, 0),
     ],
@@ -149,11 +185,37 @@ export const COURSE_LAYOUTS = {
     ],
   },
   harbor: {
+    turnSigns: [
+      {
+        name: 'Entrance channel turn board',
+        at: [0, -135],
+        facing: [0, 1],
+        direction: 'right',
+        baseHeight: 3,
+      },
+      {
+        name: 'Inner basin left-turn board',
+        at: [139.05, 60.65],
+        facing: [0, -1],
+        direction: 'left',
+        baseHeight: 3,
+        width: 34,
+      },
+      {
+        name: 'Cargo terminal turn board',
+        at: [232, 198],
+        facing: [0, -1],
+        direction: 'right',
+        baseHeight: 3,
+      },
+    ],
     checkpoints: [
       { name: 'Start / finish', at: [0, 0], width: 24 },
       { name: 'Container turn', at: [148.5, -90], width: 44 },
-      { name: 'Harbor mouth', at: [256.5, 78.75], width: 52 },
-      { name: 'Cargo south passage', at: [175, 170], width: 44 },
+      { name: 'Inner basin', at: [139, 14], width: 32, facePrevious: true },
+      { name: 'Harbor mouth', at: [256.5, 78.75], width: 80 },
+      { name: 'Cargo south passage', at: [175, 170], width: 100 },
+      { name: 'Southwest basin', at: [50, 143], width: 44, facePrevious: true },
       { name: 'West breakwater', at: [-69.75, 63], width: 44 },
     ],
     route: [
@@ -180,13 +242,17 @@ export const COURSE_LAYOUTS = {
     ],
     land: [
       dock('West entrance pier', -17.1, -38.25, 12.6, 65.25),
-      dock('East entrance pier', 17.1, -38.25, 12.6, 65.25),
-      dock('Container quay', 74.25, -83.25, 60.75, 31.5),
-      dock('Inner basin pier', 98.1, 45, 42.75, 81),
+      // Adjoining convex sections form one dock without water gaps or overlapping top faces.
+      dock('Central dock west', 43.7625, 7.3125, 65.925, 156.375),
+      dock('Container quay', 74.25, -84.9375, 60.75, 28.125),
+      dock('Central dock east', 98.1, 7.3125, 42.75, 156.375),
       dock('Cargo terminal', 193.5, 98.1, 69.75, 76.5),
       dock('South quay', 157.5, 209.25, 121.5, 33.75),
       dock('West breakwater', -96.75, 72, 15.75, 85.5),
       dock('Outer breakwater', 297, 105.75, 20.25, 135),
+      // Close the false straight-ahead passage after the Inner basin checkpoint.
+      dock('Inner basin cross-quay', 139.05, 73, 41.25, 26.3),
+      { ...dock('Finish approach divider', 12, 74, 60, 16), height: 6 },
     ],
     zones: [
       zone('Entrance channel', 0, -31.5, 0, 1, 162, 76.5, 0.92, 0),
@@ -198,38 +264,46 @@ export const COURSE_LAYOUTS = {
     rampCenters: [],
   },
   storm: {
+    turnSigns: [
+      { name: 'West approach turn board', at: [-112, 126], facing: [0, -1], direction: 'left' },
+      { name: 'East sweep turn board', at: [163, 171], facing: [-1, 0], direction: 'left' },
+      { name: 'Signal approach turn board', at: [201, -122], facing: [0.1, 1], direction: 'left' },
+      { name: 'Home sweep turn board', at: [-109, -150], facing: [1, 0], direction: 'left' },
+    ],
     checkpoints: [
-      { name: 'Start / finish', at: [-36, 0], width: 40 },
-      { name: 'West wave turn', at: [-118, 60], width: 56 },
+      { name: 'Start / finish', at: [-112, -45], width: 40 },
+      { name: 'West approach', at: [-112, 35], width: 56, facePrevious: true },
       { name: 'Cross-swell reef', at: [32, 106], width: 40 },
-      { name: 'East channel', at: [210, 63], width: 56 },
+      // Let the shore fit span the channel between the breakwater and offshore ridge.
+      { name: 'East channel', at: [205, 35], width: 180 },
+      { name: 'Signal east turn', at: [175, -79], width: 56, facePrevious: true },
       { name: 'Signal north turn', at: [68, -142], width: 56 },
     ],
     route: [
-      [-36, 0],
-      [-72, 22],
-      [-104, 45],
-      [-119, 65],
-      [-103, 111],
-      [-60, 137],
-      [-12, 126],
+      [-112, -45],
+      [-112, -5],
+      [-112, 35],
+      [-80, 55],
+      [-25, 80],
       [32, 106],
-      [80, 131],
-      [141, 149],
-      [192, 123],
-      [210, 63],
-      [198, -9],
+      [85, 90],
+      [140, 60],
+      [205, 35],
+      [194, -14],
       [175, -79],
-      [123, -127],
-      [58, -144],
-      [11, -109],
-      [0, -60],
+      [123, -111],
+      [68, -142],
+      [8, -115],
+      [-52, -83],
+      [-95, -60],
+      [-112, -60],
     ],
     land: [
-      island('Signal island', 85, -42, 134, 126, 14, 'rock'),
-      island('East breakwater', 142, 52, 34, 128, 9, 'rock'),
-      island('Cross-swell reef', 36, 147, 42, 44, 6, 'rock'),
-      island('Western reef', -45, 78, 32, 44, 6, 'rock'),
+      island('Signal island', 85, -30, 120, 100, 14, 'rock'),
+      island('East breakwater', 142, 20, 34, 46, 5, 'rock'),
+      island('Cross-swell reef', 25, 170, 36, 30, 6, 'rock'),
+      // Keep the first sector's sightline open across the inside of the sweep.
+      island('Western reef', -15, 40, 32, 36, 6, 'rock'),
       island('South shelter', 92, 206, 106, 32, 9, 'rock'),
       island('Offshore ridge', 260, 40, 56, 148, 18, 'rock'),
       island('Western shore', -184, 50, 42, 120, 12, 'rock'),
@@ -239,8 +313,8 @@ export const COURSE_LAYOUTS = {
       zone('North swell', 104, -128, -1, 0, 144, 88, 0.3, 1.3, 37, 6),
       zone('Exposed east channel', 196, 42, 0, -1, 176, 72, 0.05, 1.8, 34, 6),
       zone('Cross-swell bend', 32, 91, -1, 0.35, 112, 80, 0.25, 1.1, 32, 5),
-      zone('West wave train', -114, 56, 0, 1, 104, 70, 0.1, 1.4, 29, 5),
-      zone('Departure lee', -48, 18, 1, 0, 96, 52, 0.9, 0),
+      zone('West wave train', -50, 70, 1, 0.45, 108, 66, 0.1, 1.4, 29, 5),
+      zone('Departure lee', -112, -16, 0, 1, 180, 65, 0.9, 0),
     ],
     rampCenters: [],
   },
@@ -248,10 +322,11 @@ export const COURSE_LAYOUTS = {
   string,
   {
     route: number[][];
-    checkpoints: { name: string; at: number[]; width: number }[];
+    checkpoints: { name: string; at: number[]; width: number; facePrevious?: boolean }[];
     land: Landform[];
     zones: WaveZone[];
     rampCenters: number[][];
+    turnSigns: CourseTurnSign[];
   }
 >;
 

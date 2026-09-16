@@ -99,13 +99,6 @@ button:hover {
   width: auto;
   height: 28px;
 }
-.version {
-  font-size: 10px;
-  opacity: 0.5;
-  font-weight: 400;
-  letter-spacing: 1px;
-  margin-left: 5px;
-}
 .header-right {
   display: flex;
   align-items: center;
@@ -270,19 +263,6 @@ h1 span {
   fill: none;
   stroke: currentColor;
   stroke-width: 12;
-}
-.course-description {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 15px 0 22px;
-  color: #9fada8;
-  font-size: 10px;
-  line-height: 1.6;
-}
-.course-description > span:last-child {
-  white-space: nowrap;
-  font-size: 9px;
 }
 .launch-row {
   display: flex;
@@ -567,6 +547,8 @@ dialog .primary {
 }
 dialog .quiet {
   display: block;
+  width: 100%;
+  min-height: 44px;
   margin: 18px auto 0;
 }
 dialog .secondary {
@@ -665,9 +647,6 @@ dialog dd {
   .launch {
     margin-bottom: 15px;
   }
-  .course-description {
-    padding: 9px 0 14px;
-  }
   .masthead {
     padding-top: 20px;
   }
@@ -705,9 +684,6 @@ dialog dd {
   .masthead {
     padding: 20px;
   }
-  .version {
-    display: none;
-  }
   #menu {
     padding: 0 20px;
   }
@@ -734,12 +710,6 @@ dialog dd {
   }
   .course small {
     font-size: 7px;
-  }
-  .course-description {
-    font-size: 9px;
-  }
-  .course-description > span:last-child {
-    display: none;
   }
   .launch-row {
     gap: 12px;
@@ -1066,9 +1036,6 @@ dialog {
   }
   .course-index {
     display: block;
-  }
-  .course-description {
-    padding: 12px 0;
   }
   .setup-options {
     display: grid;
@@ -1506,19 +1473,13 @@ button *,
   .masthead #leave-room {
     margin: 0;
     min-height: 44px;
-    padding: 12px;
+    padding: 6px 8px;
     font-size: 0.625rem;
   }
   body.playing #setup-back,
   body.in-lobby #setup-back,
   body:not(.in-lobby) .masthead #leave-room {
     display: none;
-  }
-  .masthead #leave-room {
-    width: auto;
-  }
-  .masthead #leave-room span {
-    display: inline;
   }
   #touch-controls .touch-stick {
     width: 120px;

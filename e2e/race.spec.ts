@@ -6,9 +6,15 @@ test('select courses, ride, pause, recover and restart', async ({ page }) => {
   await page.goto('/');
   await page.locator('#open-setup').click();
   await page.getByRole('button', { name: /PORT AFTERDARK/ }).click();
-  await expect(page.locator('#description')).toContainText('docks');
+  await expect(page.getByRole('button', { name: /PORT AFTERDARK/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.getByRole('button', { name: /STORM SIGNAL/ }).click();
-  await expect(page.locator('#description')).toContainText(/heavy swell/i);
+  await expect(page.getByRole('button', { name: /STORM SIGNAL/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.getByRole('button', { name: /PALM CIRCUIT/ }).click();
   await page.getByRole('button', { name: /TIME TRIAL/ }).click();
   await page.locator('#start').click();

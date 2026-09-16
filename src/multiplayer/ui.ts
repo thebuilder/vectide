@@ -23,10 +23,10 @@ export function setupMultiplayer(
   lobby.id = 'online-lobby';
   lobby.hidden = true;
   lobby.setAttribute('aria-label', 'Multiplayer lobby');
-  lobby.innerHTML = `<div class="lobby-heading"><section class="room-code-panel" aria-label="Share room"><span class="eyebrow">ROOM CODE</span><div class="room-code-row"><input id="room-code" readonly aria-label="Share this room code"><button id="copy-room" class="quiet" aria-label="Copy room join link" aria-live="polite">COPY</button></div><span class="room-address">vectide.thebuilder.dk</span><input id="room-link" readonly hidden aria-label="Room join link"></section><div id="practice-controls" hidden><div><span class="eyebrow">FREE RIDE</span><p>Practice while the host gets ready.</p></div><button id="leave-practice" class="quiet">BACK TO LOBBY</button></div></div>
+  lobby.innerHTML = `<div class="lobby-heading"><div class="lobby-navigation"><div class="lobby-back"><button id="leave-room" class="quiet" aria-label="Leave room" title="Leave room"><svg width="34" height="28" viewBox="0 0 34 28" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M29 14H6M16 4 6 14l10 10"/></svg></button></div><section class="room-code-panel" aria-label="Share room"><span class="eyebrow">ROOM CODE</span><div class="room-code-row"><input id="room-code" readonly aria-label="Share this room code"><button id="copy-room" class="quiet" aria-label="Copy room join link" aria-live="polite">COPY</button></div><span class="room-address">vectide.thebuilder.dk</span><input id="room-link" readonly hidden aria-label="Room join link"></section></div><div id="practice-controls" hidden><div><span class="eyebrow">FREE RIDE</span><p>Practice while the host gets ready.</p></div><button id="leave-practice" class="quiet">BACK TO LOBBY</button></div></div>
     <div id="lobby-labels" aria-hidden="true"></div>
     <div class="lobby-bottom"><section id="room-courses" aria-label="Room course"><div class="course-heading"><span id="room-course-heading">SELECT COURSE</span><span id="room-course-number">01 / 03</span></div><div class="courses">${courseCards('data-room-track')}</div></section>
-    <div class="lobby-panel"><div class="lobby-crew"><span id="room-count" class="eyebrow"></span><ol id="room-racers" aria-label="Racers in room"></ol><button id="room-pickups" class="pickup-toggle" aria-pressed="true">PICKUPS ON</button><button id="leave-room" class="quiet" aria-label="Leave room" title="Leave room"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4h9v16h-9M14 12H3m4-4-4 4 4 4"/></svg><span>LEAVE ROOM</span></button></div>
+    <div class="lobby-panel"><div class="lobby-crew"><span id="room-count" class="eyebrow"></span><ol id="room-racers" aria-label="Racers in room"></ol><button id="room-pickups" class="pickup-toggle" aria-pressed="true">PICKUPS ON</button></div>
     <div class="lobby-settings"><label>Your name<input id="profile-name" maxlength="20" autocomplete="nickname" placeholder="RACER"></label>
     <fieldset class="color-picker"><legend>Craft color</legend>${COLORS.map((color, i) => `<button type="button" data-color="${i}" style="--craft-color:${color}" aria-label="${['Mint', 'Pink', 'Gold', 'Violet', 'Blue', 'White', 'Lime', 'Rose', 'Aqua', 'Orange', 'Jade', 'Lilac'][i]}" aria-pressed="false"></button>`).join('')}</fieldset>
     </div>
@@ -45,7 +45,7 @@ export function setupMultiplayer(
   const placeHeaderActions = () => {
     const leave = button('leave-room');
     if (mobileHeader.matches) document.querySelector('.masthead')!.prepend(leave);
-    else lobby.querySelector('.lobby-crew')!.append(leave);
+    else lobby.querySelector('.lobby-back')!.append(leave);
     const back = button('leave-practice');
     if (mobileHeader.matches) document.querySelector('.masthead')!.prepend(back);
     else el('practice-controls').append(back);
