@@ -235,11 +235,16 @@ export function stepRacer(
   r.roll = clamp(r.roll + r.rollVelocity * dt, -0.9, 0.9);
   r.steer += (input.steer - r.steer) * Math.min(1, dt * 7);
   const grip = r.onRamp ? 0.55 : r.wet;
+  // Braking into a turn releases the stern. Centering the steering restores the
+  // stopping brake; releasing it restores lateral grip to drive out of the slide.
+  const drift = r.onRamp
+    ? 0
+    : clamp((input.brake - 0.7) / 0.3, 0, 1) * Math.abs(r.steer) * clamp((speed - 5) / 10, 0, 1);
   r.yaw +=
     r.steer *
     (1.02 + Math.abs(r.body.side) * 0.1) *
     clamp(speed / 9, 0, 1) *
-    (1 - input.brake * 0.2) *
+    (1 - input.brake * 0.2 + drift * 0.95) *
     (r.onRamp ? 1 : 1 - trim * 0.4) *
     grip *
     dt;
@@ -250,13 +255,14 @@ export function stepRacer(
   const thrust = input.throttle * 19 * power * response * grip;
   const drag =
     (0.037 * forward * Math.abs(forward) * response * (0.35 + 0.65 * input.throttle) +
-      input.brake * forward * 1.8 +
+      input.brake * forward * (1.8 - drift * 1.55) +
       r.air.dive * clamp((height + 0.25 - r.y) / 0.75, 0, 1) * forward * 1.4 +
       (1 - input.throttle) * forward * (0.08 + 0.8 * clamp((8 - speed) / 6, 0, 1))) *
     grip;
   const sideDrag =
     lateral *
     (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) *
+    (1 - drift * 0.86) *
     grip *
     (r.onRamp ? 1 : 1 - trim * 0.2);
   r.vx += (fx * (thrust - drag) - rx * sideDrag) * dt;

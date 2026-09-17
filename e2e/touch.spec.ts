@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Snapshot } from '../src/game/engine';
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-test('mobile auto throttle yields to brake and the flip button loads and cancels safely', async ({
+test('mobile auto throttle yields to brake and the stunt button loads and cancels safely', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -19,7 +19,7 @@ test('mobile auto throttle yields to brake and the flip button loads and cancels
     return { x: r!.x + r!.width / 2, y: r!.y + r!.height / 2 };
   };
   const state = () => page.evaluate(() => (window as unknown as { __vectide: Snapshot }).__vectide);
-  await expect(page.getByRole('button', { name: 'JUMP', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'STUNT', exact: true })).toBeVisible();
   await expect(page.locator('body')).toHaveCSS('touch-action', 'none');
   await expect(page.locator('[data-touch-key="flip"]')).toHaveCSS('user-select', 'none');
   await expect(page.locator('[data-touch-key="throttle"]')).toHaveCount(0);

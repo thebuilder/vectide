@@ -57,11 +57,11 @@ app.innerHTML = `
   <div id="notice" class="notice" role="status"></div>
   <div class="race-bottom"><div class="map-wrap"><canvas id="map" width="220" height="190" aria-label="Course map"></canvas><span id="track-name">PALM CIRCUIT</span></div><div class="speed"><strong id="speed">0</strong><span>KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small id="water-state">ON THE WATER</small></div></div>
   <div id="online-race-status" hidden></div>
-  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD JUMP" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE · RELEASE AT TAKEOFF · LEAN TO ROTATE</div>
+  <div class="race-help"><kbd data-keyboard="R" data-touch="RESET button" data-gamepad="X">R</kbd> RESET <span>·</span> <kbd data-keyboard="HOLD E" data-touch="HOLD STUNT" data-gamepad="HOLD RB">HOLD E</kbd> PREPARE · RELEASE AT TAKEOFF · LEAN TO ROTATE</div>
 </section>
 <div id="touch-controls" aria-label="Touch driving controls">
  <div class="touch-navigation"><button data-touch-key="reset" hidden>RESET</button><div class="touch-stick-wrap"><button data-touch-key="stick" class="touch-stick" aria-label="Slide to steer and lean" aria-describedby="stick-help"><span class="stick-axis" aria-hidden="true"></span><span class="stick-thumb" aria-hidden="true"></span></button><span id="stick-help">STEER / LEAN</span></div></div>
- <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">JUMP</button></div></div>
+ <div class="touch-actions"><button data-touch-key="item" hidden aria-label="Use item">USE</button><div><button data-touch-key="brake">BRAKE</button><button data-touch-key="flip">STUNT</button></div></div>
 </div>
 <div id="stunt-hud" aria-hidden="true" hidden></div>
 <div id="stunt-announcement" class="sr-only" role="status" aria-atomic="true"></div>

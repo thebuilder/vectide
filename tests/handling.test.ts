@@ -48,6 +48,45 @@ it('airborne throttle and steering cannot manufacture momentum', () => {
     expect(r.yaw).toBe(0);
   }
 });
+
+it.each([-1, 1])('brake-steering carries speed into a controlled slide, direction %s', (steer) => {
+  const drift = rider(22),
+    carve = rider(22),
+    stop = rider(22);
+  const slip = (r: ReturnType<typeof rider>) => Math.abs(Math.atan2(r.vx, r.vz) - r.yaw);
+  for (let i = 0; i < 72; i++) {
+    stepRacer(drift, { ...full, throttle: 0, steer, brake: 1 }, flat, i * dt, dt);
+    stepRacer(carve, { ...full, throttle: 0, steer }, flat, i * dt, dt);
+    stepRacer(stop, { ...full, throttle: 0, brake: 1 }, flat, i * dt, dt);
+  }
+  console.log('drift', {
+    speed: speed(drift),
+    stop: speed(stop),
+    yaw: drift.yaw,
+    carve: carve.yaw,
+    slip: slip(drift),
+    carveSlip: slip(carve),
+  });
+  expect(speed(drift)).toBeGreaterThan(12);
+  expect(speed(drift)).toBeGreaterThan(speed(stop) + 4);
+  expect(Math.abs(drift.yaw)).toBeGreaterThan(Math.abs(carve.yaw) + 0.1);
+  expect(slip(drift)).toBeGreaterThan(slip(carve) + 0.15);
+  const before = slip(drift);
+  for (let i = 0; i < 120; i++) stepRacer(drift, full, flat, (72 + i) * dt, dt);
+  expect(slip(drift)).toBeLessThan(before * 0.3);
+  expect(drift.recovery.crashes).toBe(0);
+});
+
+it('holding brake and steering eventually stops instead of spinning forever', () => {
+  const r = rider(22);
+  for (let i = 0; i < 1200; i++)
+    stepRacer(r, { ...full, throttle: 0, brake: 1, steer: 1 }, flat, i * dt, dt);
+  expect(speed(r)).toBe(0);
+  const yaw = r.yaw;
+  for (let i = 0; i < 120; i++)
+    stepRacer(r, { ...full, throttle: 0, brake: 1, steer: 1 }, flat, (1200 + i) * dt, dt);
+  expect(r.yaw).toBe(yaw);
+});
 const swell: Track = {
   ...flat,
   wave: 1,
