@@ -203,14 +203,32 @@ export function stepRacer(
   r.wet = contacts / 4;
   if (r.wet === 0 && !r.onRamp) r.body.airtime += dt;
   else r.body.airtime = 0;
-  r.vy += (force - 9.81) * dt;
+  const trim = stunt ? 0 : r.lean;
+  const moving = clamp((speed - 4) / 14, 0, 1);
+  const uphill = clamp(slopeX * fx + slopeZ * fz, 0, 0.6);
+  // Weight transfer changes the launch on an approaching wave, never lifts on flat water.
+  const waveLift = r.onRamp
+    ? 0
+    : trim * clamp(uphill * 3, 0, 1) * moving * Math.max(0, force - 9.81) * 0.8;
+  // A short arcade assist trades speed for hang time. Gravity always wins and the
+  // assist expires during each flight, even if the rider keeps pulling back.
+  const airControl = r.wet === 0 && !r.onRamp ? moving * clamp(1 - r.body.airtime / 1.2, 0, 1) : 0;
+  const airLift = trim * (trim > 0 ? 3.8 : 5.5) * airControl;
+  if (airLift > 0) {
+    const retained = Math.exp(-airLift * 0.035 * dt);
+    r.vx *= retained;
+    r.vz *= retained;
+  }
+  r.vy += (force + waveLift + airLift - 9.81) * dt;
   r.y += r.vy * dt;
   const targetBank = -r.body.side * 0.82;
   r.pitchVelocity +=
     ((front - back) * 0.19 -
       r.pitchVelocity * 2.8 -
       r.pitch * 2.5 +
-      r.body.fore * (stunt ? 0 : 4.8)) *
+      r.body.fore * (stunt ? 0 : 4.8) +
+      trim * (r.wet > 0 ? 4 : 2.5) -
+      (!stunt && r.wet === 0 ? (r.pitch * 7 + r.pitchVelocity * 2) * Math.abs(r.lean) : 0)) *
     dt;
   r.rollVelocity += ((right - left) * 0.25 + (targetBank - r.roll) * 15 - r.rollVelocity * 5) * dt;
   r.pitch = clamp(r.pitch + r.pitchVelocity * dt, -1.15, 1.15);
@@ -222,6 +240,7 @@ export function stepRacer(
     (1.02 + Math.abs(r.body.side) * 0.1) *
     clamp(speed / 9, 0, 1) *
     (1 - input.brake * 0.2) *
+    (r.onRamp ? 1 : 1 - trim * 0.4) *
     grip *
     dt;
   const forward = r.vx * fx + r.vz * fz,
@@ -235,7 +254,11 @@ export function stepRacer(
       r.air.dive * clamp((height + 0.25 - r.y) / 0.75, 0, 1) * forward * 1.4 +
       (1 - input.throttle) * forward * (0.08 + 0.8 * clamp((8 - speed) / 6, 0, 1))) *
     grip;
-  const sideDrag = lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * grip;
+  const sideDrag =
+    lateral *
+    (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) *
+    grip *
+    (r.onRamp ? 1 : 1 - trim * 0.2);
   r.vx += (fx * (thrust - drag) - rx * sideDrag) * dt;
   r.vz += (fz * (thrust - drag) - rz * sideDrag) * dt;
   if (!r.onRamp && r.wet > 0) {
