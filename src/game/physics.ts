@@ -1,3 +1,6 @@
+import { clamp, angle } from './math';
+export { clamp, angle } from './math';
+import { calculateHandling } from './handling';
 import { createAerialState, stepAerial, landAerial, type AerialState } from './aerial';
 import { createRecoveryState, stepRecovery, type RecoveryState } from './recovery';
 import { hullPoints, polygonContact } from './hull-contact';
@@ -52,8 +55,6 @@ export interface Racer {
   recovery: RecoveryState;
   approachingGate: boolean;
 }
-export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
-export const angle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
 export function createRacer(track: Track, id: number, gridSlot = id): Racer {
   const g = track.gates[0],
     back = gridSlot === 0 ? 18 : 26 + Math.floor((gridSlot - 1) / 2) * 7,
@@ -203,25 +204,30 @@ export function stepRacer(
   r.wet = contacts / 4;
   if (r.wet === 0 && !r.onRamp) r.body.airtime += dt;
   else r.body.airtime = 0;
-  r.vy += (force - 9.81) * dt;
+  r.steer += (input.steer - r.steer) * Math.min(1, dt * 7);
+  const handling = calculateHandling(r, input.brake, speed, slopeX * fx + slopeZ * fz, force);
+  const retained = Math.exp(-handling.airDrag * dt);
+  r.vx *= retained;
+  r.vz *= retained;
+  r.vy += (force + handling.waveLift + handling.airLift - 9.81) * dt;
   r.y += r.vy * dt;
   const targetBank = -r.body.side * 0.82;
   r.pitchVelocity +=
     ((front - back) * 0.19 -
       r.pitchVelocity * 2.8 -
       r.pitch * 2.5 +
-      r.body.fore * (stunt ? 0 : 4.8)) *
+      handling.pitchDrive -
+      handling.pitchDamping) *
     dt;
   r.rollVelocity += ((right - left) * 0.25 + (targetBank - r.roll) * 15 - r.rollVelocity * 5) * dt;
   r.pitch = clamp(r.pitch + r.pitchVelocity * dt, -1.15, 1.15);
   r.roll = clamp(r.roll + r.rollVelocity * dt, -0.9, 0.9);
-  r.steer += (input.steer - r.steer) * Math.min(1, dt * 7);
   const grip = r.onRamp ? 0.55 : r.wet;
   r.yaw +=
     r.steer *
     (1.02 + Math.abs(r.body.side) * 0.1) *
     clamp(speed / 9, 0, 1) *
-    (1 - input.brake * 0.2) *
+    handling.steering *
     grip *
     dt;
   const forward = r.vx * fx + r.vz * fz,
@@ -231,11 +237,12 @@ export function stepRacer(
   const thrust = input.throttle * 19 * power * response * grip;
   const drag =
     (0.037 * forward * Math.abs(forward) * response * (0.35 + 0.65 * input.throttle) +
-      input.brake * forward * 1.8 +
+      input.brake * forward * handling.braking +
       r.air.dive * clamp((height + 0.25 - r.y) / 0.75, 0, 1) * forward * 1.4 +
       (1 - input.throttle) * forward * (0.08 + 0.8 * clamp((8 - speed) / 6, 0, 1))) *
     grip;
-  const sideDrag = lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * grip;
+  const sideDrag =
+    lateral * (2.3 + Math.abs(r.body.side) * 0.3 + input.brake) * handling.lateralGrip * grip;
   r.vx += (fx * (thrust - drag) - rx * sideDrag) * dt;
   r.vz += (fz * (thrust - drag) - rz * sideDrag) * dt;
   if (!r.onRamp && r.wet > 0) {
